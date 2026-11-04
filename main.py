@@ -144,12 +144,12 @@ def build_application() -> Application:
     # Blocked words: both lists, admin controls, and callback UI.
     application.add_handler(
         MessageHandler(filters.TEXT & (filters.ChatType.GROUPS | filters.ChatType.PRIVATE), blocked_words_message_handler),
-        group=-1,
+        group=-20,
     )
     application.add_handler(CallbackQueryHandler(blocked_words_callback, pattern=r"^bw:"))
 
     # Repetition protection settings and message detector.
-    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.TEXT & ~filters.COMMAND, receive_repetition_duration), group=-10)
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.TEXT & ~filters.COMMAND, receive_repetition_duration), group=-16)
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^تفعيل التكرار$"), enable_repetition))
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^تعطيل التكرار$"), disable_repetition))
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^ضع تكرار \d+$"), set_repetition_start))
@@ -232,7 +232,7 @@ def build_application() -> Application:
     application.add_handler(MessageHandler(filters.Regex(r"^قفل امر .+$"), lock_command))
     application.add_handler(MessageHandler(filters.Regex(r"^فتح امر .+$"), open_command))
     application.add_handler(MessageHandler(filters.Regex(r"^(Dev|المالك|نائب المالك|ادمن اساسي|ادمن|مميز)$"), save_lock_rank))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, command_guard), group=-2)
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, command_guard), group=-22)
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, save_group_text_message), group=1)
     application.add_handler(ChatMemberHandler(chat_member_updated, ChatMemberHandler.CHAT_MEMBER), group=-1)
     return application
