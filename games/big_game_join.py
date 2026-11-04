@@ -28,6 +28,7 @@ from games.image_quiz.image_quiz import (
     begin_image_quiz,
     continue_image_quiz,
     end_image_quiz,
+    add_image_quiz_player,
 )
 from games.word_race import (
     RACES,
@@ -37,6 +38,7 @@ from games.word_race import (
     continue_word_race,
     end_word_race,
     word_race_distribution,
+    word_race_add_solo,
 )
 
 
@@ -137,3 +139,14 @@ async def distribute_big_game_router(update, context):
         await word_race_distribution(update, context)
     elif chat.id in active_penalty_games:
         await distribute_penalties(update, context)
+
+
+async def add_big_game_player_router(update, context):
+    chat = update.effective_chat
+    if not chat:
+        return
+    game = get_active_game(chat.id)
+    if game == "image_quiz":
+        await add_image_quiz_player(update, context)
+    elif game == "word_race":
+        await word_race_add_solo(update, context)
