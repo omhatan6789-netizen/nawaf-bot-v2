@@ -779,7 +779,7 @@ async def word_race_add_solo(
     if not state or not user:
         return
 
-    if not _is_controller(state, user.id):
+    if not await _is_controller(state, user.id):
         await _deny_controller(update)
         return
 
@@ -833,7 +833,7 @@ async def begin_word_race(
 
     if not state or not user or state.started:
         return
-    if not _is_controller(state, user.id):
+    if not await _is_controller(state, user.id):
         return
 
     if len(state.players) < 2:
@@ -1372,7 +1372,7 @@ async def word_race_callback(
     user = query.from_user
 
     if query.data.startswith("wr:mode:"):
-        if not _is_controller(state, user.id):
+        if not await _is_controller(state, user.id):
             await query.answer("انتظر ليس دورك!", show_alert=True)
             return
         if state.started:
@@ -1409,7 +1409,7 @@ async def word_race_callback(
         return
 
     if query.data.startswith("wr:stages:"):
-        if not _is_controller(state, user.id):
+        if not await _is_controller(state, user.id):
             await query.answer("انتظر ليس دورك!", show_alert=True)
             return
 
