@@ -91,6 +91,8 @@ def build_application() -> Application:
     application.add_handler(CommandHandler("health", health_command))
 
     # Plain-text commands retain the legacy wording.
+    application.add_handler(MessageHandler(filters.Regex(r"^اضف رد مميز$"), add_special_reply_start))
+    application.add_handler(MessageHandler(filters.Regex(r"^اضف رد$"), add_reply_start))
     application.add_handler(MessageHandler(filters.Regex(r"^نقاطي$"), my_points))
     application.add_handler(MessageHandler(filters.Regex(r"^توب النقاط(?:🎖️)?$"), top_points))
     application.add_handler(MessageHandler(filters.Regex(r"^اضف(?:\s+.*)?$"), add_points_command))
@@ -107,13 +109,11 @@ def build_application() -> Application:
     application.add_handler(MessageHandler(filters.Regex(r"^مسح الرتب$"), clear_all_ranks_command))
     application.add_handler(MessageHandler(filters.Regex(r"^(منع|سماح)\s+.+$"), permission_command))
     application.add_handler(CallbackQueryHandler(roles_clear_callback, pattern=r"^roles_clear:"))
-    application.add_handler(MessageHandler(filters.Regex(r"^اضف رد مميز$"), add_special_reply_start))
     application.add_handler(MessageHandler(filters.ALL, add_special_reply_handler), group=2)
     application.add_handler(MessageHandler(filters.Regex(r"^تعديل رد مميز$"), edit_special_reply_start))
     application.add_handler(MessageHandler(filters.ALL, edit_special_reply_handler), group=3)
     application.add_handler(MessageHandler(filters.Regex(r"^مسح رد مميز$"), delete_special_reply_start))
     application.add_handler(MessageHandler(filters.ALL, delete_special_reply_handler), group=4)
-    application.add_handler(MessageHandler(filters.Regex(r"^اضف رد$"), add_reply_start))
     application.add_handler(MessageHandler(filters.ALL, add_reply_handler), group=5)
     application.add_handler(MessageHandler(filters.Regex(r"^تعديل رد$"), edit_reply_start))
     application.add_handler(MessageHandler(filters.ALL, edit_reply_handler), group=6)
