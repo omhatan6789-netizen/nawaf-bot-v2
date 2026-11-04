@@ -315,8 +315,8 @@ async def owner_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     caption = (
         f"Owner group ↦ {group_name}\n"
         f"━━━━━━━━━━━━━━\n"
-        f"USE ↤ {html_mention(owner)}\n"
-        f"bio ↤ {bio}"
+        f"USE ↦ {html_mention(owner)}\n"
+        f"bio ↦ {bio}"
     )
     try:
         await send_profile(update, context, owner, caption)
@@ -492,7 +492,7 @@ async def check_admin_profile_reply(update: Update, context: ContextTypes.DEFAUL
     if not admin:
         return
     bio = html.escape(getattr(admin, "bio", None) or "لا يوجد بايو.")
-    caption = f"USE ↤ {html_mention(admin)}\nBio ↤ {bio}"
+    caption = f"USE ↦ {html_mention(admin)}\nBio ↦ {bio}"
     await send_profile(update, context, admin, caption)
     raise ApplicationHandlerStop()
 
