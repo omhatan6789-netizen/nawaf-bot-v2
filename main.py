@@ -50,6 +50,7 @@ from ai_assistant import ai_assistant_message
 from music_call import start_music_call, shutdown_music_call
 from account_clock import start_account_clock, shutdown_account_clock
 from auto_private_reply import start_auto_private_reply, shutdown_auto_private_reply
+from name_reaction import start_name_reaction, shutdown_name_reaction
 from custom_commands import (
     build_add_command_conversation, load_custom_commands_cache,
     custom_commands_list, delete_command_start, delete_command,
@@ -184,13 +185,18 @@ async def post_init(application: Application) -> None:
         if await start_music_call():
             await start_account_clock()
             await start_auto_private_reply()
-            logger.info("Music account connected; profile clock and private auto-reply started.")
+            await start_name_reaction()
+            logger.info("Music account connected; profile clock, auto-reply and name reactions started.")
     except Exception:
         logger.exception("Music account startup failed")
     logger.info("Bot startup completed")
 
 
 async def post_shutdown(application: Application) -> None:
+    try:
+        await shutdown_name_reaction()
+    except Exception:
+        logger.exception("Name reaction shutdown failed")
     try:
         await shutdown_auto_private_reply()
     except Exception:
