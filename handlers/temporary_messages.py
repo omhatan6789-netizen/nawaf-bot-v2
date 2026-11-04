@@ -545,10 +545,12 @@ async def temporary_message_pending_handler(update, context):
 
 async def temporary_message_callback(update, context):
     query = update.callback_query
-    await query.answer()
+    if not query or not query.message:
+        return
 
-    parts = query.data.split(":")
+    parts = (query.data or "").split(":")
     if len(parts) != 5:
+        await query.answer()
         return
 
     _, action, scope, chat_text, id_text = parts
@@ -563,6 +565,8 @@ async def temporary_message_callback(update, context):
     elif user.id != OWNER_ID and (await get_rank_level(user.id, chat_id)) < 2:
         await query.answer("هذا للمشرفين وفوق فقط.", show_alert=True)
         return
+
+    await query.answer()
 
     # جلب الرسالة المطلوبة، باستثناء الرجوع للقائمة
     row = None
