@@ -9,3 +9,7 @@ venv/
 .mypy_cache/
 .idea/
 .vscode/
+
+# Runtime account automation state
+name_reaction_settings.json
+daily_mention_state.json
