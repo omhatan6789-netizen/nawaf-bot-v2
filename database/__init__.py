@@ -17,7 +17,7 @@ from .users import (
     register_joined_member,
     update_member_status,
 )
-from .roles import (
+from .replies import (\n    load_replies_cache, save_reply, get_reply, delete_reply,\n    list_replies, delete_all_replies, invalidate_replies_cache,\n)\nfrom .roles import (
     get_rank,
     get_rank_level,
     get_group_rank,
@@ -37,5 +37,5 @@ __all__ = [
     "ensure_user", "get_user", "register_joined_member", "update_member_status",
     "get_rank", "get_rank_level", "get_group_rank", "get_group_ranks",
     "add_group_rank", "remove_group_rank", "update_developer_rank",
-    "check_command_permission", "check_user_permission", "set_user_permission",
+    "check_command_permission", "check_user_permission", "set_user_permission",\n    "load_replies_cache", "save_reply", "get_reply", "delete_reply",\n    "list_replies", "delete_all_replies", "invalidate_replies_cache",
 ]
