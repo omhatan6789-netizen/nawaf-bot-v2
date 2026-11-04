@@ -2,14 +2,14 @@
 -- Fresh schema only; no legacy data is imported.
 
 CREATE TABLE IF NOT EXISTS group_profile_settings (
-    chat_id BIGINT PRIMARY KEY REFERENCES chats(chat_id) ON DELETE CASCADE,
+    chat_id BIGINT PRIMARY KEY,
     owner_user_id BIGINT,
     owner_username TEXT,
     admin_replies_enabled BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TABLE IF NOT EXISTS admin_replies (
-    chat_id BIGINT NOT NULL REFERENCES chats(chat_id) ON DELETE CASCADE,
+    chat_id BIGINT NOT NULL,
     admin_user_id BIGINT NOT NULL,
     reply_name TEXT NOT NULL,
     created_date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
