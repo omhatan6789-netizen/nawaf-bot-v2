@@ -1,7 +1,7 @@
 import logging
 
 from telegram import Update
-from telegram.ext import Application, ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
+from telegram.ext import Application, ApplicationBuilder, ChatMemberHandler, CommandHandler, ContextTypes, MessageHandler, filters
 
 from config import load_settings
 from database import close_pool, init_pool
