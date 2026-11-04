@@ -722,6 +722,12 @@ async def game_message_handler(
     text = (message.text or "").strip()
     normalized = normalize_text(text)
 
+    # "اضف امر" belongs to the custom-command conversation, not the
+    # game-question flow. The custom-command conversation runs in an
+    # earlier handler group, but PTB continues processing later groups.
+    if normalized == "اضف امر" or context.user_data.get("custom_command"):
+        return
+
     # --------------------------------------------------
     # إلغاء جلسات الإضافة
     # --------------------------------------------------
