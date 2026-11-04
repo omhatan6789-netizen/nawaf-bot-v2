@@ -297,3 +297,21 @@ async def settle_two_player_wager(
                     "UPDATE points SET points=points+$2 WHERE user_id=$1",
                     winner_id, amount * 2,
                 )
+
+
+async def adjust_points(user_id: int, amount: int) -> int:
+    """Apply a signed points delta, preserving legacy game penalties."""
+    if isinstance(amount, bool) or not isinstance(amount, int) or amount == 0:
+        raise ValueError("amount must be a non-zero integer")
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            await _ensure_user(conn, user_id)
+            value = await conn.fetchval(
+                """INSERT INTO points(user_id,points) VALUES($1,$2)
+                   ON CONFLICT(user_id) DO UPDATE
+                   SET points=points.points+EXCLUDED.points
+                   RETURNING points""",
+                int(user_id), int(amount),
+            )
+    return int(value)
