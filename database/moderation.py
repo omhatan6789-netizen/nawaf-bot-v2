@@ -278,3 +278,15 @@ async def get_expired_moderation_rows(now=None) -> dict[str, list[tuple[int, int
     for chat_id, user_id in result["mutes"]:
         _mute_cache[(chat_id, user_id)] = (time.monotonic() + CACHE_TTL, False)
     return result
+
+
+async def get_repetition_punishment_duration(chat_id: int) -> int:
+    await ensure_chat(chat_id)
+    pool = get_pool()
+    row = await pool.fetchrow(
+        """INSERT INTO protection_settings(chat_id)
+           VALUES($1) ON CONFLICT(chat_id) DO UPDATE SET chat_id=EXCLUDED.chat_id
+           RETURNING repetition_punishment_duration""",
+        int(chat_id),
+    )
+    return max(1, int(row["repetition_punishment_duration"] or 300))
