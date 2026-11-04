@@ -6,6 +6,7 @@ from telegram.ext import ApplicationHandlerStop, ContextTypes
 from database.roles import check_command_permission
 
 MULTI_WORD_COMMANDS = [
+    "اضف امر", "الاوامر المضافة", "مسح امر", "مسح الاوامر المضافة", "تعديل لون",
     "كشف المجموعة", "كشف القيود", "رفع القيود", "الغاء التقييد",
     "الغاء الحظر", "الغاء الكتم", "تفعيل المدة للمشرفين",
     "تعطيل المدة للمشرفين", "تفعيل الاسباب", "تعطيل الاسباب",
