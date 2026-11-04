@@ -9,3 +9,5 @@ __all__ = [
     "get_points", "add_points", "deduct_points",
     "get_points_leaderboard", "queue_points", "flush_pending_points", "sell_points_for_messages",
 ]
+
+from .users import ensure_user, get_user, register_joined_member, update_member_status
