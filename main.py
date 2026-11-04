@@ -6,6 +6,7 @@ from telegram.ext import Application, ApplicationBuilder, CommandHandler, Contex
 from config import load_settings
 from database import close_pool, init_pool
 from database.health import check_database
+from database.schema import apply_schema
 
 logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
@@ -17,6 +18,7 @@ logger = logging.getLogger("nawaf-bot")
 async def post_init(application: Application) -> None:
     settings = application.bot_data["settings"]
     await init_pool(settings)
+    await apply_schema()
     if not await check_database():
         raise RuntimeError("Database health check failed")
     logger.info("Bot startup completed")
