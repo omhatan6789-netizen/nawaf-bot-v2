@@ -2,7 +2,7 @@ import asyncio
 import logging
 
 from telegram import Update
-from telegram.ext import Application, ApplicationBuilder, CallbackQueryHandler, ChatMemberHandler, CommandHandler, ContextTypes, MessageHandler, filters
+from telegram.ext import Application, ApplicationBuilder, CallbackQueryHandler, ChatMemberHandler, CommandHandler, ContextTypes, ConversationHandler, MessageHandler, filters
 
 from config import load_settings
 from database import close_pool, init_pool
@@ -47,6 +47,11 @@ from handlers.moderation import (
 )
 from handlers.delete_messages import delete_messages
 from ai_assistant import ai_assistant_message
+from custom_commands import (
+    build_add_command_conversation, load_custom_commands_cache,
+    custom_commands_list, delete_command_start, delete_command,
+    delete_all_commands, custom_command_alias_handler,
+)
 from button_colors import (
     load_button_color_cache, register_existing_panel_buttons,
     patch_inline_keyboard_buttons,
@@ -152,6 +157,7 @@ async def post_init(application: Application) -> None:
     await load_button_color_cache()
     await register_existing_panel_buttons()
     patch_inline_keyboard_buttons()
+    await load_custom_commands_cache()
     await load_emoji_reaction_rules()
     if not await check_database():
         raise RuntimeError("Database health check failed")
@@ -230,6 +236,22 @@ def build_application() -> Application:
     application.bot_data["settings"] = settings
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("health", health_command))
+    application.add_handler(build_add_command_conversation(), group=-2)
+    application.add_handler(MessageHandler(
+        filters.TEXT & ~filters.COMMAND, delete_command
+    ), group=-2)
+    application.add_handler(MessageHandler(
+        filters.Regex(r"^الاوامر المضافة$"), custom_commands_list
+    ))
+    application.add_handler(MessageHandler(
+        filters.Regex(r"^مسح امر$"), delete_command_start
+    ))
+    application.add_handler(MessageHandler(
+        filters.Regex(r"^مسح الاوامر المضافة$"), delete_all_commands
+    ))
+    application.add_handler(MessageHandler(
+        filters.TEXT & ~filters.COMMAND, custom_command_alias_handler
+    ), group=-7)
     application.add_handler(MessageHandler(
         filters.ChatType.PRIVATE & filters.Regex(
             r"^/start(?:@\w+)?\s+whisper_[A-Za-z0-9_-]+$"
