@@ -144,7 +144,7 @@ def build_application() -> Application:
     # Blocked words: both lists, admin controls, and callback UI.
     application.add_handler(
         MessageHandler(filters.TEXT & (filters.ChatType.GROUPS | filters.ChatType.PRIVATE), blocked_words_message_handler),
-        group=37,
+        group=-1,
     )
     application.add_handler(CallbackQueryHandler(blocked_words_callback, pattern=r"^bw:"))
 
