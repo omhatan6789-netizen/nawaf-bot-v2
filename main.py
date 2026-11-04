@@ -76,6 +76,7 @@ def build_application() -> Application:
     application.add_handler(MessageHandler(filters.Regex(r"^اضف(?:\s+.*)?$"), add_points_command))
     application.add_handler(MessageHandler(filters.Regex(r"^خصم(?:\s+.*)?$"), remove_points_command))
     application.add_handler(MessageHandler(filters.Regex(r"^بيع نقاطي(?:\s+.*)?$"), sell_points))
+    application.add_handler(MessageHandler(filters.ALL, save_group_text_message), group=1)
     return application
 
 
