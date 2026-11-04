@@ -440,8 +440,13 @@ async def start_word_race(
     if not user or not await _is_admin_plus(user.id, chat_id):
         return
 
-    if chat_id in RACES:
-        await update.message.reply_text("⚠️ يوجد سباق كلمات قائم بالفعل في هذه المجموعة.")
+    from games.big_game_join import get_active_game
+    active_game = get_active_game(chat_id)
+    if active_game:
+        if active_game == "word_race":
+            await update.message.reply_text("⚠️ يوجد سباق كلمات قائم بالفعل في هذه المجموعة.")
+        else:
+            await update.message.reply_text("⚠️ توجد لعبة أخرى قائمة بالفعل في هذه المجموعة.")
         return
 
     state = RaceState(
