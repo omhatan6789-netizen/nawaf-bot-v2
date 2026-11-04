@@ -308,9 +308,9 @@ async def adjust_points(user_id: int, amount: int) -> int:
         async with conn.transaction():
             await _ensure_user(conn, user_id)
             value = await conn.fetchval(
-                """INSERT INTO points(user_id,points) VALUES($1,$2)
+                """INSERT INTO points(user_id,points) VALUES($1,GREATEST(0,$2))
                    ON CONFLICT(user_id) DO UPDATE
-                   SET points=points.points+EXCLUDED.points
+                   SET points=GREATEST(0,points.points+EXCLUDED.points)
                    RETURNING points""",
                 int(user_id), int(amount),
             )
