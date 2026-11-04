@@ -319,3 +319,116 @@ async def gift_item(sender_id: int, recipient_id: int, item_key: str, quantity: 
                 recipient_id, item_key, quantity,
             )
     return "ok", remaining
+
+
+async def get_bank_by_number(account_number: str) -> dict[str, Any] | None:
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """SELECT user_id, account_number, bank, card_type, robbery_balance
+               FROM bank_accounts WHERE account_number=$1""",
+            account_number,
+        )
+    return dict(row) if row else None
+
+
+async def rob_user(robber_id: int, victim_id: int, now: int, amount: int) -> tuple[str, int, int]:
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            await _ensure_user(conn, robber_id)
+            await _ensure_user(conn, victim_id)
+            bank_rows = await conn.fetch(
+                "SELECT user_id FROM bank_accounts WHERE user_id = ANY($1::bigint[])",
+                [robber_id, victim_id],
+            )
+            if len(bank_rows) != 2:
+                return "bank_missing", 0, 0
+            ids = sorted((robber_id, victim_id))
+            await conn.fetch(
+                "SELECT user_id FROM points WHERE user_id = ANY($1::bigint[]) ORDER BY user_id FOR UPDATE",
+                ids,
+            )
+            robber_cd, _ = await _claim_cooldown(
+                conn, robber_id, "robber_until", now, now + 300
+            )
+            if not robber_cd:
+                left = await conn.fetchval(
+                    "SELECT robber_until-$2 FROM tasliyat_cooldowns WHERE user_id=$1",
+                    robber_id, now,
+                )
+                return "robber_cooldown", 0, int(left or 0)
+            victim_cd, left = await _claim_cooldown(
+                conn, victim_id, "victim_rob_until", now, now + 600
+            )
+            if not victim_cd:
+                return "victim_cooldown", 0, left
+            victim_points = int(await conn.fetchval(
+                "SELECT points FROM points WHERE user_id=$1", victim_id
+            ) or 0)
+            if victim_points <= 0:
+                return "empty", 0, 0
+            stolen = min(max(1, amount), victim_points)
+            await conn.execute(
+                "UPDATE points SET points=points-$2 WHERE user_id=$1",
+                victim_id, stolen,
+            )
+            await conn.execute(
+                "UPDATE points SET points=points+$2 WHERE user_id=$1",
+                robber_id, stolen,
+            )
+            await conn.execute(
+                "UPDATE bank_accounts SET robbery_balance=robbery_balance+$2 WHERE user_id=$1",
+                robber_id, stolen,
+            )
+    return "ok", stolen, 0
+
+
+async def transfer_points(sender_id: int, recipient_id: int, amount: int) -> tuple[str, dict[str, Any] | None, dict[str, Any] | None, int]:
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            await _ensure_user(conn, sender_id)
+            await _ensure_user(conn, recipient_id)
+            banks = await conn.fetch(
+                """SELECT user_id, account_number, bank, card_type, robbery_balance
+                   FROM bank_accounts WHERE user_id = ANY($1::bigint[])""",
+                [sender_id, recipient_id],
+            )
+            by_id = {int(row["user_id"]): dict(row) for row in banks}
+            sender_bank = by_id.get(sender_id)
+            recipient_bank = by_id.get(recipient_id)
+            if not sender_bank or not recipient_bank:
+                return "bank_missing", sender_bank, recipient_bank, 0
+            ids = sorted((sender_id, recipient_id))
+            await conn.fetch(
+                "SELECT user_id FROM points WHERE user_id=ANY($1::bigint[]) ORDER BY user_id FOR UPDATE",
+                ids,
+            )
+            balance = int(await conn.fetchval(
+                "SELECT points FROM points WHERE user_id=$1", sender_id
+            ) or 0)
+            if balance < amount:
+                return "insufficient", sender_bank, recipient_bank, 0
+            received = (amount * (95 if sender_bank["bank"] == recipient_bank["bank"] else 90)) // 100
+            await conn.execute(
+                "UPDATE points SET points=points-$2 WHERE user_id=$1",
+                sender_id, amount,
+            )
+            await conn.execute(
+                "UPDATE points SET points=points+$2 WHERE user_id=$1",
+                recipient_id, received,
+            )
+    return "ok", sender_bank, recipient_bank, received
+
+
+async def get_user_name(user_id: int) -> str:
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT first_name, username FROM users WHERE user_id=$1",
+            user_id,
+        )
+    if not row:
+        return str(user_id)
+    return row["first_name"] or row["username"] or str(user_id)
