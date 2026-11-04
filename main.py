@@ -46,6 +46,7 @@ from handlers.moderation import (
 )
 from handlers.delete_messages import delete_messages
 from ai_assistant import ai_assistant_message
+from handlers.emoji_reactions import emoji_reactions_handler, load_emoji_reaction_rules
 from handlers.temporary_messages import (
     temporary_message_command, temporary_message_pending_handler,
     temporary_message_callback, temporary_message_scheduler,
@@ -134,6 +135,7 @@ async def post_init(application: Application) -> None:
     await ensure_game_tables()
     from database.replies import load_replies_cache
     await load_replies_cache()
+    await load_emoji_reaction_rules()
     if not await check_database():
         raise RuntimeError("Database health check failed")
     application.bot_data["moderation_expiry_task"] = application.create_task(
@@ -202,6 +204,10 @@ def build_application() -> Application:
     application.bot_data["settings"] = settings
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("health", health_command))
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.TEXT & ~filters.COMMAND,
+        emoji_reactions_handler,
+    ), group=-1001)
     application.add_handler(MessageHandler(
         filters.ChatType.GROUPS & filters.TEXT & ~filters.COMMAND,
         ai_assistant_message,
