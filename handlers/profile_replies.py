@@ -296,9 +296,9 @@ async def owner_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     try:
         await ensure_group_settings(chat.id)
         settings = await get_group_settings(chat.id)
-    except Exception:
+    except Exception as exc:
         logger.exception("خطأ في إعدادات المالك للمجموعة %s", chat.id)
-        await update.message.reply_text("• حدث خطأ أثناء جلب بيانات المالك.")
+        await update.message.reply_text(f"• حدث خطأ أثناء جلب بيانات المالك.\n\n{exc}")
         raise ApplicationHandlerStop()
 
     owner = None
@@ -320,9 +320,9 @@ async def owner_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     )
     try:
         await send_profile(update, context, owner, caption)
-    except Exception:
+    except Exception as exc:
         logger.exception("خطأ أثناء إرسال بروفايل المالك")
-        await update.message.reply_text("• حدث خطأ أثناء إرسال بروفايل المالك.")
+        await update.message.reply_text(f"• حدث خطأ أثناء إرسال بروفايل المالك.\n\n{exc}")
     raise ApplicationHandlerStop()
 
 
@@ -481,9 +481,6 @@ async def delete_all_admin_replies_command(
 async def check_admin_profile_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     message = update.message
     if not message or not message.text or not is_group(update):
-        return
-    settings = await get_group_settings(update.effective_chat.id)
-    if not settings or not settings["admin_replies_enabled"]:
         return
     reply_name = message.text.strip()
     if not reply_name:
