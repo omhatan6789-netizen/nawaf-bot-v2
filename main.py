@@ -97,6 +97,7 @@ from handlers.tasliyat import (
 )
 from handlers.users import user_id_command
 from handlers.commands_menu import commands_menu_start, commands_menu_callback
+from handlers.start import start
 from handlers.games_menu import games_menu_command, games_menu_callback
 from handlers.games_help import games_help
 from handlers.profile_replies import (
@@ -456,6 +457,11 @@ def build_application() -> Application:
         ),
         group=9,
     )
+
+    # Private /start message with saved text, entities, images and buttons.
+    application.add_handler(CommandHandler(
+        "start", start, filters=filters.ChatType.PRIVATE
+    ))
 
     # Help and interactive command menus.
     application.add_handler(CommandHandler("help", commands_menu_start))
