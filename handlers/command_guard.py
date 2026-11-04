@@ -48,7 +48,7 @@ WAITING_KEYS = (
     "add_reply", "edit_reply", "delete_reply", "add_special_reply",
     "edit_special_reply", "delete_special_reply", "add_game",
     "add_question", "lock_command", "custom_command",
-    "delete_command", "button_color",
+    "delete_command", "button_color", "temporary_message_pending",
 )
 
 
