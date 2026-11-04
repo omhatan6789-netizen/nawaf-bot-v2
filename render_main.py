@@ -11,17 +11,28 @@ from main import build_application
 
 
 class HealthHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
+    def _respond(self, include_body=True):
         if self.path not in ("/", "/health"):
             self.send_response(404)
+            self.send_header("Content-Length", "0")
             self.end_headers()
             return
+
         body = b"OK"
         self.send_response(200)
         self.send_header("Content-Type", "text/plain; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
-        self.wfile.write(body)
+        if include_body:
+            self.wfile.write(body)
+
+    def do_GET(self):
+        self._respond(include_body=True)
+
+    def do_HEAD(self):
+        # UptimeRobot and some proxies probe endpoints with HEAD requests.
+        # HEAD must return the same headers/status as GET, without a body.
+        self._respond(include_body=False)
 
     def log_message(self, format, *args):
         # Keep routine health checks out of the logs.
