@@ -277,6 +277,10 @@ async def sell_item(user_id: int, item_key: str, quantity: int, value: int) -> t
     async with pool.acquire() as conn:
         async with conn.transaction():
             await _ensure_user(conn, user_id)
+            await conn.fetchval(
+                "SELECT points FROM points WHERE user_id=$1 FOR UPDATE",
+                user_id,
+            )
             row = await conn.fetchrow(
                 """SELECT quantity FROM possessions
                    WHERE user_id=$1 AND item_key=$2 FOR UPDATE""",
@@ -309,9 +313,12 @@ async def gift_item(sender_id: int, recipient_id: int, item_key: str, quantity: 
     pool = get_pool()
     async with pool.acquire() as conn:
         async with conn.transaction():
+            first_id, second_id = sorted((sender_id, recipient_id))
+            await conn.execute("SELECT pg_advisory_xact_lock($1)", first_id)
+            await conn.execute("SELECT pg_advisory_xact_lock($1)", second_id)
             await _ensure_user(conn, sender_id)
             await _ensure_user(conn, recipient_id)
-            # Lock the sender's inventory row; conditional update prevents double gifting.
+            # Conditional update prevents double gifting.
             row = await conn.fetchrow(
                 """UPDATE possessions SET quantity=quantity-$3
                    WHERE user_id=$1 AND item_key=$2 AND quantity >= $3
