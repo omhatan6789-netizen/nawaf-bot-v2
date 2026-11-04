@@ -110,7 +110,7 @@ async def is_group_admin_or_above(
     if user.id == OWNER_ID:
         return True
     try:
-        if await get_rank_level(user.id) >= 2:
+        if await get_rank_level(user.id, chat.id) >= 2:
             return True
     except Exception:
         logger.exception("تعذر فحص رتبة المستخدم %s", user.id)
@@ -131,7 +131,7 @@ async def is_owner_or_above(
     if user.id == OWNER_ID:
         return True
     try:
-        if await get_rank_level(user.id) >= 5:
+        if await get_rank_level(user.id, chat.id) >= 5:
             return True
     except Exception:
         logger.exception("تعذر فحص رتبة المستخدم %s", user.id)
