@@ -1,5 +1,3 @@
-import re
-
 from telegram import Update
 from telegram.ext import ContextTypes
 
@@ -170,6 +168,6 @@ async def top_points(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     lines = ["🏆 ترتيب اللاعبين", ""]
     for place, row in enumerate(rows, 1):
-        name = row["first_name"] or row["username"] or "مستخدم"
+        name = row["first_name"] or "مستخدم"
         lines.append(f"{place} - {name} : {row['points'] or 0} نقطة")
     await update.message.reply_text("\n".join(lines))
