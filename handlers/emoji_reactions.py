@@ -110,7 +110,7 @@ async def emoji_reactions_handler(
     is_management_command = (
         text == "الايموجيات المضافة"
         or re.match(
-            r"^(اضف ايموجي(?: مميز)?|مسح ايموجي(?: مميز)?)(?:\\s|$)",
+            r"^(اضف ايموجي(?: مميز)?|مسح ايموجي(?: مميز)?)(?:\s|$)",
             text,
         )
     )
@@ -122,7 +122,7 @@ async def emoji_reactions_handler(
             await message.reply_text(_format_list())
             raise ApplicationHandlerStop
 
-        match = re.match(r"^اضف ايموجي مميز\\s+(.+)$", text)
+        match = re.match(r"^اضف ايموجي مميز\s+(.+)$", text)
         if match:
             _PENDING_EMOJI[user.id] = {
                 "match_type": "contains",
@@ -131,7 +131,7 @@ async def emoji_reactions_handler(
             await message.reply_text("• تمام، ارسل الإيموجي المميز الحين…")
             raise ApplicationHandlerStop
 
-        match = re.match(r"^اضف ايموجي\\s+(.+)$", text)
+        match = re.match(r"^اضف ايموجي\s+(.+)$", text)
         if match:
             _PENDING_EMOJI[user.id] = {
                 "match_type": "exact",
@@ -140,7 +140,7 @@ async def emoji_reactions_handler(
             await message.reply_text("• تمام ارسل الايموجي الحين…")
             raise ApplicationHandlerStop
 
-        match = re.match(r"^مسح ايموجي مميز\\s+(.+)$", text)
+        match = re.match(r"^مسح ايموجي مميز\s+(.+)$", text)
         if match:
             keyword = match.group(1).strip()
             deleted = await _delete_rule("contains", keyword)
@@ -149,7 +149,7 @@ async def emoji_reactions_handler(
             )
             raise ApplicationHandlerStop
 
-        match = re.match(r"^مسح ايموجي\\s+(.+)$", text)
+        match = re.match(r"^مسح ايموجي\s+(.+)$", text)
         if match:
             keyword = match.group(1).strip()
             deleted = await _delete_rule("exact", keyword)
