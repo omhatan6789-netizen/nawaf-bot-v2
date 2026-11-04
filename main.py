@@ -56,6 +56,11 @@ from handlers.emoji_reactions import emoji_reactions_handler, load_emoji_reactio
 from handlers.mandatory_subscription import (
     mandatory_subscription_guard, mandatory_subscription_commands,
 )
+from handlers.whisper import (
+    whisper_command, whisper_start_handler, whisper_private_message,
+    whisper_callbacks, enable_whispers_command, disable_whispers_command,
+    whispers_list_command,
+)
 from handlers.temporary_messages import (
     temporary_message_command, temporary_message_pending_handler,
     temporary_message_callback, temporary_message_scheduler,
