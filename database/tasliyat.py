@@ -168,3 +168,154 @@ async def run_luck(user_id: int, now: int, cooldown_seconds: int, amount: int, w
                 user_id, delta,
             ))
     return ("won" if won else "lost"), balance, new_balance, 0
+
+
+STORE_ITEMS = {
+    "برج": {"emoji":"🏰","min":2188,"max":4375},
+    "جزيرة": {"emoji":"🏝","min":2625,"max":5250},
+    "بيت": {"emoji":"🏠","min":1500,"max":3000},
+    "طيارة": {"emoji":"🛩","min":1125,"max":2250},
+    "سيارة": {"emoji":"🏎","min":750,"max":1500},
+    "سفينة": {"emoji":"🛳","min":1000,"max":2000},
+    "قطار": {"emoji":"🚂","min":1750,"max":3500},
+    "قصر": {"emoji":"🏯","min":2438,"max":4875},
+    "ماسة": {"emoji":"💎","min":625,"max":1250},
+    "طعمية": {"emoji":"🧆","min":13,"max":25},
+    "شاورما": {"emoji":"🌯","min":22,"max":44},
+    "مزرعة": {"emoji":"🌾","min":500,"max":1000},
+}
+STORE_ORDER = ["برج","جزيرة","بيت","طيارة","سيارة","سفينة","قطار","قصر","ماسة","طعمية","شاورما","مزرعة"]
+
+
+async def get_store_prices() -> dict[str, int]:
+    import random
+    import time
+
+    hour_key = int(time.time()) // 3600
+    pool = get_pool()
+    prices: dict[str, int] = {}
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            await conn.execute("SELECT pg_advisory_xact_lock($1)", 918273646)
+            rows = await conn.fetch(
+                "SELECT item_key, price, hour_key FROM store_prices WHERE item_key = ANY($1::text[])",
+                STORE_ORDER,
+            )
+            existing = {row["item_key"]: row for row in rows}
+            for item_key in STORE_ORDER:
+                row = existing.get(item_key)
+                if row and int(row["hour_key"]) == hour_key:
+                    prices[item_key] = int(row["price"])
+                    continue
+                bounds = STORE_ITEMS[item_key]
+                price = random.randint(bounds["min"], bounds["max"])
+                await conn.execute(
+                    """INSERT INTO store_prices(item_key, price, hour_key)
+                       VALUES($1,$2,$3)
+                       ON CONFLICT(item_key) DO UPDATE
+                       SET price=EXCLUDED.price, hour_key=EXCLUDED.hour_key""",
+                    item_key, price, hour_key,
+                )
+                prices[item_key] = price
+    return prices
+
+
+async def get_possessions(user_id: int) -> list[tuple[str, int]]:
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            """SELECT item_key, quantity FROM possessions
+               WHERE user_id=$1 AND quantity>0 ORDER BY item_key""",
+            user_id,
+        )
+    return [(row["item_key"], int(row["quantity"])) for row in rows]
+
+
+async def purchase_item(user_id: int, item_key: str, quantity: int, total: int) -> int | None:
+    """Debit points and add stock atomically; None means insufficient funds."""
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            await _ensure_user(conn, user_id)
+            balance = await conn.fetchval(
+                """UPDATE points SET points=points-$3
+                   WHERE user_id=$1 AND points >= $3 RETURNING points""",
+                user_id, item_key, total,
+            )
+            if balance is None:
+                return None
+            await conn.execute(
+                """INSERT INTO possessions(user_id,item_key,quantity)
+                   VALUES($1,$2,$3)
+                   ON CONFLICT(user_id,item_key) DO UPDATE
+                   SET quantity=possessions.quantity+EXCLUDED.quantity""",
+                user_id, item_key, quantity,
+            )
+    return int(balance)
+
+
+async def sell_item(user_id: int, item_key: str, quantity: int, value: int) -> tuple[str, int]:
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            await _ensure_user(conn, user_id)
+            row = await conn.fetchrow(
+                """SELECT quantity FROM possessions
+                   WHERE user_id=$1 AND item_key=$2 FOR UPDATE""",
+                user_id, item_key,
+            )
+            owned = int(row["quantity"]) if row else 0
+            if owned <= 0:
+                return "none", 0
+            if owned < quantity:
+                return "short", owned
+            remaining = owned - quantity
+            if remaining:
+                await conn.execute(
+                    "UPDATE possessions SET quantity=$3 WHERE user_id=$1 AND item_key=$2",
+                    user_id, item_key, remaining,
+                )
+            else:
+                await conn.execute(
+                    "DELETE FROM possessions WHERE user_id=$1 AND item_key=$2",
+                    user_id, item_key,
+                )
+            balance = await conn.fetchval(
+                "UPDATE points SET points=points+$2 WHERE user_id=$1 RETURNING points",
+                user_id, value,
+            )
+    return "ok", int(balance)
+
+
+async def gift_item(sender_id: int, recipient_id: int, item_key: str, quantity: int) -> tuple[str, int]:
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            await _ensure_user(conn, sender_id)
+            await _ensure_user(conn, recipient_id)
+            # Lock the sender's inventory row; conditional update prevents double gifting.
+            row = await conn.fetchrow(
+                """UPDATE possessions SET quantity=quantity-$3
+                   WHERE user_id=$1 AND item_key=$2 AND quantity >= $3
+                   RETURNING quantity""",
+                sender_id, item_key, quantity,
+            )
+            if row is None:
+                owned = await conn.fetchval(
+                    "SELECT quantity FROM possessions WHERE user_id=$1 AND item_key=$2",
+                    sender_id, item_key,
+                )
+                return ("none" if not owned else "short"), int(owned or 0)
+            remaining = int(row["quantity"])
+            if remaining == 0:
+                await conn.execute(
+                    "DELETE FROM possessions WHERE user_id=$1 AND item_key=$2 AND quantity=0",
+                    sender_id, item_key,
+                )
+            await conn.execute(
+                """INSERT INTO possessions(user_id,item_key,quantity) VALUES($1,$2,$3)
+                   ON CONFLICT(user_id,item_key) DO UPDATE
+                   SET quantity=possessions.quantity+EXCLUDED.quantity""",
+                recipient_id, item_key, quantity,
+            )
+    return "ok", remaining
