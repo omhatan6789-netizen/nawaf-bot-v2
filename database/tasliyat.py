@@ -356,11 +356,6 @@ async def rob_user(robber_id: int, victim_id: int, now: int, amount: int) -> tup
                 "INSERT INTO tasliyat_cooldowns(user_id) VALUES($1),($2) ON CONFLICT(user_id) DO NOTHING",
                 robber_id, victim_id,
             )
-            cooldowns = await conn.fetchrow(
-                """SELECT user_id, robber_until, victim_rob_until
-                   FROM tasliyat_cooldowns WHERE user_id=ANY($1::bigint[])""",
-                ids,
-            )
             # Fetch both cooldowns explicitly; no cooldown is consumed on a failed attempt.
             rows = await conn.fetch(
                 """SELECT user_id, robber_until, victim_rob_until
