@@ -238,3 +238,62 @@ async def transfer_points_atomic(sender_id: int, recipient_id: int, amount: int)
                 recipient_id, amount,
             )
     return True
+
+
+async def charge_two_players(first_id: int, second_id: int, amount: int) -> str:
+    """Debit equal wagers from both players atomically, in stable lock order."""
+    _validate_amount(amount)
+    if first_id == second_id:
+        return "first_insufficient"
+    ids = sorted((first_id, second_id))
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            await _ensure_user(conn, first_id)
+            await _ensure_user(conn, second_id)
+            await conn.execute(
+                "INSERT INTO points(user_id,points) VALUES($1,0),($2,0) ON CONFLICT(user_id) DO NOTHING",
+                ids[0], ids[1],
+            )
+            rows = await conn.fetch(
+                "SELECT user_id,points FROM points WHERE user_id=ANY($1::bigint[]) ORDER BY user_id FOR UPDATE",
+                ids,
+            )
+            balances = {int(row["user_id"]): int(row["points"]) for row in rows}
+            if balances.get(first_id, 0) < amount:
+                return "first_insufficient"
+            if balances.get(second_id, 0) < amount:
+                return "second_insufficient"
+            await conn.execute(
+                "UPDATE points SET points=points-$2 WHERE user_id=ANY($1::bigint[])",
+                ids, amount,
+            )
+    return "ok"
+
+
+async def settle_two_player_wager(
+    first_id: int, second_id: int, amount: int, winner_id: int | None = None
+) -> None:
+    """Pay the winner 2x the stake, or refund both players on a draw."""
+    _validate_amount(amount)
+    if first_id == second_id or winner_id not in (None, first_id, second_id):
+        raise ValueError("invalid wager participants")
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            await _ensure_user(conn, first_id)
+            await _ensure_user(conn, second_id)
+            if winner_id is None:
+                await conn.execute(
+                    "UPDATE points SET points=points+$2 WHERE user_id=$1",
+                    first_id, amount,
+                )
+                await conn.execute(
+                    "UPDATE points SET points=points+$2 WHERE user_id=$1",
+                    second_id, amount,
+                )
+            else:
+                await conn.execute(
+                    "UPDATE points SET points=points+$2 WHERE user_id=$1",
+                    winner_id, amount * 2,
+                )
