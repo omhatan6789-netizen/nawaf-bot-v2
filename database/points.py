@@ -310,7 +310,7 @@ async def adjust_points(user_id: int, amount: int) -> int:
             value = await conn.fetchval(
                 """INSERT INTO points(user_id,points) VALUES($1,GREATEST(0,$2))
                    ON CONFLICT(user_id) DO UPDATE
-                   SET points=GREATEST(0,points.points+EXCLUDED.points)
+                   SET points=GREATEST(0,points.points+$2)
                    RETURNING points""",
                 int(user_id), int(amount),
             )
