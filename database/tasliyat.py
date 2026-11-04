@@ -238,9 +238,9 @@ async def purchase_item(user_id: int, item_key: str, quantity: int, total: int) 
         async with conn.transaction():
             await _ensure_user(conn, user_id)
             balance = await conn.fetchval(
-                """UPDATE points SET points=points-$3
-                   WHERE user_id=$1 AND points >= $3 RETURNING points""",
-                user_id, item_key, total,
+                """UPDATE points SET points=points-$2
+                   WHERE user_id=$1 AND points >= $2 RETURNING points""",
+                user_id, total,
             )
             if balance is None:
                 return None
