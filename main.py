@@ -1,12 +1,16 @@
 import logging
 
 from telegram import Update
-from telegram.ext import Application, ApplicationBuilder, CommandHandler, ContextTypes
+from telegram.ext import Application, ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
 
 from config import load_settings
 from database import close_pool, init_pool
 from database.health import check_database
 from database.migration_runner import apply_all_migrations
+from handlers.points import (
+    add_points_command, remove_points_command, sell_points,
+    my_points, top_points, flush_pending_points,
+)
 
 logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
@@ -25,7 +29,10 @@ async def post_init(application: Application) -> None:
 
 
 async def post_shutdown(application: Application) -> None:
-    await close_pool()
+    try:
+        await flush_pending_points()
+    finally:
+        await close_pool()
     logger.info("Bot shutdown completed")
 
 
@@ -59,6 +66,13 @@ def build_application() -> Application:
     application.bot_data["settings"] = settings
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("health", health_command))
+
+    # Plain-text commands retain the legacy wording.
+    application.add_handler(MessageHandler(filters.Regex(r"^نقاطي$"), my_points))
+    application.add_handler(MessageHandler(filters.Regex(r"^توب النقاط$"), top_points))
+    application.add_handler(MessageHandler(filters.Regex(r"^اضف\\s+\\d+$"), add_points_command))
+    application.add_handler(MessageHandler(filters.Regex(r"^خصم\\s+\\d+$"), remove_points_command))
+    application.add_handler(MessageHandler(filters.Regex(r"^بيع نقاطي(?:\\s+.*)?$"), sell_points))
     return application
 
 
