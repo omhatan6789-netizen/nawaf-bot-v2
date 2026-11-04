@@ -239,7 +239,7 @@ def build_application() -> Application:
     application.add_handler(CallbackQueryHandler(bank_callback, pattern=r"^tasliyat:bank:"))
 
     application.add_handler(MessageHandler(filters.Regex(r"^عرض الاكواد$"), show_scratch_codes))
-    application.add_handler(MessageHandler(filters.Regex(r"^كشط\\s+[A-Za-z0-9]+$"), scratch_code))
+    application.add_handler(MessageHandler(filters.Regex(r"^كشط\s+[A-Za-z0-9]+$"), scratch_code))
     application.add_handler(MessageHandler(filters.Regex(r"^رست الكشط$"), reset_scratch_cooldown))
     application.add_handler(MessageHandler(filters.Regex(r"^(رتبتي|رتبته(?:\s+@[A-Za-z0-9_]+|\s+\d+)?)$"), roles_command))
     application.add_handler(MessageHandler(filters.Regex(r"^كشف المجموعة$"), roles_command))
