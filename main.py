@@ -179,7 +179,7 @@ def build_application() -> Application:
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^انذار(?:\s+.+)?$"), warning_command))
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^مسح انذاراته$"), clear_warnings_command))
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^مسح(?:\s*\d+)?$"), delete_messages))
-    application.add_handler(MessageHandler(filters.Regex(r"^ايدي$"), user_id_command))
+    application.add_handler(MessageHandler(filters.Regex(r"^ايدي(?:\\s+@?[A-Za-z0-9_]+)?$"), user_id_command))
 
     # Profile cards and admin replies (legacy plain-text commands).
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, profile_reply_pending_handler), group=-11)
