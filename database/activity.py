@@ -9,6 +9,7 @@ FLUSH_DELAY = 0.5
 _pending_users = {}
 _pending_chats = {}
 _pending_members = set()
+_pending_message_total = 0
 _flush_lock = None
 _flush_task = None
 
@@ -21,11 +22,13 @@ def _lock():
 
 
 def record_group_text_message(*, chat_id, chat_type, chat_title, chat_username, user_id, username, first_name):
+    global _pending_message_total
     old = _pending_users.get(user_id)
     _pending_users[user_id] = (username if username is not None else (old[0] if old else None), first_name or (old[1] if old else ""), (old[2] if old else 0) + 1)
     _pending_chats[chat_id] = (chat_type, chat_title, chat_username)
     _pending_members.add((chat_id, user_id))
-    _schedule_flush(0 if sum(v[2] for v in _pending_users.values()) >= 100 else FLUSH_DELAY)
+    _pending_message_total += 1
+    _schedule_flush(0 if _pending_message_total >= 100 else FLUSH_DELAY)
 
 
 def _schedule_flush(delay):
@@ -51,12 +54,15 @@ async def _flush_worker(delay):
 
 
 async def flush_pending_activity():
+    global _pending_message_total
     if not (_pending_users or _pending_chats or _pending_members):
         return
     async with _lock():
         if not (_pending_users or _pending_chats or _pending_members):
             return
         users, chats, members = dict(_pending_users), dict(_pending_chats), set(_pending_members)
+        message_total = _pending_message_total
+        _pending_message_total = 0
         _pending_users.clear()
         _pending_chats.clear()
         _pending_members.clear()
@@ -71,6 +77,7 @@ async def flush_pending_activity():
                     if members:
                         await conn.executemany("""INSERT INTO chat_members(chat_id,user_id,member_status) VALUES($1,$2,'member') ON CONFLICT(chat_id,user_id) DO UPDATE SET member_status='member',updated_at=NOW()""", list(members))
         except Exception:
+            _pending_message_total += message_total
             for uid, (username, first_name, count) in users.items():
                 newer = _pending_users.get(uid)
                 _pending_users[uid] = (newer[0] if newer and newer[0] is not None else username, newer[1] if newer and newer[1] else first_name, count + (newer[2] if newer else 0))
