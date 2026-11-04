@@ -4,6 +4,10 @@ from __future__ import annotations
 import secrets
 from typing import Any
 from datetime import timedelta
+import time
+
+_games_cache_value: bool | None = None
+_games_cache_expires: float = 0.0
 
 from .pool import get_pool
 
@@ -14,10 +18,16 @@ _COOLDOWN_COLUMNS = {
 
 
 async def games_enabled() -> bool:
+    global _games_cache_value, _games_cache_expires
+    now = time.monotonic()
+    if _games_cache_value is not None and _games_cache_expires > now:
+        return _games_cache_value
     pool = get_pool()
     async with pool.acquire() as conn:
         status = await conn.fetchval("SELECT status FROM games_settings WHERE id = 1")
-    return status is None or status != "off"
+    _games_cache_value = status is None or status != "off"
+    _games_cache_expires = now + 60
+    return _games_cache_value
 
 
 async def _ensure_user(conn: Any, user_id: int) -> None:
@@ -72,6 +82,13 @@ async def create_bank(user_id: int, bank_name: str, card_type: str) -> dict[str,
                 )
                 if row:
                     return dict(row)
+                existing = await conn.fetchrow(
+                    """SELECT user_id, account_number, bank, card_type, robbery_balance
+                       FROM bank_accounts WHERE user_id=$1""",
+                    user_id,
+                )
+                if existing:
+                    return dict(existing)
     return None
 
 
