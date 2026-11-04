@@ -3,6 +3,9 @@ from __future__ import annotations
 
 import random
 import time
+import secrets
+import string
+from datetime import datetime, timedelta, timezone
 from html import escape
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -13,6 +16,8 @@ from database.tasliyat import (
     claim_reward, run_investment, run_luck,
     get_store_prices, get_possessions, purchase_item, sell_item, gift_item,
     get_bank_by_number, rob_user, transfer_points, get_user_name,
+    ensure_scratch_codes, get_active_scratch_codes,
+    redeem_scratch_code, reset_scratch_limit,
 )
 
 OWNER_ID = 8453977662
@@ -750,3 +755,92 @@ async def transfer_message_receiver(update: Update, context: ContextTypes.DEFAUL
 def _format_clock(seconds: int) -> str:
     minutes, secs = divmod(max(0, int(seconds)), 60)
     return f"{minutes:02d}:{secs:02d}"
+
+
+SCRATCH_CODE_COUNT = 10
+SCRATCH_COOLDOWN_SECONDS = 2 * 60 * 60
+SCRATCH_MIN_AMOUNT = 70
+SCRATCH_MAX_AMOUNT = 10_000_000
+SAUDI_TZ = timezone(timedelta(hours=3))
+
+
+def _scratch_hour_data():
+    now = datetime.now(SAUDI_TZ)
+    hour_start = now.replace(minute=0, second=0, microsecond=0)
+    next_hour = hour_start + timedelta(hours=1)
+    return int(hour_start.timestamp() // 3600), next_hour
+
+
+def _format_scratch_remaining(seconds: int) -> str:
+    seconds = max(0, int(seconds))
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
+    seconds %= 60
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+
+async def reset_scratch_cooldown(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    message = update.effective_message
+    user = update.effective_user
+    if not message or not user or user.id != OWNER_ID or not message.reply_to_message:
+        return
+    target = message.reply_to_message.from_user
+    if not target:
+        return
+    await reset_scratch_limit(target.id)
+    await message.reply_text(
+        "• تم صفرت وقت الكشط لـ  "
+        f"{_mention(target)} ✅",
+        parse_mode="HTML",
+    )
+
+
+async def show_scratch_codes(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    message = update.effective_message
+    if not message or (message.text or "").strip() != "عرض الاكواد":
+        return
+    if not await _enabled():
+        return
+    hour_key, next_hour = _scratch_hour_data()
+    await ensure_scratch_codes(hour_key, next_hour)
+    rows = await get_active_scratch_codes(datetime.now(timezone.utc))
+    text = "• اكواد الكشط الموجوده بالبوت :\n\n"
+    for index, row in enumerate(rows, 1):
+        text += f"{index}- <code>{row['code']}</code>\n\n"
+    await message.reply_text(text, parse_mode="HTML")
+
+
+async def scratch_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    message = update.effective_message
+    user = update.effective_user
+    if not message or not user:
+        return
+    text = (message.text or "").strip()
+    if not text.startswith("كشط "):
+        return
+    parts = text.split(maxsplit=1)
+    if len(parts) != 2:
+        return
+    code = parts[1].strip().upper()
+    if not code or not await _enabled():
+        return
+    hour_key, next_hour = _scratch_hour_data()
+    await ensure_scratch_codes(hour_key, next_hour)
+    status, result = await redeem_scratch_code(
+        user.id, code, datetime.now(timezone.utc)
+    )
+    if status == "cooldown":
+        await message.reply_text(
+            "• مب حلى هو مايمديك تكشط اي كود الحين .\n"
+            f"• الوقت المتبقي: {_format_scratch_remaining(result)} ⏰"
+        )
+        return
+    if status == "invalid":
+        await message.reply_text("• للأسف الكود انتهى وقته او فيه شخص استعمله قبلك")
+        return
+    await message.reply_text(
+        "• تم كشط الكود بنجاح 🎉 .\n\n"
+        f"- الاسم ↤︎ {_mention(user)}\n"
+        f"- المبلغ ↤︎ {result} نقطة 💸 \n"
+        "-"
+    )
