@@ -137,11 +137,10 @@ def build_application() -> Application:
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.TEXT & ~filters.COMMAND, receive_repetition_duration), group=-10)
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^تفعيل التكرار$"), enable_repetition))
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^تعطيل التكرار$"), disable_repetition))
-    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^ضع تكرار \\d+$"), set_repetition_start))
-    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^ضع كتم تكرار \\S+$"), set_mute_duration))
-    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^ضع تقييد تكرار \\S+$"), set_restrict_duration))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^ضع تكرار \d+$"), set_repetition_start))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^ضع كتم تكرار \S+$"), set_mute_duration))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^ضع تقييد تكرار \S+$"), set_restrict_duration))
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^(?:ضع|تغيير) رتبة التكرار (عضو|مميز|ادمن|ادمن اساسي|نائب المالك|المالك|Dev)$"), set_repetition_rank))
-    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^مسح انذاراته$"), clear_user_repetition_warnings), group=-1)
     application.add_handler(MessageHandler(filters.ChatType.GROUPS, repetition_message_handler), group=38)
 
     # Moderation / sanctions (same plain-text commands as the legacy bot).
