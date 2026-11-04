@@ -477,7 +477,7 @@ async def warning_command(update, context):
     actor_level = await _get_level(actor.id, chat.id)
     if await _get_level(target.id, chat.id) >= actor_level:
         await message.reply_text(
-            "• اعذرني بس هذا الأمر لـ ↤︎〖 الرتبة الأعلى منك 〗 فقط ."
+            "• اعذرني بس هذا الأمر لـ ↤︎〖 الادمن 〗وفوق فقط ."
         )
         return
     await save_target_user(target)
