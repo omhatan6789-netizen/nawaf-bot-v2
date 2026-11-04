@@ -7,7 +7,7 @@ from typing import Any
 from database.pool import get_pool
 
 _settings_cache: dict[int, tuple[float, dict[str, bool]]] = {}
-_mute_cache: dict[tuple[int, int], tuple[float, bool]] = {}
+_mute_cache: dict[tuple[int, int], tuple[float, float | None | bool]] = {}
 CACHE_TTL = 10.0
 
 
@@ -119,7 +119,7 @@ async def save_sanction(
         until_ts = until_time.timestamp() if hasattr(until_time, "timestamp") else None
         _mute_cache[(int(chat_id), int(user.id))] = (
             time.monotonic() + CACHE_TTL,
-            until_ts is None or until_ts > time.time(),
+            until_ts,
         )
 
 
@@ -140,7 +140,18 @@ async def get_active_mute(chat_id: int, user_id: int) -> bool:
     now = time.monotonic()
     cached = _mute_cache.get(key)
     if cached and cached[0] > now:
-        return cached[1]
+        until = cached[1]
+        if until is False:
+            return False
+        if until is None or (isinstance(until, (int, float)) and until > time.time()):
+            return True
+        _mute_cache[key] = (now + CACHE_TTL, False)
+        pool = get_pool()
+        await pool.execute(
+            "DELETE FROM bot_mutes WHERE chat_id=$1 AND user_id=$2",
+            *key,
+        )
+        return False
     pool = get_pool()
     row = await pool.fetchrow(
         "SELECT until_time FROM bot_mutes WHERE chat_id=$1 AND user_id=$2",
@@ -150,13 +161,17 @@ async def get_active_mute(chat_id: int, user_id: int) -> bool:
         result = False
     else:
         until = row["until_time"]
-        result = until is None or until.timestamp() > time.time()
+        until_ts = until.timestamp() if until is not None else None
+        result = until_ts is None or until_ts > time.time()
         if not result:
             await pool.execute(
                 "DELETE FROM bot_mutes WHERE chat_id=$1 AND user_id=$2",
                 *key,
             )
-    _mute_cache[key] = (now + CACHE_TTL, result)
+        else:
+            _mute_cache[key] = (now + CACHE_TTL, until_ts)
+    if not row or (row and not result):
+        _mute_cache[key] = (now + CACHE_TTL, False)
     return result
 
 
