@@ -49,6 +49,10 @@ from games.rock_paper_scissors import (
     start_rock_paper_scissors, rock_paper_scissors_callback,
 )
 from games.xo import start_xo_game, xo_callback
+from games.hide_and_seek import (
+    start_hide_game, join_hide_game, begin_hide_game, end_hide_game,
+    hide_number_callback, search_number_callback,
+)
 from handlers.tasliyat import (
     create_bank_account, bank_callback, my_bank_account,
     delete_bank_account, salary, tip, invest, luck,
@@ -234,6 +238,30 @@ def build_application() -> Application:
         start_xo_game,
     ))
     application.add_handler(CallbackQueryHandler(xo_callback, pattern=r"^xo:"))
+
+    # Hide-and-seek game.
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.Regex(r"^غميضة$"),
+        start_hide_game,
+    ))
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.Regex(r"^دخول$"),
+        join_hide_game,
+    ))
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.Regex(r"^\.ابدا$"),
+        begin_hide_game,
+    ))
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.Regex(r"^\.انهاء$"),
+        end_hide_game,
+    ))
+    application.add_handler(CallbackQueryHandler(
+        hide_number_callback, pattern=r"^hide:"
+    ))
+    application.add_handler(CallbackQueryHandler(
+        search_number_callback, pattern=r"^search:"
+    ))
 
     # Bank and economy commands (legacy wording retained).
     application.add_handler(MessageHandler(filters.Regex(r"^انشاء حساب بنكي$"), create_bank_account))
