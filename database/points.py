@@ -5,6 +5,7 @@ import asyncio
 from typing import Any
 
 from .pool import get_pool
+from .timing import timed
 
 
 def _validate_amount(amount: int) -> None:
@@ -19,6 +20,7 @@ async def _ensure_user(conn: Any, user_id: int) -> None:
     )
 
 
+@timed("db.points.get_points")
 async def get_points(user_id: int) -> int:
     pool = get_pool()
     async with pool.acquire() as conn:
@@ -103,6 +105,7 @@ async def sell_points_for_messages(user_id: int, amount: int, points_per_message
     return int(remaining), messages
 
 
+@timed("db.points.get_points_leaderboard")
 async def get_points_leaderboard(limit: int = 10) -> list[Any]:
     if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 100:
         raise ValueError("limit must be between 1 and 100")
