@@ -8,7 +8,6 @@ from telegram.ext import ContextTypes
 from database.points import get_points
 from database.roles import OWNER_ID, get_rank
 from handlers.cache import ensure_user_loaded, get_user_data
-from handlers.roles import get_target_user
 
 
 async def user_id_command(
@@ -22,10 +21,11 @@ async def user_id_command(
         return
 
     # يدعم أمر ايدي منفردًا أو بالرد على رسالة الشخص.
-    target = await get_target_user(update, context)
-    if target is None:
-        await message.reply_text("❌ حدد الشخص بالرد أو اليوزر أو الآيدي.")
-        return
+    target = (
+        message.reply_to_message.from_user
+        if message.reply_to_message and message.reply_to_message.from_user
+        else actor
+    )
 
     user_id = int(target.id)
     username_value = getattr(target, "username", None)
