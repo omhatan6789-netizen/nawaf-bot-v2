@@ -21,6 +21,14 @@ from games.hide_and_seek import (
     begin_hide_game,
     end_hide_game,
 )
+from games.image_quiz.image_quiz import (
+    IMAGE_QUIZZES,
+    join_image_quiz,
+    leave_image_quiz,
+    begin_image_quiz,
+    continue_image_quiz,
+    end_image_quiz,
+)
 from games.word_race import (
     RACES,
     join_word_race,
@@ -39,6 +47,8 @@ def get_active_game(chat_id: int) -> str | None:
         return "penalty"
     if chat_id in active_hide_games:
         return "hide"
+    if chat_id in IMAGE_QUIZZES:
+        return "image_quiz"
     if chat_id in RACES:
         return "word_race"
     return None
@@ -57,6 +67,8 @@ async def join_big_game_router(update, context):
         await join_hide_game(update, context)
     elif game == "word_race":
         await join_word_race(update, context)
+    elif game == "image_quiz":
+        await join_image_quiz(update, context)
 
 
 async def leave_big_game_router(update, context):
@@ -67,6 +79,8 @@ async def leave_big_game_router(update, context):
         await leave_liar_game(update, context)
     elif chat.id in RACES:
         await leave_word_race(update, context)
+    elif chat.id in IMAGE_QUIZZES:
+        await leave_image_quiz(update, context)
 
 
 async def begin_big_game_router(update, context):
@@ -82,6 +96,8 @@ async def begin_big_game_router(update, context):
         await begin_hide_game(update, context)
     elif game == "word_race":
         await begin_word_race(update, context)
+    elif game == "image_quiz":
+        await begin_image_quiz(update, context)
 
 
 async def continue_big_game_router(update, context):
@@ -92,6 +108,8 @@ async def continue_big_game_router(update, context):
         await continue_penalties(update, context)
     elif chat.id in RACES:
         await continue_word_race(update, context)
+    elif chat.id in IMAGE_QUIZZES:
+        await continue_image_quiz(update, context)
 
 
 async def end_big_game_router(update, context):
@@ -107,6 +125,8 @@ async def end_big_game_router(update, context):
         await end_hide_game(update, context)
     elif game == "word_race":
         await end_word_race(update, context)
+    elif game == "image_quiz":
+        await end_image_quiz(update, context)
 
 
 async def distribute_big_game_router(update, context):
