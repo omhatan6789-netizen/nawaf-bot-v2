@@ -100,15 +100,12 @@ def increment_cached_messages(
     amount: int = 1,
     username: str | None = None,
     first_name: str | None = None,
-) -> dict[str, Any]:
+) -> dict[str, Any] | None:
+    # Do not invent a zero baseline for a cold cache entry. The database remains
+    # the source of truth until this user's profile has been loaded.
     data = get_cached_user(user_id)
     if data is None:
-        data = {
-            "user_id": user_id, "messages": 0, "rank": "عضو",
-            "joined_date": "غير معروف", "username": username,
-            "first_name": first_name or "", "points": 0,
-        }
-        _put(user_id, data)
+        return None
     data["messages"] = int(data.get("messages") or 0) + amount
     if username is not None:
         data["username"] = username
