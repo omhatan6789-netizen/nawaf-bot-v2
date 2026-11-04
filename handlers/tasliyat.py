@@ -132,9 +132,23 @@ async def bank_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if query.from_user.id not in (target_id, OWNER_ID):
         return
     info = BANKS[parts[2]]
+    if await get_bank(target_id):
+        await query.edit_message_text(
+            "• عنده حساب بنكي 😅\n\n"
+            "• لعرض معلومات حسابه اكتب\n"
+            "↤︎ حسابي"
+        )
+        return
     bank = await create_bank(target_id, info["name"], info["card"])
     if not bank:
-        await query.edit_message_text("• تعذر إنشاء الحساب، حاول مرة ثانية.")
+        if await get_bank(target_id):
+            await query.edit_message_text(
+                "• عنده حساب بنكي 😅\n\n"
+                "• لعرض معلومات حسابه اكتب\n"
+                "↤︎ حسابي"
+            )
+        else:
+            await query.edit_message_text("• تعذر إنشاء الحساب، حاول مرة ثانية.")
         return
     points = await get_points(target_id)
     await query.edit_message_text(
