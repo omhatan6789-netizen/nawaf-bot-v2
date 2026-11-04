@@ -45,6 +45,10 @@ from handlers.moderation import (
     moderation_expiry_loop, reveal_command, repetition_action_callback,
 )
 from handlers.delete_messages import delete_messages
+from handlers.tasliyat import (
+    create_bank_account, bank_callback, my_bank_account,
+    delete_bank_account, salary, tip, invest, luck,
+)
 from handlers.users import user_id_command
 from handlers.profile_replies import (
     developer_command, change_developer_username,
@@ -207,6 +211,16 @@ def build_application() -> Application:
     application.add_handler(MessageHandler(filters.Regex(r"^اضف(?:\s+.*)?$"), add_points_command))
     application.add_handler(MessageHandler(filters.Regex(r"^خصم(?:\s+.*)?$"), remove_points_command))
     application.add_handler(MessageHandler(filters.Regex(r"^بيع نقاطي(?:\s+.*)?$"), sell_points))
+
+    # Bank and economy commands (legacy wording retained).
+    application.add_handler(MessageHandler(filters.Regex(r"^انشاء حساب بنكي$"), create_bank_account))
+    application.add_handler(MessageHandler(filters.Regex(r"^حسابي$"), my_bank_account))
+    application.add_handler(MessageHandler(filters.Regex(r"^مسح حسابي$"), delete_bank_account))
+    application.add_handler(MessageHandler(filters.Regex(r"^(راتب|راتبي)$"), salary))
+    application.add_handler(MessageHandler(filters.Regex(r"^بخشيش$"), tip))
+    application.add_handler(MessageHandler(filters.Regex(r"^استثمار(?: نقاطي|\s+\d+)?$"), invest))
+    application.add_handler(MessageHandler(filters.Regex(r"^حظ(?: نقاطي|\s+\d+)?$"), luck))
+    application.add_handler(CallbackQueryHandler(bank_callback, pattern=r"^tasliyat:bank:"))
     application.add_handler(MessageHandler(filters.Regex(r"^(رتبتي|رتبته(?:\s+@[A-Za-z0-9_]+|\s+\d+)?)$"), roles_command))
     application.add_handler(MessageHandler(filters.Regex(r"^كشف المجموعة$"), roles_command))
     application.add_handler(MessageHandler(filters.Regex(r"^(رفع|تنزيل) (Dev|المالك|نائب المالك|ادمن اساسي|ادمن|مميز)(?:\s+(@[A-Za-z0-9_]+|\d+))?$"), change_rank))
