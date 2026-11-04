@@ -188,9 +188,9 @@ def _is_whispers_enabled(chat_id: int) -> bool:
     return _whispers_enabled.get(chat_id, True)
 
 
-async def _can_manage_whispers(user_id: int) -> bool:
+async def _can_manage_whispers(user_id: int, chat_id: int) -> bool:
     try:
-        return await get_rank_level(user_id) >= 2
+        return await get_rank_level(user_id, chat_id) >= 2
     except Exception:
         return user_id == OWNER_ID
 
@@ -200,7 +200,7 @@ async def enable_whispers_command(update: Update, context: ContextTypes.DEFAULT_
         return
 
     user = update.effective_user
-    if not user or not await _can_manage_whispers(user.id):
+    if not user or not await _can_manage_whispers(user.id, update.effective_chat.id):
         return
 
     _whispers_enabled[update.effective_chat.id] = True
