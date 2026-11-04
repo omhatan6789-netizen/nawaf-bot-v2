@@ -2,6 +2,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from database.activity import record_group_text_message
+from handlers.cache import increment_cached_messages
 
 
 async def save_group_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -15,6 +16,13 @@ async def save_group_text_message(update: Update, context: ContextTypes.DEFAULT_
         return
     if not message.text or message.text.startswith("/"):
         return
+
+    increment_cached_messages(
+        user_id=user.id,
+        amount=1,
+        username=user.username,
+        first_name=user.first_name,
+    )
 
     record_group_text_message(
         chat_id=chat.id,
