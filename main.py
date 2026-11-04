@@ -49,6 +49,7 @@ from games.rock_paper_scissors import (
     start_rock_paper_scissors, rock_paper_scissors_callback,
 )
 from games.xo import start_xo_game, xo_callback
+from games.demon_nawaf import start_demon_nawaf, demon_nawaf_callback, ensure_demon_tables
 from games.liar import (
     start_liar_game_lobby, force_voting,
     liar_lobby_callback, liar_vote_callback, liar_guess_callback,
@@ -118,6 +119,7 @@ async def post_init(application: Application) -> None:
     settings = application.bot_data["settings"]
     await init_pool(settings)
     await apply_all_migrations()
+    await ensure_demon_tables()
     from database.replies import load_replies_cache
     await load_replies_cache()
     if not await check_database():
@@ -257,6 +259,15 @@ def build_application() -> Application:
     ))
     application.add_handler(CallbackQueryHandler(
         rock_paper_scissors_callback, pattern=r"^rps:"
+    ))
+
+    # Demon Nawaf character guessing game.
+    application.add_handler(MessageHandler(
+        filters.Regex(r"^ديمون نواف$"),
+        start_demon_nawaf,
+    ))
+    application.add_handler(CallbackQueryHandler(
+        demon_nawaf_callback, pattern=r"^dn:"
     ))
 
     # Image quiz (same async implementation, shared join/start/continue/end routing).
