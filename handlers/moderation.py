@@ -633,6 +633,11 @@ async def repetition_action_callback(update, context):
             return
         await save_sanction("restrictions", chat.id, target, until_time, "التكرار", context.bot.id)
     await clear_warnings(chat.id, target_id)
+    try:
+        from handlers.repetition import reset_repetition_messages
+        reset_repetition_messages(chat.id, target_id)
+    except Exception:
+        logger.debug("Could not reset repetition memory", exc_info=True)
     await query.answer("تم اختيار العقوبة وتصفير إنذاراته.")
     try:
         await query.edit_message_text("• ✅ تم اختيار العقوبة المناسبة بنجاح .")
