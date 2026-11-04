@@ -12,6 +12,7 @@ from database.tasliyat import (
     games_enabled, get_points, get_bank, create_bank, delete_bank,
     claim_reward, run_investment, run_luck,
     get_store_prices, get_possessions, purchase_item, sell_item, gift_item,
+    get_bank_by_number, rob_user, transfer_points, get_user_name,
 )
 
 OWNER_ID = 8453977662
@@ -498,3 +499,254 @@ async def gift(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     except Exception:
         pass
+
+
+from telegram.error import TelegramError
+from telegram.ext import ApplicationHandlerStop
+
+_transfer_sessions: dict[int, dict] = {}
+_transfer_message_sessions: dict[int, int] = {}
+
+
+def _message_link(message) -> str | None:
+    chat = message.chat
+    if chat.username:
+        return f"https://t.me/{chat.username}/{message.message_id}"
+    chat_id = str(chat.id)
+    if chat_id.startswith("-100"):
+        return f"https://t.me/c/{chat_id[4:]}/{message.message_id}"
+    return None
+
+
+async def _send_private_if_possible(bot, user_id: int, text: str, reply_markup=None, parse_mode=None):
+    try:
+        return await bot.send_message(
+            chat_id=user_id, text=text, reply_markup=reply_markup, parse_mode=parse_mode
+        )
+    except TelegramError:
+        return None
+
+
+async def rob(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await _enabled():
+        return
+    message = update.effective_message
+    robber = update.effective_user
+    if not message or not message.reply_to_message or not robber:
+        return
+    victim = message.reply_to_message.from_user
+    if not victim:
+        return
+    if robber.id == victim.id:
+        await message.reply_text("• شوفو الغبي يبي يزرف نفسه 😭😭 .")
+        return
+    robber_bank = await get_bank(robber.id)
+    victim_bank = await get_bank(victim.id)
+    if not robber_bank:
+        await message.reply_text("• ماعندك حساب بنكي:")
+        return
+    if not victim_bank:
+        await message.reply_text("• ماعنده حساب بنكي")
+        return
+    status, amount, remaining = await rob_user(
+        robber.id, victim.id, int(time.time()), random.randint(20, 1000)
+    )
+    if status == "robber_cooldown":
+        await message.reply_text(
+            "• انحش يارجال الشرطة تدور عليك 🚓\n"
+            f"• يمديك تزرف بعد {_format_clock(remaining)} دقيقة ⏰"
+        )
+        return
+    if status == "victim_cooldown":
+        await message.reply_text(
+            "• المسكين توه مزروف ارحمه شوي 😭 .\n"
+            f"• يمديك تزرفه بعد {_format_clock(remaining)} دقيقة"
+        )
+        return
+    if status == "empty":
+        return
+    if status != "ok":
+        await message.reply_text("• ماعنده حساب بنكي")
+        return
+    sent = await message.reply_text(f"• خذ يالحرامي زرفته {amount} نقطة 💵 .")
+    from datetime import datetime, timedelta, timezone
+    saudi = timezone(timedelta(hours=3))
+    now_dt = datetime.fromtimestamp(int(time.time()), saudi)
+    date_text = now_dt.strftime("%Y/%m/%d")
+    time_text = now_dt.strftime("%I:%M%p").lstrip("0")
+    group_name = message.chat.title or "القروب"
+    url = _message_link(sent)
+    keyboard = InlineKeyboardMarkup([[InlineKeyboardButton(group_name, url=url)]]) if url else None
+    await _send_private_if_possible(
+        context.bot, victim.id,
+        "• الحق على حلالك هههههه\n"
+        f"• الشخص ذا : {_mention(robber)}\n"
+        f"• زرفك {amount} نقطة 💸\n"
+        f"• التاريخ ↤︎ {date_text}\n"
+        f"• الساعة ↤︎ {time_text}\n-",
+        reply_markup=keyboard, parse_mode="HTML",
+    )
+
+
+async def transfer(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await _enabled():
+        return
+    message = update.effective_message
+    user = update.effective_user
+    if not message or not message.text or not user:
+        return
+    if not await _require_bank(message, user.id):
+        return
+    parts = message.text.strip().split()
+    if len(parts) != 2:
+        return
+    try:
+        amount = int(parts[1])
+    except ValueError:
+        return
+    if amount < 200:
+        return
+    if await get_points(user.id) < amount:
+        await message.reply_text("• نقاطك ماتكفي يا مطفر\n–")
+        return
+    _transfer_sessions[user.id] = {"amount": amount, "created_at": int(time.time())}
+    await message.reply_text("• الحين ارسل رقم الحساب البنكي الي تبي تحول له\n–")
+
+
+async def transfer_account_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await _enabled():
+        return
+    message = update.effective_message
+    user = update.effective_user
+    if not message or not message.text or not user:
+        return
+    session = _transfer_sessions.get(user.id)
+    if not session:
+        return
+    account_number = message.text.strip()
+    if not account_number.isdigit() or len(account_number) != 17:
+        return
+    recipient_bank = await get_bank_by_number(account_number)
+    if not recipient_bank:
+        _transfer_sessions.pop(user.id, None)
+        await message.reply_text("• مالقيت رقم الحساب البنكي\n–")
+        return
+    amount = int(session["amount"])
+    if int(recipient_bank["user_id"]) == user.id:
+        _transfer_sessions.pop(user.id, None)
+        return
+    status, sender_bank, recipient_bank, received = await transfer_points(
+        user.id, int(recipient_bank["user_id"]), amount
+    )
+    if status == "bank_missing":
+        _transfer_sessions.pop(user.id, None)
+        return
+    if status == "insufficient":
+        _transfer_sessions.pop(user.id, None)
+        await message.reply_text("• نقاطك ماتكفي يا مطفر\n–")
+        return
+    _transfer_sessions.pop(user.id, None)
+    recipient_mention = __import__("telegram.helpers", fromlist=["mention_html"]).mention_html(
+        int(recipient_bank["user_id"]), await get_user_name(int(recipient_bank["user_id"]))
+    )
+    fee_text = (
+        f"خصمت 5% لبنك {recipient_bank['bank']}"
+        if sender_bank["bank"] == recipient_bank["bank"]
+        else "خصمت 10% من بنك لبنك"
+    )
+    await message.reply_text(
+        f"حوالة صادرة من البنك ↢ ( {sender_bank['bank']} )\n"
+        f"المرسل : {_mention(user)}\n"
+        f"الحساب رقم : <code>{sender_bank['account_number']}</code>\n"
+        f"نوع البطاقة : {sender_bank['card_type']}\n"
+        f"المستلم : {recipient_mention}\n"
+        f"الحساب رقم : <code>{recipient_bank['account_number']}</code>\n"
+        f"البنك : {recipient_bank['bank']}\n"
+        f"نوع البطاقة : {recipient_bank['card_type']}\n"
+        f"{fee_text}\n"
+        f"المبلغ : {received} نقطة 💵",
+        parse_mode="HTML",
+    )
+    recipient_id = int(recipient_bank["user_id"])
+    _transfer_message_sessions.pop(recipient_id, None)
+    keyboard = InlineKeyboardMarkup([[
+        InlineKeyboardButton(
+            "ارسل رسالة للمُرسل 🌹",
+            callback_data=f"tasliyat:transfer_message:{recipient_id}:{user.id}",
+        )
+    ]])
+    await _send_private_if_possible(
+        context.bot, recipient_id,
+        f"حوالة واردة من البنك ↢ ( {sender_bank['bank']} )\n\n"
+        f"المرسل : {_mention(user)}\n"
+        f"الحساب رقم : <code>{sender_bank['account_number']}</code>\n"
+        f"نوع البطاقة : {sender_bank['card_type']}\n"
+        f"المبلغ : {received} نقطة 💸",
+        reply_markup=keyboard, parse_mode="HTML",
+    )
+
+
+async def transfer_message_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    if not query or not query.data:
+        return
+    parts = query.data.split(":")
+    if len(parts) != 4:
+        return
+    try:
+        recipient_id, sender_id = int(parts[2]), int(parts[3])
+    except ValueError:
+        return
+    if query.from_user.id != recipient_id:
+        await query.answer()
+        return
+    _transfer_message_sessions[recipient_id] = sender_id
+    await query.answer()
+    if query.message:
+        await query.message.reply_text("• تمام، ارسل الرسالة وبرسلها للمرسل فورًا .")
+
+
+async def transfer_message_receiver(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await _enabled():
+        return
+    message = update.effective_message
+    user = update.effective_user
+    chat = update.effective_chat
+    if not message or not user or not chat or chat.type != "private":
+        return
+    sender_id = _transfer_message_sessions.pop(user.id, None)
+    if not sender_id:
+        return
+    if message.text:
+        notification = (
+            "• جتك رسالة من الشخص الي حولت له🌹\n"
+            f"• اسمه: {_mention(user)}\n"
+            f"• الرسالة: {escape(message.text)}"
+        )
+        try:
+            await context.bot.send_message(chat_id=sender_id, text=notification, parse_mode="HTML")
+        except TelegramError:
+            raise ApplicationHandlerStop()
+        await message.reply_text("• تم ارسال الرسالة بنجاح ✅ .")
+        raise ApplicationHandlerStop()
+    caption = message.caption
+    notification = (
+        "• جتك رسالة من الشخص الي حولت له🌹\n"
+        f"• اسمه: {_mention(user)}\n• الرسالة:"
+    )
+    if caption:
+        notification += f" {escape(caption)}"
+    try:
+        await context.bot.send_message(chat_id=sender_id, text=notification, parse_mode="HTML")
+        await context.bot.copy_message(
+            chat_id=sender_id, from_chat_id=user.id, message_id=message.message_id
+        )
+    except TelegramError:
+        raise ApplicationHandlerStop()
+    await message.reply_text("• تم ارسال الرسالة بنجاح ✅ .")
+    raise ApplicationHandlerStop()
+
+
+def _format_clock(seconds: int) -> str:
+    minutes, secs = divmod(max(0, int(seconds)), 60)
+    return f"{minutes:02d}:{secs:02d}"
