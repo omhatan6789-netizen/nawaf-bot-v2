@@ -225,7 +225,7 @@ def build_application() -> Application:
     application.add_handler(MessageHandler(
         filters.ChatType.GROUPS & filters.TEXT & ~filters.COMMAND,
         mandatory_subscription_commands,
-    ), group=-21)
+    ), group=-90)
     application.add_handler(MessageHandler(
         filters.ChatType.GROUPS & filters.TEXT & ~filters.COMMAND,
         emoji_reactions_handler,
