@@ -23,6 +23,10 @@ from handlers.roles import (
 from handlers.user_permissions import permission_command
 from handlers.command_guard import command_guard
 from handlers.command_lock import lock_command, save_lock_rank, open_command
+from handlers.blocked_words import (
+    blocked_words_message_handler, blocked_words_callback,
+    blocked_words_expiry_loop,
+)
 from handlers.repetition import (
     repetition_message_handler, repetition_expiry_loop,
     enable_repetition, disable_repetition, set_repetition_start,
@@ -82,11 +86,15 @@ async def post_init(application: Application) -> None:
         repetition_expiry_loop(application),
         name="repetition-expiry-loop",
     )
+    application.bot_data["blocked_words_expiry_task"] = application.create_task(
+        blocked_words_expiry_loop(application),
+        name="blocked-words-expiry-loop",
+    )
     logger.info("Bot startup completed")
 
 
 async def post_shutdown(application: Application) -> None:
-    for task_key in ("moderation_expiry_task", "repetition_expiry_task"):
+    for task_key in ("moderation_expiry_task", "repetition_expiry_task", "blocked_words_expiry_task"):
         task = application.bot_data.get(task_key)
         if task is not None and not task.done():
             task.cancel()
@@ -132,6 +140,13 @@ def build_application() -> Application:
     application.bot_data["settings"] = settings
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("health", health_command))
+
+    # Blocked words: both lists, admin controls, and callback UI.
+    application.add_handler(
+        MessageHandler(filters.TEXT & (filters.ChatType.GROUPS | filters.ChatType.PRIVATE), blocked_words_message_handler),
+        group=37,
+    )
+    application.add_handler(CallbackQueryHandler(blocked_words_callback, pattern=r"^bw:"))
 
     # Repetition protection settings and message detector.
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.TEXT & ~filters.COMMAND, receive_repetition_duration), group=-10)
