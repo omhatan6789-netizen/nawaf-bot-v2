@@ -450,3 +450,83 @@ async def get_user_name(user_id: int) -> str:
     if not row:
         return str(user_id)
     return row["first_name"] or row["username"] or str(user_id)
+
+
+async def ensure_scratch_codes(hour_key: int, expires_at) -> None:
+    import random
+    import secrets
+    import string
+
+    pool = get_pool()
+    chars = string.ascii_uppercase + string.digits
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            await conn.execute("SELECT pg_advisory_xact_lock($1)", 918273645)
+            count = int(await conn.fetchval(
+                "SELECT COUNT(*) FROM scratch_codes WHERE hour_key=$1",
+                hour_key,
+            ) or 0)
+            while count < 10:
+                code = "".join(secrets.choice(chars) for _ in range(12))
+                amount = random.randint(70, 10_000_000)
+                inserted = await conn.fetchval(
+                    """INSERT INTO scratch_codes(code,amount,hour_key,expires_at)
+                       VALUES($1,$2,$3,$4)
+                       ON CONFLICT(code) DO NOTHING
+                       RETURNING id""",
+                    code, amount, hour_key, expires_at,
+                )
+                if inserted is not None:
+                    count += 1
+
+
+async def get_active_scratch_codes(now):
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        return await conn.fetch(
+            """SELECT code FROM scratch_codes
+               WHERE used=FALSE AND expires_at>$1 ORDER BY id ASC""",
+            now,
+        )
+
+
+async def redeem_scratch_code(user_id: int, code: str, now) -> tuple[str, int]:
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            await _ensure_user(conn, user_id)
+            await conn.execute("SELECT pg_advisory_xact_lock($1)", user_id)
+            last = await conn.fetchval(
+                "SELECT last_scratched_at FROM scratch_limits WHERE user_id=$1",
+                user_id,
+            )
+            if last is not None:
+                remaining = int((last + __import__("datetime").timedelta(hours=2) - now).total_seconds())
+                if remaining > 0:
+                    return "cooldown", remaining
+            amount = await conn.fetchval(
+                """UPDATE scratch_codes SET used=TRUE, used_by=$1
+                   WHERE code=$2 AND used=FALSE AND expires_at>$3
+                   RETURNING amount""",
+                user_id, code, now,
+            )
+            if amount is None:
+                return "invalid", 0
+            await conn.execute(
+                """INSERT INTO scratch_limits(user_id,last_scratched_at)
+                   VALUES($1,$2)
+                   ON CONFLICT(user_id) DO UPDATE
+                   SET last_scratched_at=EXCLUDED.last_scratched_at""",
+                user_id, now,
+            )
+            balance = await conn.fetchval(
+                "UPDATE points SET points=points+$2 WHERE user_id=$1 RETURNING points",
+                user_id, int(amount),
+            )
+    return "success", int(amount)
+
+
+async def reset_scratch_limit(user_id: int) -> None:
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        await conn.execute("DELETE FROM scratch_limits WHERE user_id=$1", user_id)
