@@ -47,6 +47,11 @@ from handlers.moderation import (
 )
 from handlers.delete_messages import delete_messages
 from ai_assistant import ai_assistant_message
+from button_colors import (
+    load_button_color_cache, register_existing_panel_buttons,
+    patch_inline_keyboard_buttons,
+)
+from handlers.button_colors import change_button_color_start, change_button_color_handler
 from handlers.emoji_reactions import emoji_reactions_handler, load_emoji_reaction_rules
 from handlers.mandatory_subscription import (
     mandatory_subscription_guard, mandatory_subscription_commands,
@@ -139,6 +144,9 @@ async def post_init(application: Application) -> None:
     await ensure_game_tables()
     from database.replies import load_replies_cache
     await load_replies_cache()
+    await load_button_color_cache()
+    await register_existing_panel_buttons()
+    patch_inline_keyboard_buttons()
     await load_emoji_reaction_rules()
     if not await check_database():
         raise RuntimeError("Database health check failed")
@@ -218,6 +226,14 @@ def build_application() -> Application:
     application.bot_data["settings"] = settings
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("health", health_command))
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.Regex(r"^تعديل لون$"),
+        change_button_color_start,
+    ), group=-20)
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.TEXT & ~filters.COMMAND,
+        change_button_color_handler,
+    ), group=-14)
     application.add_handler(MessageHandler(
         filters.ChatType.GROUPS,
         mandatory_subscription_guard,
