@@ -59,6 +59,20 @@ async def command_guard(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if any(key in context.user_data for key in WAITING_KEYS):
         return
+    try:
+        from handlers.replies import (
+            add_reply_sessions, add_special_reply_sessions,
+            delete_special_reply_sessions, edit_special_reply_sessions,
+            edit_reply_sessions, delete_reply_sessions,
+        )
+        if any(user.id in sessions for sessions in (
+            add_reply_sessions, add_special_reply_sessions,
+            delete_special_reply_sessions, edit_special_reply_sessions,
+            edit_reply_sessions, delete_reply_sessions,
+        )):
+            return
+    except ImportError:
+        pass
     if text == "منع" or text.startswith("منع ") or text == "سماح" or text.startswith("سماح "):
         return
     if text.startswith("قفل امر ") or text.startswith("فتح امر "):
