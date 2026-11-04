@@ -153,13 +153,22 @@ async def run_investment(user_id: int, now: int, cooldown_seconds: int, amount: 
             balance = int(await conn.fetchval(
                 "SELECT points FROM points WHERE user_id=$1 FOR UPDATE", user_id
             ) or 0)
+            await conn.execute(
+                "INSERT INTO tasliyat_cooldowns(user_id) VALUES($1) ON CONFLICT(user_id) DO NOTHING",
+                user_id,
+            )
+            current_until = int(await conn.fetchval(
+                "SELECT investment_until FROM tasliyat_cooldowns WHERE user_id=$1 FOR UPDATE",
+                user_id,
+            ) or 0)
+            if current_until > now:
+                return "cooldown", balance, current_until - now
             if amount <= 0 or balance < amount:
                 return "insufficient", balance, 0
-            claimed, remaining = await _claim_cooldown(
-                conn, user_id, "investment_until", now, now + cooldown_seconds
+            await conn.execute(
+                "UPDATE tasliyat_cooldowns SET investment_until=$2 WHERE user_id=$1",
+                user_id, now + cooldown_seconds,
             )
-            if not claimed:
-                return "cooldown", balance, remaining
             if profit is not None and profit > 0:
                 balance = int(await conn.fetchval(
                     "UPDATE points SET points=points+$2 WHERE user_id=$1 RETURNING points",
@@ -177,13 +186,22 @@ async def run_luck(user_id: int, now: int, cooldown_seconds: int, amount: int, w
             balance = int(await conn.fetchval(
                 "SELECT points FROM points WHERE user_id=$1 FOR UPDATE", user_id
             ) or 0)
+            await conn.execute(
+                "INSERT INTO tasliyat_cooldowns(user_id) VALUES($1) ON CONFLICT(user_id) DO NOTHING",
+                user_id,
+            )
+            current_until = int(await conn.fetchval(
+                "SELECT luck_until FROM tasliyat_cooldowns WHERE user_id=$1 FOR UPDATE",
+                user_id,
+            ) or 0)
+            if current_until > now:
+                return "cooldown", balance, balance, current_until - now
             if amount <= 0 or balance < amount:
                 return "insufficient", balance, balance, 0
-            claimed, remaining = await _claim_cooldown(
-                conn, user_id, "luck_until", now, now + cooldown_seconds
+            await conn.execute(
+                "UPDATE tasliyat_cooldowns SET luck_until=$2 WHERE user_id=$1",
+                user_id, now + cooldown_seconds,
             )
-            if not claimed:
-                return "cooldown", balance, balance, remaining
             delta = amount if won else -amount
             new_balance = int(await conn.fetchval(
                 "UPDATE points SET points=points+$2 WHERE user_id=$1 RETURNING points",
