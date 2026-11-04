@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from telegram import Update
@@ -79,7 +80,7 @@ async def post_shutdown(application: Application) -> None:
         task.cancel()
         try:
             await task
-        except Exception:
+        except asyncio.CancelledError:
             pass
     try:
         await flush_pending_points()
@@ -126,16 +127,16 @@ def build_application() -> Application:
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^تعطيل المدة للمشرفين$"), disable_durations_command))
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^تفعيل الاسباب$"), enable_reasons_command))
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^تعطيل الاسباب$"), disable_reasons_command))
-    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^كشف(?:\\s+@[A-Za-z0-9_]+|\\s+\\d+)?$"), reveal_command))
-    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^كشف القيود(?:\\s+@[A-Za-z0-9_]+|\\s+\\d+)?$"), reveal_restrictions_command))
-    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^(كتم|تقييد|حظر)(?:\\s+.+)?$"), moderation_command))
-    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^الغاء الكتم(?:\\s+.+)?$"), unmute_command))
-    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^الغاء التقييد(?:\\s+.+)?$"), unrestrict_command))
-    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^الغاء الحظر(?:\\s+.+)?$"), unban_command))
-    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^رفع القيود(?:\\s+.+)?$"), clear_restrictions_command))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^كشف(?:\s+@[A-Za-z0-9_]+|\s+\d+)?$"), reveal_command))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^كشف القيود(?:\s+@[A-Za-z0-9_]+|\s+\d+)?$"), reveal_restrictions_command))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^(كتم|تقييد|حظر)(?:\s+.+)?$"), moderation_command))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^الغاء الكتم(?:\s+.+)?$"), unmute_command))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^الغاء التقييد(?:\s+.+)?$"), unrestrict_command))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^الغاء الحظر(?:\s+.+)?$"), unban_command))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^رفع القيود(?:\s+.+)?$"), clear_restrictions_command))
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^(المكتومين|المقيدين|المحظورين)$"), moderation_lists_command))
     application.add_handler(CallbackQueryHandler(clear_list_callback, pattern=r"^moderation:clear:"))
-    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^انذار(?:\\s+.+)?$"), warning_command))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^انذار(?:\s+.+)?$"), warning_command))
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^مسح انذاراته$"), clear_warnings_command))
 
     # Profile cards and admin replies (legacy plain-text commands).
