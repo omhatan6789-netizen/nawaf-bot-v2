@@ -1,0 +1,1 @@
+"""Image quiz game package."""
