@@ -7,6 +7,8 @@ from config import load_settings
 from database import close_pool, init_pool
 from database.health import check_database
 from database.migration_runner import apply_all_migrations
+from database.activity import shutdown_activity
+from handlers.message_tracking import save_group_text_message
 from handlers.points import (
     add_points_command, remove_points_command, sell_points,
     my_points, top_points, flush_pending_points,
@@ -31,6 +33,7 @@ async def post_init(application: Application) -> None:
 async def post_shutdown(application: Application) -> None:
     try:
         await flush_pending_points()
+        await shutdown_activity()
     finally:
         await close_pool()
     logger.info("Bot shutdown completed")
