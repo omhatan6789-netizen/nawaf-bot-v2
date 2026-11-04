@@ -44,6 +44,7 @@ from handlers.moderation import (
     clear_warnings_command, reveal_restrictions_command,
     moderation_expiry_loop, reveal_command, repetition_action_callback,
 )
+from handlers.delete_messages import delete_messages
 from handlers.profile_replies import (
     developer_command, change_developer_username,
     owner_command, change_owner_username,
@@ -176,6 +177,7 @@ def build_application() -> Application:
     application.add_handler(CallbackQueryHandler(repetition_action_callback, pattern=r"^repetition_punish:(?:mute|restrict):\d+$"))
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^انذار(?:\s+.+)?$"), warning_command))
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^مسح انذاراته$"), clear_warnings_command))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^مسح(?:\s*\d+)?$"), delete_messages))
 
     # Profile cards and admin replies (legacy plain-text commands).
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, profile_reply_pending_handler), group=-11)
