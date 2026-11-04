@@ -237,7 +237,10 @@ def build_application() -> Application:
         start_rock_paper_scissors,
     ))
     application.add_handler(CallbackQueryHandler(
-        rock_paper_scissors_callback, pattern=r"^rps:    # Shared big games: hide-and-seek and penalties.
+        rock_paper_scissors_callback, pattern=r"^rps:"
+    ))
+
+    # Shared big games: hide-and-seek and penalties.
     application.add_handler(MessageHandler(
         filters.ChatType.GROUPS & filters.Regex(r"^غميضة$"),
         start_hide_game,
@@ -247,7 +250,7 @@ def build_application() -> Application:
         start_penalty_game,
     ))
     application.add_handler(MessageHandler(
-        filters.ChatType.GROUPS & filters.Regex(r"^\\.وزع$"),
+        filters.ChatType.GROUPS & filters.Regex(r"^\.وزع$"),
         distribute_penalties,
     ))
     application.add_handler(MessageHandler(
@@ -255,19 +258,19 @@ def build_application() -> Application:
         join_big_game_router,
     ))
     application.add_handler(MessageHandler(
-        filters.ChatType.GROUPS & filters.Regex(r"^\\.ابدا$"),
+        filters.ChatType.GROUPS & filters.Regex(r"^\.ابدا$"),
         begin_big_game_router,
     ))
     application.add_handler(MessageHandler(
-        filters.ChatType.GROUPS & filters.Regex(r"^\\.كمل$"),
+        filters.ChatType.GROUPS & filters.Regex(r"^\.كمل$"),
         continue_big_game_router,
     ))
     application.add_handler(MessageHandler(
-        filters.ChatType.GROUPS & filters.Regex(r"^\\.انهاء$"),
+        filters.ChatType.GROUPS & filters.Regex(r"^\.انهاء$"),
         end_big_game_router,
     ))
     application.add_handler(MessageHandler(
-        filters.ChatType.GROUPS & filters.Regex(r"^\\.(?:احمر|ازرق)(?:\\s+\\d+\\*?)+$"),
+        filters.ChatType.GROUPS & filters.Regex(r"^\.(?:احمر|ازرق)(?:\s+\d+\*?)+$"),
         manual_team_command,
     ))
     application.add_handler(CallbackQueryHandler(
