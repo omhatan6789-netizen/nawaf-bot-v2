@@ -197,8 +197,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             )
         except Exception:
             logger.exception("Failed to record private /start for mandatory subscription")
-    if update.effective_message:
-        await update.effective_message.reply_text("أهلًا! بوت نواف قيد التجهيز 🎖️")
+    await start(update, context)
 
 
 async def health_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -501,11 +500,6 @@ def build_application() -> Application:
         ),
         group=9,
     )
-
-    # Private /start message with saved text, entities, images and buttons.
-    application.add_handler(CommandHandler(
-        "start", start, filters=filters.ChatType.PRIVATE
-    ))
 
     # Help and interactive command menus.
     application.add_handler(CommandHandler("help", commands_menu_start))
