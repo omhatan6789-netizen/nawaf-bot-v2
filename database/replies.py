@@ -33,8 +33,8 @@ async def load_replies_cache(force: bool = False):
             return _reply_cache, _special_cache
         pool = get_pool()
         normal_rows, special_rows = await asyncio.gather(
-            pool.fetch("SELECT name,text,type,caption,entities FROM replies ORDER BY name"),
-            pool.fetch("SELECT name,text,type,caption,entities FROM special_replies ORDER BY name"),
+            pool.fetch("SELECT name,text,type,caption,entities FROM replies"),
+            pool.fetch("SELECT name,text,type,caption,entities FROM special_replies"),
         )
         _reply_cache = {
             row["name"]: (
