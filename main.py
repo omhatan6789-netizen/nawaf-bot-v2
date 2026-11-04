@@ -70,9 +70,9 @@ def build_application() -> Application:
     # Plain-text commands retain the legacy wording.
     application.add_handler(MessageHandler(filters.Regex(r"^نقاطي$"), my_points))
     application.add_handler(MessageHandler(filters.Regex(r"^توب النقاط(?:🎖️)?$"), top_points))
-    application.add_handler(MessageHandler(filters.Regex(r"^اضف(?:\\s+.*)?$"), add_points_command))
-    application.add_handler(MessageHandler(filters.Regex(r"^خصم(?:\\s+.*)?$"), remove_points_command))
-    application.add_handler(MessageHandler(filters.Regex(r"^بيع نقاطي(?:\\s+.*)?$"), sell_points))
+    application.add_handler(MessageHandler(filters.Regex(r"^اضف(?:\s+.*)?$"), add_points_command))
+    application.add_handler(MessageHandler(filters.Regex(r"^خصم(?:\s+.*)?$"), remove_points_command))
+    application.add_handler(MessageHandler(filters.Regex(r"^بيع نقاطي(?:\s+.*)?$"), sell_points))
     return application
 
 
