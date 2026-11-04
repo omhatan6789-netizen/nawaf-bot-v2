@@ -48,6 +48,7 @@ from handlers.delete_messages import delete_messages
 from games.rock_paper_scissors import (
     start_rock_paper_scissors, rock_paper_scissors_callback,
 )
+from games.xo import start_xo_game, xo_callback
 from handlers.tasliyat import (
     create_bank_account, bank_callback, my_bank_account,
     delete_bank_account, salary, tip, invest, luck,
@@ -227,6 +228,12 @@ def build_application() -> Application:
     application.add_handler(CallbackQueryHandler(
         rock_paper_scissors_callback, pattern=r"^rps:"
     ))
+
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.Regex(r"^اكس او(?:\s+\d+)?$"),
+        start_xo_game,
+    ))
+    application.add_handler(CallbackQueryHandler(xo_callback, pattern=r"^xo:"))
 
     # Bank and economy commands (legacy wording retained).
     application.add_handler(MessageHandler(filters.Regex(r"^انشاء حساب بنكي$"), create_bank_account))
