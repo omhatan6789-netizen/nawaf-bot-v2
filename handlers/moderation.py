@@ -24,6 +24,7 @@ from database.moderation import (
     get_user_restrictions, get_sanction_rows, clear_sanction_table,
     get_warning_count, add_warning, clear_warnings,
     get_expired_sanctions, get_user_messages,
+    get_repetition_punishment_duration,
 )
 from database.roles import get_rank, get_rank_level
 
@@ -583,3 +584,57 @@ async def moderation_expiry_loop(application):
         except Exception:
             logger.exception("Moderation expiry loop failed")
         await asyncio.sleep(5)
+
+
+async def repetition_action_callback(update, context):
+    query = update.callback_query
+    if not query or not query.message:
+        return
+    chat = query.message.chat
+    actor = query.from_user
+    data = (query.data or "").split(":")
+    if len(data) != 3 or data[0] != "repetition_punish" or data[1] not in ("mute", "restrict"):
+        return
+    try:
+        target_id = int(data[2])
+    except (TypeError, ValueError):
+        return
+    if await _get_level(actor.id, chat.id) < 3:
+        await query.answer("❌ ليس لديك الصلاحية.", show_alert=True)
+        return
+    if await get_warning_count(chat.id, target_id) < 3:
+        await query.answer("❌ لم يعد لديه 3 إنذارات.", show_alert=True)
+        return
+    if target_id == OWNER_ID:
+        await query.answer("❌ لا يمكن تطبيق العقوبة على المطور الأساسي.", show_alert=True)
+        return
+    if await _get_level(target_id, chat.id) >= await _get_level(actor.id, chat.id):
+        await query.answer("❌ لا يمكنك معاقبة شخص رتبته مساوية أو أعلى منك.", show_alert=True)
+        return
+    try:
+        target = await context.bot.get_chat(target_id)
+    except Exception:
+        await query.answer("❌ تعذر العثور على المستخدم.", show_alert=True)
+        return
+    duration = await get_repetition_punishment_duration(chat.id)
+    until_time = datetime.now(timezone.utc) + timedelta(seconds=duration)
+    if data[1] == "mute":
+        await save_sanction("bot_mutes", chat.id, target, until_time, "التكرار", context.bot.id)
+    else:
+        try:
+            await context.bot.restrict_chat_member(
+                chat_id=chat.id, user_id=target_id,
+                permissions=ChatPermissions(can_send_messages=False),
+                until_date=until_time,
+            )
+        except Exception:
+            logger.exception("Failed to apply repetition restriction")
+            await query.answer("❌ تعذر تطبيق العقوبة.", show_alert=True)
+            return
+        await save_sanction("restrictions", chat.id, target, until_time, "التكرار", context.bot.id)
+    await clear_warnings(chat.id, target_id)
+    await query.answer("تم اختيار العقوبة وتصفير إنذاراته.")
+    try:
+        await query.edit_message_text("• ✅ تم اختيار العقوبة المناسبة بنجاح .")
+    except Exception:
+        logger.debug("Could not edit repetition punishment message", exc_info=True)
