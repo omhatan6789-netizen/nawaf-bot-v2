@@ -418,3 +418,25 @@ async def clear_lower_group_ranks(chat_id: int, user_id: int, actor_level: int) 
 
 async def clear_all_role_caches() -> None:
     _cache.clear()
+
+
+async def check_user_permission(chat_id: int, user_id: int, command: str):
+    """Return True/False for an explicit override, or None when unset."""
+    command = " ".join((command or "").split())
+    if not command:
+        return None
+    if await is_primary_developer(user_id):
+        return True
+    key = ("user_permission", int(chat_id), int(user_id), command)
+    value, found = _cache_get(key)
+    if found:
+        return value
+    pool = get_pool()
+    row = await pool.fetchrow(
+        """SELECT allowed FROM group_user_permissions
+           WHERE chat_id=$1 AND user_id=$2 AND permission=$3""",
+        int(chat_id), int(user_id), command,
+    )
+    result = bool(row["allowed"]) if row else None
+    _cache_set(key, result)
+    return result
