@@ -23,7 +23,8 @@ from database.blocked_words import (
     cleanup_expired_blocked_warnings, invalidate_blocked_cache,
 )
 from database.moderation import (
-    save_sanction, delete_sanction, get_user_by_id, get_user_by_username,
+    save_sanction, delete_sanction, save_target_user,
+    get_user_by_id, get_user_by_username,
 )
 from database.roles import get_rank_level, is_primary_developer
 
@@ -462,6 +463,10 @@ async def check_blocked_words(update, context) -> bool:
                 logger.warning("Could not delete blocked-word message from admin", exc_info=True)
             return True
         if level <= BLOCKED_WORDS_MAX_AFFECTED_RANK:
+            try:
+                await save_target_user(actor)
+            except Exception:
+                logger.debug("Could not save blocked-word target user", exc_info=True)
             try:
                 await message.delete()
             except Exception:
