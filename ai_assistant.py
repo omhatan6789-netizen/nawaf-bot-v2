@@ -595,7 +595,7 @@ async def _fetch_page(url):
 
 async def _image_url_candidates_from_google(query: str):
     page = await _fetch_page("https://www.google.com/search?" + urlencode({"tbm": "isch", "q": query}))
-    page = page.replace(r"\\/", "/").replace(r"\u003d", "=").replace(r"\u0026", "&").replace(r"\u003c", "<").replace(r"\u003e", ">")
+    page = page.replace(r"\/", "/").replace(r"\u003d", "=").replace(r"\u0026", "&").replace(r"\u003c", "<").replace(r"\u003e", ">")
     candidates = []
     for match in re.finditer(r'"ou"\s*:\s*"(https?://[^"\\]+)', page):
         url = match.group(1).replace(r"\u0026", "&")
