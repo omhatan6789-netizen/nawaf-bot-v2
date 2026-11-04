@@ -23,6 +23,13 @@ from handlers.roles import (
 from handlers.user_permissions import permission_command
 from handlers.command_guard import command_guard
 from handlers.command_lock import lock_command, save_lock_rank, open_command
+from handlers.repetition import (
+    repetition_message_handler, repetition_expiry_loop,
+    enable_repetition, disable_repetition, set_repetition_start,
+    receive_repetition_duration, set_mute_duration,
+    set_restrict_duration, set_repetition_rank,
+    clear_user_repetition_warnings,
+)
 from handlers.moderation import (
     moderation_command, check_muted_message,
     unmute_command, unrestrict_command, unban_command,
@@ -71,17 +78,22 @@ async def post_init(application: Application) -> None:
         moderation_expiry_loop(application),
         name="moderation-expiry-loop",
     )
+    application.bot_data["repetition_expiry_task"] = application.create_task(
+        repetition_expiry_loop(application),
+        name="repetition-expiry-loop",
+    )
     logger.info("Bot startup completed")
 
 
 async def post_shutdown(application: Application) -> None:
-    task = application.bot_data.get("moderation_expiry_task")
-    if task is not None and not task.done():
-        task.cancel()
-        try:
-            await task
-        except asyncio.CancelledError:
-            pass
+    for task_key in ("moderation_expiry_task", "repetition_expiry_task"):
+        task = application.bot_data.get(task_key)
+        if task is not None and not task.done():
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
     try:
         await flush_pending_points()
         await shutdown_activity()
@@ -120,6 +132,17 @@ def build_application() -> Application:
     application.bot_data["settings"] = settings
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("health", health_command))
+
+    # Repetition protection settings and message detector.
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.TEXT & ~filters.COMMAND, receive_repetition_duration), group=-10)
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^تفعيل التكرار$"), enable_repetition))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^تعطيل التكرار$"), disable_repetition))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^ضع تكرار \\d+$"), set_repetition_start))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^ضع كتم تكرار \\S+$"), set_mute_duration))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^ضع تقييد تكرار \\S+$"), set_restrict_duration))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^(?:ضع|تغيير) رتبة التكرار (عضو|مميز|ادمن|ادمن اساسي|نائب المالك|المالك|Dev)$"), set_repetition_rank))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^مسح انذاراته$"), clear_user_repetition_warnings), group=-1)
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS, repetition_message_handler), group=38)
 
     # Moderation / sanctions (same plain-text commands as the legacy bot).
     application.add_handler(MessageHandler(filters.ChatType.GROUPS, check_muted_message), group=-30)
