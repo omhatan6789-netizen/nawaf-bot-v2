@@ -22,6 +22,15 @@ from handlers.roles import (
 from handlers.user_permissions import permission_command
 from handlers.command_guard import command_guard
 from handlers.command_lock import lock_command, save_lock_rank, open_command
+from handlers.profile_replies import (
+    developer_command, change_developer_username,
+    owner_command, change_owner_username,
+    add_my_admin_reply, delete_my_admin_reply, delete_other_admin_reply,
+    admin_replies_list, enable_admin_replies, disable_admin_replies,
+    delete_all_admin_replies_command, check_admin_profile_reply,
+    profile_reply_pending_handler,
+)
+
 from handlers.replies import (
     add_reply_start, add_reply_handler, check_replies, replies_list,
     add_special_reply_start, add_special_reply_handler, special_replies_list,
@@ -89,6 +98,24 @@ def build_application() -> Application:
     application.bot_data["settings"] = settings
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("health", health_command))
+
+    # Profile cards and admin replies (legacy plain-text commands).
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, profile_reply_pending_handler), group=-11)
+    application.add_handler(MessageHandler(filters.Regex(r"^المطور$"), developer_command))
+    application.add_handler(MessageHandler(filters.Regex(r"^تغيير يوزر المطور$"), change_developer_username))
+    application.add_handler(MessageHandler(filters.Regex(r"^المالك$"), owner_command))
+    application.add_handler(MessageHandler(filters.Regex(r"^تغيير يوزر المالك$"), change_owner_username))
+    application.add_handler(MessageHandler(filters.Regex(r"^اضف ردي$"), add_my_admin_reply))
+    application.add_handler(MessageHandler(filters.Regex(r"^حذف ردي$"), delete_my_admin_reply))
+    application.add_handler(MessageHandler(filters.Regex(r"^حذف رده$"), delete_other_admin_reply))
+    application.add_handler(MessageHandler(filters.Regex(r"^ردود الادمن$"), admin_replies_list))
+    application.add_handler(MessageHandler(filters.Regex(r"^تفعيل ردود الادمن$"), enable_admin_replies))
+    application.add_handler(MessageHandler(filters.Regex(r"^تعطيل ردود الادمن$"), disable_admin_replies))
+    application.add_handler(MessageHandler(filters.Regex(r"^حذف ردود الادمن$"), delete_all_admin_replies_command))
+    application.add_handler(
+        MessageHandler(filters.ChatType.GROUPS & filters.TEXT & ~filters.COMMAND, check_admin_profile_reply),
+        group=39,
+    )
 
     # Plain-text commands retain the legacy wording.
     application.add_handler(MessageHandler(filters.Regex(r"^اضف رد مميز$"), add_special_reply_start))
