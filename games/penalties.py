@@ -268,7 +268,7 @@ async def start_penalty_game(
     # الصلاحية
     # ==================================================
 
-    if not await can_manage_penalties(user.id, chat_id):
+    if not await can_manage_penalties(user.id, chat.id):
 
         await update.message.reply_text(
             "❌ هذا الأمر للرتب فقط."
