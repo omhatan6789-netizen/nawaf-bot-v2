@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import secrets
 from typing import Any
+from datetime import timedelta
 
 from .pool import get_pool
 
@@ -501,7 +502,7 @@ async def redeem_scratch_code(user_id: int, code: str, now) -> tuple[str, int]:
                 user_id,
             )
             if last is not None:
-                remaining = int((last + __import__("datetime").timedelta(hours=2) - now).total_seconds())
+                remaining = int((last + timedelta(hours=2) - now).total_seconds())
                 if remaining > 0:
                     return "cooldown", remaining
             amount = await conn.fetchval(
