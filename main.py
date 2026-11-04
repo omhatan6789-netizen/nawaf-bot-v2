@@ -49,6 +49,11 @@ from games.rock_paper_scissors import (
     start_rock_paper_scissors, rock_paper_scissors_callback,
 )
 from games.xo import start_xo_game, xo_callback
+from games.liar import (
+    start_liar_game_lobby, force_voting,
+    liar_lobby_callback, liar_vote_callback, liar_guess_callback,
+    check_liar_message,
+)
 from games.hide_and_seek import (
     start_hide_game, hide_number_callback, search_number_callback,
 )
@@ -59,6 +64,7 @@ from games.penalties import (
 from games.big_game_join import (
     join_big_game_router, begin_big_game_router,
     continue_big_game_router, end_big_game_router,
+    leave_big_game_router,
 )
 from handlers.tasliyat import (
     create_bank_account, bank_callback, my_bank_account,
@@ -240,26 +246,34 @@ def build_application() -> Application:
         rock_paper_scissors_callback, pattern=r"^rps:"
     ))
 
-    # Shared big games: hide-and-seek and penalties.
+    # Shared big games: classic liar, hide-and-seek, and penalties.
     application.add_handler(MessageHandler(
-        filters.ChatType.GROUPS & filters.Regex(r"^غميضة$"),
-        start_hide_game,
+        filters.ChatType.GROUPS & filters.Regex(r"^الكذاب$"),
+        start_liar_game_lobby,
     ))
     application.add_handler(MessageHandler(
         filters.ChatType.GROUPS & filters.Regex(r"^بلنتيات$"),
         start_penalty_game,
     ))
     application.add_handler(MessageHandler(
-        filters.ChatType.GROUPS & filters.Regex(r"^\.وزع$"),
-        distribute_penalties,
+        filters.ChatType.GROUPS & filters.Regex(r"^غميضة$"),
+        start_hide_game,
     ))
     application.add_handler(MessageHandler(
         filters.ChatType.GROUPS & filters.Regex(r"^دخول$"),
         join_big_game_router,
     ))
     application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.Regex(r"^\.خروج$"),
+        leave_big_game_router,
+    ))
+    application.add_handler(MessageHandler(
         filters.ChatType.GROUPS & filters.Regex(r"^\.ابدا$"),
         begin_big_game_router,
+    ))
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.Regex(r"^\.التصويت$"),
+        force_voting,
     ))
     application.add_handler(MessageHandler(
         filters.ChatType.GROUPS & filters.Regex(r"^\.كمل$"),
@@ -270,8 +284,21 @@ def build_application() -> Application:
         end_big_game_router,
     ))
     application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.Regex(r"^\.وزع$"),
+        distribute_penalties,
+    ))
+    application.add_handler(MessageHandler(
         filters.ChatType.GROUPS & filters.Regex(r"^\.(?:احمر|ازرق)(?:\s+\d+\*?)+$"),
         manual_team_command,
+    ))
+    application.add_handler(CallbackQueryHandler(
+        liar_lobby_callback, pattern=r"^liar_lobby:"
+    ))
+    application.add_handler(CallbackQueryHandler(
+        liar_vote_callback, pattern=r"^liar_vote:"
+    ))
+    application.add_handler(CallbackQueryHandler(
+        liar_guess_callback, pattern=r"^liar_guess:"
     ))
     application.add_handler(CallbackQueryHandler(
         hide_number_callback, pattern=r"^hide:"
@@ -285,6 +312,13 @@ def build_application() -> Application:
     application.add_handler(CallbackQueryHandler(
         penalty_direction_callback, pattern=r"^penalty:direction:"
     ))
+    application.add_handler(
+        MessageHandler(
+            filters.ChatType.GROUPS & filters.TEXT & ~filters.COMMAND,
+            check_liar_message,
+        ),
+        group=9,
+    )
 
     # Bank and economy commands (legacy wording retained).
     application.add_handler(MessageHandler(filters.Regex(r"^انشاء حساب بنكي$"), create_bank_account))
