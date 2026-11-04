@@ -396,9 +396,10 @@ async def get_reply_user_data(user, content=None, caption=None, chat_id=None):
     data = await get_user(user.id)
     if not data:
         return 0, "عضو", 0
-    messages = int(data.get("messages", 0) or 0)
-    rank = await get_rank(user.id, chat_id)
-    points = int(data.get("points", 0) or 0)
+    row = dict(data)
+    messages = int(row.get("messages", 0) or 0)
+    rank = await get_rank(user.id)
+    points = int(row.get("points", 0) or 0)
     return messages, rank, points
 
 
