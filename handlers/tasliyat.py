@@ -11,6 +11,8 @@ from html import escape
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 
+from database.timing import timed
+
 from database.tasliyat import (
     games_enabled, get_points, get_bank, create_bank, delete_bank,
     claim_reward, run_investment, run_luck,
@@ -197,6 +199,7 @@ async def delete_bank_account(update: Update, context: ContextTypes.DEFAULT_TYPE
     await message.reply_text("• تم مسح حسابك البنكي .")
 
 
+@timed("handler.salary")
 async def salary(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await _enabled():
         return
@@ -221,6 +224,7 @@ async def salary(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+@timed("handler.tip")
 async def tip(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await _enabled():
         return
@@ -264,6 +268,7 @@ def _parse_amount(text: str, current: int) -> int | None:
     return None
 
 
+@timed("handler.invest")
 async def invest(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await _enabled():
         return
