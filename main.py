@@ -22,6 +22,16 @@ from handlers.roles import (
 from handlers.user_permissions import permission_command
 from handlers.command_guard import command_guard
 from handlers.command_lock import lock_command, save_lock_rank, open_command
+from handlers.moderation import (
+    moderation_command, check_muted_message,
+    unmute_command, unrestrict_command, unban_command,
+    clear_restrictions_command, moderation_lists_command,
+    clear_list_callback, enable_durations_command,
+    disable_durations_command, enable_reasons_command,
+    disable_reasons_command, warning_command,
+    clear_warnings_command, reveal_restrictions_command,
+    moderation_expiry_loop, reveal_command,
+)
 from handlers.profile_replies import (
     developer_command, change_developer_username,
     owner_command, change_owner_username,
@@ -56,10 +66,21 @@ async def post_init(application: Application) -> None:
     await load_replies_cache()
     if not await check_database():
         raise RuntimeError("Database health check failed")
+    application.bot_data["moderation_expiry_task"] = application.create_task(
+        moderation_expiry_loop(application),
+        name="moderation-expiry-loop",
+    )
     logger.info("Bot startup completed")
 
 
 async def post_shutdown(application: Application) -> None:
+    task = application.bot_data.get("moderation_expiry_task")
+    if task is not None and not task.done():
+        task.cancel()
+        try:
+            await task
+        except Exception:
+            pass
     try:
         await flush_pending_points()
         await shutdown_activity()
@@ -98,6 +119,24 @@ def build_application() -> Application:
     application.bot_data["settings"] = settings
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("health", health_command))
+
+    # Moderation / sanctions (same plain-text commands as the legacy bot).
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS, check_muted_message), group=-30)
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^تفعيل المدة للمشرفين$"), enable_durations_command))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^تعطيل المدة للمشرفين$"), disable_durations_command))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^تفعيل الاسباب$"), enable_reasons_command))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^تعطيل الاسباب$"), disable_reasons_command))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^كشف(?:\\s+@[A-Za-z0-9_]+|\\s+\\d+)?$"), reveal_command))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^كشف القيود(?:\\s+@[A-Za-z0-9_]+|\\s+\\d+)?$"), reveal_restrictions_command))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^(كتم|تقييد|حظر)(?:\\s+.+)?$"), moderation_command))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^الغاء الكتم(?:\\s+.+)?$"), unmute_command))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^الغاء التقييد(?:\\s+.+)?$"), unrestrict_command))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^الغاء الحظر(?:\\s+.+)?$"), unban_command))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^رفع القيود(?:\\s+.+)?$"), clear_restrictions_command))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^(المكتومين|المقيدين|المحظورين)$"), moderation_lists_command))
+    application.add_handler(CallbackQueryHandler(clear_list_callback, pattern=r"^moderation:clear:"))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^انذار(?:\\s+.+)?$"), warning_command))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^مسح انذاراته$"), clear_warnings_command))
 
     # Profile cards and admin replies (legacy plain-text commands).
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, profile_reply_pending_handler), group=-11)
