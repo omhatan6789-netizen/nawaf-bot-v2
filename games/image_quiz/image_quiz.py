@@ -1872,7 +1872,7 @@ async def start_image_quiz(
 
     from games.big_game_join import get_active_game
     active_game = get_active_game(chat.id)
-    if active_game and active_game != "image":
+    if active_game and active_game != "image_quiz":
         await message.reply_text(
             "⚠️ توجد لعبة أخرى قائمة بالفعل في هذا القروب."
         )
