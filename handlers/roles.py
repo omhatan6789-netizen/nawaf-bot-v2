@@ -112,7 +112,7 @@ def rank_permission_message(rank: str) -> str:
     return "• اعذرني بس ما عندك الصلاحية لهذا الأمر ."
 
 
-async def _can_change(actor_id: int, target_id: int, rank: str):
+async def _can_change(actor_id: int, target_id: int, rank: str, chat_id: int | None = None):
     actor_dev = await get_developer_type(actor_id)
     target_dev = await get_developer_type(target_id)
     if rank == "Dev":
@@ -132,7 +132,7 @@ async def _can_change(actor_id: int, target_id: int, rank: str):
         return False, "❌ لا يمكنك تعديل مطور من نفس رتبتك."
     if target_dev == DEV_SECONDARY:
         return False, "❌ لا يمكنك تعديل مطور Dev."
-    actor_level = await get_rank_level(actor_id)
+    actor_level = await get_rank_level(actor_id, chat_id)
     new_level = RANK_LEVELS.get(rank, 0)
     if new_level >= actor_level:
         return False, rank_permission_message(rank)
@@ -242,7 +242,7 @@ async def change_rank(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if target.id == actor.id and not promoting:
             await message.reply_text("❌ لا يمكنك إزالة Dev من نفسك.")
             return
-        allowed, reason = await _can_change(actor.id, target.id, "Dev")
+        allowed, reason = await _can_change(actor.id, target.id, "Dev", chat_id)
         if not allowed:
             await message.reply_text(reason)
             return
@@ -270,7 +270,7 @@ async def change_rank(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if target.id == OWNER_ID:
         await message.reply_text("❌ لا يمكن تعديل رتبة الـDev الأساسي.")
         return
-    allowed, reason = await _can_change(actor.id, target.id, rank)
+    allowed, reason = await _can_change(actor.id, target.id, rank, chat_id)
     if not allowed:
         await message.reply_text(reason)
         return
