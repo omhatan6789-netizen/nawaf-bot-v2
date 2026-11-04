@@ -49,6 +49,8 @@ from handlers.tasliyat import (
     create_bank_account, bank_callback, my_bank_account,
     delete_bank_account, salary, tip, invest, luck,
     store, my_possessions, other_possessions, buy_sell, gift,
+    rob, transfer, transfer_account_number,
+    transfer_message_callback, transfer_message_receiver,
 )
 from handlers.users import user_id_command
 from handlers.profile_replies import (
@@ -227,6 +229,12 @@ def build_application() -> Application:
     application.add_handler(MessageHandler(filters.Regex(r"^ممتلكاته$"), other_possessions))
     application.add_handler(MessageHandler(filters.Regex(r"^(شراء|بيع) \d+ \S+$"), buy_sell))
     application.add_handler(MessageHandler(filters.Regex(r"^اهداء \d+ \S+$"), gift))
+
+    application.add_handler(MessageHandler(filters.Regex(r"^زرف$"), rob))
+    application.add_handler(MessageHandler(filters.Regex(r"^تحويل \d+$"), transfer))
+    application.add_handler(MessageHandler(filters.Regex(r"^\d{17}$"), transfer_account_number))
+    application.add_handler(CallbackQueryHandler(transfer_message_callback, pattern=r"^tasliyat:transfer_message:"))
+    application.add_handler(MessageHandler(filters.ChatType.PRIVATE, transfer_message_receiver), group=-4)
     application.add_handler(CallbackQueryHandler(bank_callback, pattern=r"^tasliyat:bank:"))
     application.add_handler(MessageHandler(filters.Regex(r"^(رتبتي|رتبته(?:\s+@[A-Za-z0-9_]+|\s+\d+)?)$"), roles_command))
     application.add_handler(MessageHandler(filters.Regex(r"^كشف المجموعة$"), roles_command))
