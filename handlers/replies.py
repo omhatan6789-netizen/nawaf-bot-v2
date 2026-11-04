@@ -108,7 +108,7 @@ def deserialize_reply_metadata(value):
     return result or None, source_chat_id, source_message_id, copyable
 
 
-def _message_content(message):
+def _message_content(message, allow_sticker: bool = False):
     if message.text is not None:
         return message.text, "text", None, serialize_entities(message.entities, message)
     if message.photo:
@@ -117,7 +117,7 @@ def _message_content(message):
         return message.video.file_id, "video", message.caption, None
     if message.animation:
         return message.animation.file_id, "animation", message.caption, None
-    if message.sticker:
+    if allow_sticker and message.sticker:
         return message.sticker.file_id, "sticker", None, None
     if message.voice:
         return message.voice.file_id, "voice", None, None
@@ -139,13 +139,13 @@ async def _save_session_content(update: Update, sessions: dict, special: bool):
         return
     if session.get("step") == "name":
         if not message.text:
-            await message.reply_text("❌ أرسل الاسم كنص" if special else "❌ أرسل الاسم كنص")
+            await message.reply_text("❌ أرسل اسم الرد كنص" if special else "❌ أرسل الاسم كنص")
             return
         session["name"] = message.text.strip()
         session["step"] = "content"
         await message.reply_text(
             "• حسناً يمكنك اضافة\n"
-            "( نص, صوره, فيديو, متحركه, بصمه, اغنيه, ملف, ملصق )\n\n"
+            + ("( نص, صوره, فيديو, متحركه, بصمه, اغنيه, ملف, ملصق )" if special else "( نص, صوره, فيديو, متحركه, بصمه, اغنيه, ملف )") + "\n\n"
             "ويمكنك اضافة الرد بتلك الطريقة :\n\n"
             "▹ #الاسم - اسم العضو .\n"
             "▹ #يوزره - يوزر الرد .\n"
@@ -159,7 +159,9 @@ async def _save_session_content(update: Update, sessions: dict, special: bool):
         return
     if session.get("step") != "content":
         return
-    content, reply_type, caption, entities = _message_content(message)
+    content, reply_type, caption, entities = _message_content(message, allow_sticker=special)
+    if special and reply_type == "audio":
+        caption = None
     if content is None:
         await message.reply_text("❌ هذا النوع غير مدعوم")
         return
