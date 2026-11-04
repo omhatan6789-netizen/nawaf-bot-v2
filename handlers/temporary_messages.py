@@ -297,7 +297,7 @@ async def temporary_message_command(update, context):
         return
 
     if command in ("اضف رسالة مؤقتة", "اضف رساله مؤقته"):
-        if len(_get_rows(scope, chat_id)) >= MAX_MESSAGES:
+        if len(await _get_rows(scope, chat_id)) >= MAX_MESSAGES:
             await message.reply_text("• وصلت للحد الأعلى، وهو 8 رسائل مؤقتة.")
             return
 
@@ -342,7 +342,7 @@ async def temporary_message_command(update, context):
     match = re.fullmatch(r"ضع الرسالة\s+(\d+)", command)
     if match:
         number = int(match.group(1))
-        row = _get_row(scope, chat_id, number)
+        row = await _get_row(scope, chat_id, number)
         if not row:
             await message.reply_text("• مافيه رسالة يالطيب .")
             return
@@ -574,7 +574,7 @@ async def temporary_message_callback(update, context):
 
     # الرجوع للقائمة داخل نفس رسالة لوحة التحكم
     if action == "list":
-        rows = _get_rows(scope, chat_id)
+        rows = await _get_rows(scope, chat_id)
         title = (
             "قائمة الرسائل المؤقتة العامة:"
             if scope == "global"
@@ -672,7 +672,7 @@ async def temporary_message_callback(update, context):
     # عرض تفاصيل الرسالة
     payload = json.loads(row[1])
     saved_buttons = json.loads(row[2] or "[]")
-    rows = _get_rows(scope, chat_id)
+    rows = await _get_rows(scope, chat_id)
 
     number = next(
         (
