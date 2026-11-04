@@ -181,10 +181,24 @@ async def post_init(application: Application) -> None:
         temporary_message_scheduler(application),
         name="temporary-message-scheduler",
     )
+    try:
+        if await start_music_call():
+            await start_account_clock()
+            logger.info("Music account connected; profile clock started.")
+    except Exception:
+        logger.exception("Music account startup failed")
     logger.info("Bot startup completed")
 
 
 async def post_shutdown(application: Application) -> None:
+    try:
+        await shutdown_account_clock()
+    except Exception:
+        logger.exception("Account clock shutdown failed")
+    try:
+        await shutdown_music_call()
+    except Exception:
+        logger.exception("Music account shutdown failed")
     for task_key in ("moderation_expiry_task", "repetition_expiry_task", "blocked_words_expiry_task", "temporary_message_scheduler_task"):
         task = application.bot_data.get(task_key)
         if task is not None and not task.done():
