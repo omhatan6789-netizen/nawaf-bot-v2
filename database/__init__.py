@@ -11,3 +11,5 @@ __all__ = [
 ]
 
 from .users import ensure_user, get_user, register_joined_member, update_member_status
+
+from .roles import (\n    get_rank, get_rank_level, get_group_rank, get_group_ranks,\n    add_group_rank, remove_group_rank, update_developer_rank,\n    check_command_permission, check_user_permission, set_user_permission,\n)\n
