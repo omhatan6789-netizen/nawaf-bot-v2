@@ -64,7 +64,12 @@ from games.penalties import (
 from games.big_game_join import (
     join_big_game_router, begin_big_game_router,
     continue_big_game_router, end_big_game_router,
-    leave_big_game_router,
+    leave_big_game_router, distribute_big_game_router,
+)
+from games.word_race import (
+    start_word_race, word_race_mode, word_race_distribution,
+    word_race_manual_team, word_race_add_solo,
+    word_race_callback, check_word_race_message,
 )
 from handlers.tasliyat import (
     create_bank_account, bank_callback, my_bank_account,
@@ -255,6 +260,34 @@ def build_application() -> Application:
         filters.ChatType.GROUPS & filters.Regex(r"^بلنتيات$"),
         start_penalty_game,
     ))
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.Regex(r"^سباق الكلمات$"),
+        start_word_race,
+    ))
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.Regex(r"^\\.الطور$"),
+        word_race_mode,
+    ))
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.Regex(r"^\\.توزيع$"),
+        word_race_distribution,
+    ))
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.Regex(r"^\\.اضافة (?:احمر|ازرق|اخضر|اصفر)$"),
+        word_race_manual_team,
+    ))
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.Regex(r"^\\.اضافة$"),
+        word_race_add_solo,
+    ))
+    application.add_handler(CallbackQueryHandler(
+        word_race_callback, pattern=r"^wr:"
+    ))
+    application.add_handler(MessageHandler(
+        (filters.ChatType.GROUPS | filters.ChatType.PRIVATE)
+        & filters.TEXT & ~filters.COMMAND,
+        check_word_race_message,
+    ), group=10)
     application.add_handler(MessageHandler(
         filters.ChatType.GROUPS & filters.Regex(r"^غميضة$"),
         start_hide_game,
