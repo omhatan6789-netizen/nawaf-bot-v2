@@ -247,6 +247,10 @@ def build_application() -> Application:
         start_penalty_game,
     ))
     application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.Regex(r"^\\.وزع$"),
+        distribute_penalties,
+    ))
+    application.add_handler(MessageHandler(
         filters.ChatType.GROUPS & filters.Regex(r"^دخول$"),
         join_big_game_router,
     ))
