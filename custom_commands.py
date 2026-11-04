@@ -73,6 +73,7 @@ async def add_command_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not message or not user or user.id != OWNER_ID:
         return ConversationHandler.END
     add_command_sessions[user.id] = {}
+    context.user_data["custom_command"] = True
     await message.reply_text("حسناً، أرسل الأمر القديم")
     return WAIT_OLD
 
@@ -107,6 +108,7 @@ async def receive_new_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     old = add_command_sessions[user.id].get("old")
     if not old:
         add_command_sessions.pop(user.id, None)
+        context.user_data.pop("custom_command", None)
         return ConversationHandler.END
     if old == new:
         await message.reply_text("• الأمر الجديد لازم يكون مختلف عن الأمر القديم")
@@ -127,6 +129,7 @@ async def receive_new_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         return WAIT_NEW
     set_custom_command_cache(old, new)
     add_command_sessions.pop(user.id, None)
+    context.user_data.pop("custom_command", None)
     await message.reply_text(f"✅ تم إضافة الأمر\n\n{new} يعمل الآن مثل {old}")
     return ConversationHandler.END
 
