@@ -127,6 +127,10 @@ async def claim_reward(user_id: int, column: str, now: int, cooldown_seconds: in
     async with pool.acquire() as conn:
         async with conn.transaction():
             await _ensure_user(conn, user_id)
+            await conn.fetchval(
+                "SELECT points FROM points WHERE user_id=$1 FOR UPDATE",
+                user_id,
+            )
             claimed, remaining = await _claim_cooldown(
                 conn, user_id, column, now, now + cooldown_seconds
             )
