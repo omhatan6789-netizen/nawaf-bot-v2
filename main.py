@@ -45,6 +45,9 @@ from handlers.moderation import (
     moderation_expiry_loop, reveal_command, repetition_action_callback,
 )
 from handlers.delete_messages import delete_messages
+from games.rock_paper_scissors import (
+    start_rock_paper_scissors, rock_paper_scissors_callback,
+)
 from handlers.tasliyat import (
     create_bank_account, bank_callback, my_bank_account,
     delete_bank_account, salary, tip, invest, luck,
@@ -215,6 +218,15 @@ def build_application() -> Application:
     application.add_handler(MessageHandler(filters.Regex(r"^اضف(?:\s+.*)?$"), add_points_command))
     application.add_handler(MessageHandler(filters.Regex(r"^خصم(?:\s+.*)?$"), remove_points_command))
     application.add_handler(MessageHandler(filters.Regex(r"^بيع نقاطي(?:\s+.*)?$"), sell_points))
+
+    # Rock-paper-scissors challenge (same legacy commands and callbacks).
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.Regex(r"^(?:حجرة(?: ورقة مقص)?|ورقة|مقص)(?:\s+\d+)?$"),
+        start_rock_paper_scissors,
+    ))
+    application.add_handler(CallbackQueryHandler(
+        rock_paper_scissors_callback, pattern=r"^rps:"
+    ))
 
     # Bank and economy commands (legacy wording retained).
     application.add_handler(MessageHandler(filters.Regex(r"^انشاء حساب بنكي$"), create_bank_account))
