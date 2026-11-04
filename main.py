@@ -65,6 +65,7 @@ from games.big_game_join import (
     join_big_game_router, begin_big_game_router,
     continue_big_game_router, end_big_game_router,
     leave_big_game_router, distribute_big_game_router,
+    add_big_game_player_router,
 )
 from games.word_race import (
     start_word_race, word_race_mode, word_race_distribution,
@@ -72,7 +73,7 @@ from games.word_race import (
     word_race_callback, check_word_race_message,
 )
 from games.image_quiz.image_quiz import (
-    start_image_quiz, add_image_quiz_player, image_quiz_settings,
+    start_image_quiz, image_quiz_settings,
     check_image_quiz_message, image_quiz_callback,
     add_manual_image_command, receive_manual_image, cancel_manual_image,
     delete_manual_image_command, receive_delete_manual_image,
@@ -268,10 +269,6 @@ def build_application() -> Application:
         image_quiz_settings,
     ))
     application.add_handler(MessageHandler(
-        filters.ChatType.GROUPS & filters.Regex(r"^\.اضافة$"),
-        add_image_quiz_player,
-    ))
-    application.add_handler(MessageHandler(
         filters.ChatType.GROUPS & filters.Regex(r"^اضف صورة$"),
         add_manual_image_command,
     ))
@@ -330,7 +327,7 @@ def build_application() -> Application:
     ))
     application.add_handler(MessageHandler(
         filters.ChatType.GROUPS & filters.Regex(r"^\.اضافة$"),
-        word_race_add_solo,
+        add_big_game_player_router,
     ))
     application.add_handler(CallbackQueryHandler(
         word_race_callback, pattern=r"^wr:"
