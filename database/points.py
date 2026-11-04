@@ -84,13 +84,22 @@ async def transfer_points(sender_id: int, receiver_id: int, amount: int) -> dict
             await _ensure_user(conn, sender_id)
             await _ensure_user(conn, receiver_id)
 
-            # Ensure both balance rows exist before the conditional debit.
+            # Ensure both balance rows exist, then lock them in a stable order.
             await conn.execute(
                 """
                 INSERT INTO points(user_id, points) VALUES($1, 0), ($2, 0)
                 ON CONFLICT(user_id) DO NOTHING
                 """,
                 sender_id, receiver_id,
+            )
+            await conn.fetch(
+                """
+                SELECT user_id FROM points
+                WHERE user_id = ANY($1::bigint[])
+                ORDER BY user_id
+                FOR UPDATE
+                """,
+                [sender_id, receiver_id],
             )
 
             sender_balance = await conn.fetchval(
