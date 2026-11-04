@@ -10,6 +10,7 @@ _games_cache_value: bool | None = None
 _games_cache_expires: float = 0.0
 
 from .pool import get_pool
+from .timing import timed
 
 _COOLDOWN_COLUMNS = {
     "salary_until", "tip_until", "robber_until",
@@ -17,6 +18,7 @@ _COOLDOWN_COLUMNS = {
 }
 
 
+@timed("db.tasliyat.games_enabled")
 async def games_enabled() -> bool:
     global _games_cache_value, _games_cache_expires
     now = time.monotonic()
@@ -41,6 +43,7 @@ async def _ensure_user(conn: Any, user_id: int) -> None:
     )
 
 
+@timed("db.tasliyat.get_points")
 async def get_points(user_id: int) -> int:
     pool = get_pool()
     async with pool.acquire() as conn:
@@ -48,6 +51,7 @@ async def get_points(user_id: int) -> int:
     return int(value or 0)
 
 
+@timed("db.tasliyat.get_bank")
 async def get_bank(user_id: int) -> dict[str, Any] | None:
     pool = get_pool()
     async with pool.acquire() as conn:
@@ -121,6 +125,7 @@ async def _claim_cooldown(conn: Any, user_id: int, column: str, now: int, until:
     return False, max(0, int(current or 0) - now)
 
 
+@timed("db.tasliyat.claim_reward")
 async def claim_reward(user_id: int, column: str, now: int, cooldown_seconds: int, amount: int) -> tuple[bool, int, int]:
     """Claim a cooldown and credit the reward atomically."""
     pool = get_pool()
@@ -144,6 +149,7 @@ async def claim_reward(user_id: int, column: str, now: int, cooldown_seconds: in
     return True, int(balance), 0
 
 
+@timed("db.tasliyat.run_investment")
 async def run_investment(user_id: int, now: int, cooldown_seconds: int, amount: int, profit: int | None) -> tuple[str, int, int]:
     """Validate funds, claim cooldown, and apply an optional profit atomically."""
     pool = get_pool()
