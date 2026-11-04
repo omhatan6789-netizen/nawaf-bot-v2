@@ -206,3 +206,35 @@ async def flush_pending_points() -> None:
             for user_id, amount in pending.items():
                 _pending_point_deltas[user_id] = _pending_point_deltas.get(user_id, 0) + amount
             raise
+
+
+async def transfer_points_atomic(sender_id: int, recipient_id: int, amount: int) -> bool:
+    """Transfer points once, atomically, only if the sender can cover the stake."""
+    _validate_amount(amount)
+    if sender_id == recipient_id:
+        return False
+    first_id, second_id = sorted((sender_id, recipient_id))
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            await _ensure_user(conn, sender_id)
+            await _ensure_user(conn, recipient_id)
+            await conn.execute(
+                "INSERT INTO points(user_id, points) VALUES($1,0),($2,0) ON CONFLICT(user_id) DO NOTHING",
+                first_id, second_id,
+            )
+            await conn.fetch(
+                "SELECT user_id FROM points WHERE user_id=ANY($1::bigint[]) ORDER BY user_id FOR UPDATE",
+                [first_id, second_id],
+            )
+            debited = await conn.fetchval(
+                "UPDATE points SET points=points-$2 WHERE user_id=$1 AND points >= $2 RETURNING user_id",
+                sender_id, amount,
+            )
+            if debited is None:
+                return False
+            await conn.execute(
+                "UPDATE points SET points=points+$2 WHERE user_id=$1",
+                recipient_id, amount,
+            )
+    return True
