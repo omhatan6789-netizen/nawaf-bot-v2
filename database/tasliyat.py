@@ -344,31 +344,54 @@ async def rob_user(robber_id: int, victim_id: int, now: int, amount: int) -> tup
             )
             if len(bank_rows) != 2:
                 return "bank_missing", 0, 0
+
+            # Lock point rows in a stable order to avoid deadlocks.
             ids = sorted((robber_id, victim_id))
             await conn.fetch(
                 "SELECT user_id FROM points WHERE user_id = ANY($1::bigint[]) ORDER BY user_id FOR UPDATE",
                 ids,
             )
-            robber_cd, _ = await _claim_cooldown(
-                conn, robber_id, "robber_until", now, now + 300
+
+            await conn.execute(
+                "INSERT INTO tasliyat_cooldowns(user_id) VALUES($1),($2) ON CONFLICT(user_id) DO NOTHING",
+                robber_id, victim_id,
             )
-            if not robber_cd:
-                left = await conn.fetchval(
-                    "SELECT robber_until-$2 FROM tasliyat_cooldowns WHERE user_id=$1",
-                    robber_id, now,
-                )
-                return "robber_cooldown", 0, int(left or 0)
-            victim_cd, left = await _claim_cooldown(
-                conn, victim_id, "victim_rob_until", now, now + 600
+            cooldowns = await conn.fetchrow(
+                """SELECT user_id, robber_until, victim_rob_until
+                   FROM tasliyat_cooldowns WHERE user_id=ANY($1::bigint[])""",
+                ids,
             )
-            if not victim_cd:
-                return "victim_cooldown", 0, left
+            # Fetch both cooldowns explicitly; no cooldown is consumed on a failed attempt.
+            rows = await conn.fetch(
+                """SELECT user_id, robber_until, victim_rob_until
+                   FROM tasliyat_cooldowns WHERE user_id=ANY($1::bigint[])""",
+                ids,
+            )
+            by_id = {int(row["user_id"]): row for row in rows}
+            robber_left = max(0, int(by_id[robber_id]["robber_until"] or 0) - now)
+            victim_left = max(0, int(by_id[victim_id]["victim_rob_until"] or 0) - now)
+            if robber_left:
+                return "robber_cooldown", 0, robber_left
+            if victim_left:
+                return "victim_cooldown", 0, victim_left
+
             victim_points = int(await conn.fetchval(
                 "SELECT points FROM points WHERE user_id=$1", victim_id
             ) or 0)
             if victim_points <= 0:
                 return "empty", 0, 0
+
             stolen = min(max(1, amount), victim_points)
+            await conn.execute(
+                """UPDATE tasliyat_cooldowns
+                   SET robber_until=$2 WHERE user_id=$1""",
+                robber_id, now + 300,
+            )
+            await conn.execute(
+                """UPDATE tasliyat_cooldowns
+                   SET victim_rob_until=$2 WHERE user_id=$1""",
+                victim_id, now + 600,
+            )
             await conn.execute(
                 "UPDATE points SET points=points-$2 WHERE user_id=$1",
                 victim_id, stolen,
