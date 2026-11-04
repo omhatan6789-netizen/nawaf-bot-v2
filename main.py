@@ -6,6 +6,7 @@ from telegram.ext import Application, ApplicationBuilder, CallbackQueryHandler, 
 
 from config import load_settings
 from database import close_pool, init_pool
+from database.pool import get_pool
 from database.health import check_database
 from database.migration_runner import apply_all_migrations
 from database.activity import shutdown_activity
@@ -47,6 +48,9 @@ from handlers.moderation import (
 from handlers.delete_messages import delete_messages
 from ai_assistant import ai_assistant_message
 from handlers.emoji_reactions import emoji_reactions_handler, load_emoji_reaction_rules
+from handlers.mandatory_subscription import (
+    mandatory_subscription_guard, mandatory_subscription_commands,
+)
 from handlers.temporary_messages import (
     temporary_message_command, temporary_message_pending_handler,
     temporary_message_callback, temporary_message_scheduler,
@@ -175,6 +179,16 @@ async def post_shutdown(application: Application) -> None:
 
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    chat = update.effective_chat
+    if user and chat and chat.type == "private":
+        try:
+            await get_pool().execute(
+                "INSERT INTO developer_private_starts(user_id) VALUES($1) ON CONFLICT(user_id) DO NOTHING",
+                user.id,
+            )
+        except Exception:
+            logger.exception("Failed to record private /start for mandatory subscription")
     if update.effective_message:
         await update.effective_message.reply_text("أهلًا! بوت نواف قيد التجهيز 🎖️")
 
@@ -204,6 +218,14 @@ def build_application() -> Application:
     application.bot_data["settings"] = settings
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("health", health_command))
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS,
+        mandatory_subscription_guard,
+    ), group=-100)
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.TEXT & ~filters.COMMAND,
+        mandatory_subscription_commands,
+    ), group=-21)
     application.add_handler(MessageHandler(
         filters.ChatType.GROUPS & filters.TEXT & ~filters.COMMAND,
         emoji_reactions_handler,
