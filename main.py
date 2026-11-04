@@ -43,6 +43,8 @@ async def post_init(application: Application) -> None:
     settings = application.bot_data["settings"]
     await init_pool(settings)
     await apply_all_migrations()
+    from database.replies import load_replies_cache
+    await load_replies_cache()
     if not await check_database():
         raise RuntimeError("Database health check failed")
     logger.info("Bot startup completed")
