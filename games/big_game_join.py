@@ -10,6 +10,7 @@ from games.liar import (
 from games.penalties import (
     active_penalty_games,
     join_penalty_game,
+    distribute_penalties,
     begin_penalties,
     continue_penalties,
     end_penalty_game,
@@ -20,6 +21,15 @@ from games.hide_and_seek import (
     begin_hide_game,
     end_hide_game,
 )
+from games.word_race import (
+    RACES,
+    join_word_race,
+    leave_word_race,
+    begin_word_race,
+    continue_word_race,
+    end_word_race,
+    word_race_distribution,
+)
 
 
 def get_active_game(chat_id: int) -> str | None:
@@ -29,6 +39,8 @@ def get_active_game(chat_id: int) -> str | None:
         return "penalty"
     if chat_id in active_hide_games:
         return "hide"
+    if chat_id in RACES:
+        return "word_race"
     return None
 
 
@@ -43,6 +55,8 @@ async def join_big_game_router(update, context):
         await join_penalty_game(update, context)
     elif game == "hide":
         await join_hide_game(update, context)
+    elif game == "word_race":
+        await join_word_race(update, context)
 
 
 async def leave_big_game_router(update, context):
@@ -51,6 +65,8 @@ async def leave_big_game_router(update, context):
         return
     if chat.id in active_liar_games:
         await leave_liar_game(update, context)
+    elif chat.id in RACES:
+        await leave_word_race(update, context)
 
 
 async def begin_big_game_router(update, context):
@@ -64,6 +80,8 @@ async def begin_big_game_router(update, context):
         await begin_penalties(update, context)
     elif game == "hide":
         await begin_hide_game(update, context)
+    elif game == "word_race":
+        await begin_word_race(update, context)
 
 
 async def continue_big_game_router(update, context):
@@ -72,6 +90,8 @@ async def continue_big_game_router(update, context):
         return
     if chat.id in active_penalty_games:
         await continue_penalties(update, context)
+    elif chat.id in RACES:
+        await continue_word_race(update, context)
 
 
 async def end_big_game_router(update, context):
@@ -85,3 +105,15 @@ async def end_big_game_router(update, context):
         await end_penalty_game(update, context)
     elif game == "hide":
         await end_hide_game(update, context)
+    elif game == "word_race":
+        await end_word_race(update, context)
+
+
+async def distribute_big_game_router(update, context):
+    chat = update.effective_chat
+    if not chat:
+        return
+    if chat.id in RACES:
+        await word_race_distribution(update, context)
+    elif chat.id in active_penalty_games:
+        await distribute_penalties(update, context)
