@@ -22,19 +22,18 @@ async def _claim_reply_slot(user_id, now):
     pool = get_pool()
     async with pool.acquire() as conn:
         async with conn.transaction():
-            row = await conn.fetchrow(
-                "SELECT replied_at FROM auto_private_replied WHERE user_id=$1 FOR UPDATE",
+            previous_time = await conn.fetchval(
+                "SELECT replied_at FROM auto_private_replied WHERE user_id=$1",
                 int(user_id),
             )
-            previous_time = int(row["replied_at"]) if row else None
-            if previous_time is not None and now - previous_time < REPLY_INTERVAL:
-                return False, previous_time
-            await conn.execute(
+            claimed = await conn.fetchval(
                 """INSERT INTO auto_private_replied(user_id,replied_at) VALUES($1,$2)
-                   ON CONFLICT(user_id) DO UPDATE SET replied_at=EXCLUDED.replied_at""",
-                int(user_id), int(now),
+                   ON CONFLICT(user_id) DO UPDATE SET replied_at=EXCLUDED.replied_at
+                   WHERE auto_private_replied.replied_at <= $2 - $3
+                   RETURNING user_id""",
+                int(user_id), int(now), REPLY_INTERVAL,
             )
-            return True, previous_time
+            return claimed is not None, int(previous_time) if previous_time is not None else None
 
 
 async def _restore_reply_time(user_id, previous_time, claimed_time):
