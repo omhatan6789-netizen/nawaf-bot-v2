@@ -14,6 +14,12 @@ from handlers.points import (
     add_points_command, remove_points_command, sell_points,
     my_points, top_points, flush_pending_points,
 )
+from handlers.roles import (
+    roles_command, change_rank, dev_list_command, rank_list_command,
+    clear_dev_command, clear_rank_command, clear_all_ranks_command,
+    roles_clear_callback,
+)
+from handlers.user_permissions import permission_command
 
 logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
