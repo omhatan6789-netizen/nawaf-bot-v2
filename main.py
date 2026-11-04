@@ -22,6 +22,15 @@ from handlers.roles import (
 from handlers.user_permissions import permission_command
 from handlers.command_guard import command_guard
 from handlers.command_lock import lock_command, save_lock_rank, open_command
+from handlers.replies import (
+    add_reply_start, add_reply_handler, check_replies, replies_list,
+    add_special_reply_start, add_special_reply_handler, special_replies_list,
+    edit_special_reply_start, edit_special_reply_handler,
+    edit_reply_start, edit_reply_handler,
+    delete_special_reply_start, delete_special_reply_handler,
+    delete_reply_start, delete_reply_handler,
+    delete_all_replies, delete_all_special_replies,
+)
 
 logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
