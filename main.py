@@ -31,7 +31,7 @@ from handlers.moderation import (
     disable_durations_command, enable_reasons_command,
     disable_reasons_command, warning_command,
     clear_warnings_command, reveal_restrictions_command,
-    moderation_expiry_loop, reveal_command,
+    moderation_expiry_loop, reveal_command, repetition_action_callback,
 )
 from handlers.profile_replies import (
     developer_command, change_developer_username,
@@ -136,6 +136,7 @@ def build_application() -> Application:
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^رفع القيود(?:\s+.+)?$"), clear_restrictions_command))
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^(المكتومين|المقيدين|المحظورين)$"), moderation_lists_command))
     application.add_handler(CallbackQueryHandler(clear_list_callback, pattern=r"^moderation:clear:"))
+    application.add_handler(CallbackQueryHandler(repetition_action_callback, pattern=r"^repetition_punish:(?:mute|restrict):\\d+$"))
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^انذار(?:\s+.+)?$"), warning_command))
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^مسح انذاراته$"), clear_warnings_command))
 
