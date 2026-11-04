@@ -257,8 +257,8 @@ async def invest(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if amount is None or amount <= 0:
         return
     success = random.randint(1, 100) <= 90
-    profit = (amount * _investment_percent()) // 100 if success else None
-    percent = (profit * 100 // amount) if profit is not None else 0
+    percent = _investment_percent() if success else 0
+    profit = (amount * percent) // 100 if success else None
     status, balance, remaining = await run_investment(
         user.id, int(time.time()), 1200, amount, profit
     )
