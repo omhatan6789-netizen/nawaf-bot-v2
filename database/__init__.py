@@ -6,6 +6,6 @@ from .points import add_points, deduct_points, get_points, get_points_leaderboar
 
 __all__ = [
     "init_pool", "get_pool", "close_pool", "apply_all_migrations",
-    "get_points", "add_points", "deduct_points", "transfer_points",
+    "get_points", "add_points", "deduct_points",
     "get_points_leaderboard", "queue_points", "flush_pending_points", "sell_points_for_messages",
 ]
