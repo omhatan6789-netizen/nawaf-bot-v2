@@ -2,8 +2,6 @@ from telegram import Update
 from telegram.ext import ChatMemberHandler, ContextTypes
 
 from database.users import register_joined_member, update_member_status
-from handlers.cache import set_cached_user
-
 
 async def chat_member_updated(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     event = update.chat_member
@@ -27,18 +25,5 @@ async def chat_member_updated(update: Update, context: ContextTypes.DEFAULT_TYPE
             last_name=user.last_name,
             is_bot=user.is_bot,
         )
-        # The event confirms membership; cache only a known default profile here.
-        # A later profile read fetches counters and points from PostgreSQL.
-        cached = {
-            "user_id": user.id,
-            "username": user.username,
-            "first_name": user.first_name or "",
-            "last_name": user.last_name,
-            "messages": 0,
-            "rank": "عضو",
-            "joined_date": "غير معروف",
-            "points": 0,
-        }
-        set_cached_user(user.id, cached)
     elif status in ("left", "kicked"):
         await update_member_status(chat.id, user.id, status)
