@@ -267,7 +267,7 @@ def build_application() -> Application:
         end_big_game_router,
     ))
     application.add_handler(MessageHandler(
-        filters.ChatType.GROUPS & filters.Regex(r"^\\.(?:احمر|ازرق)\\s+.+$"),
+        filters.ChatType.GROUPS & filters.Regex(r"^\\.(?:احمر|ازرق)(?:\\s+\\d+\\*?)+$"),
         manual_team_command,
     ))
     application.add_handler(CallbackQueryHandler(
@@ -281,15 +281,6 @@ def build_application() -> Application:
     ))
     application.add_handler(CallbackQueryHandler(
         penalty_direction_callback, pattern=r"^penalty:direction:"
-    ))
-
- end_hide_game,
-    ))
-    application.add_handler(CallbackQueryHandler(
-        hide_number_callback, pattern=r"^hide:"
-    ))
-    application.add_handler(CallbackQueryHandler(
-        search_number_callback, pattern=r"^search:"
     ))
 
     # Bank and economy commands (legacy wording retained).
