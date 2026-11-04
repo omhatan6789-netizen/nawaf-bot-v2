@@ -45,6 +45,11 @@ from handlers.moderation import (
     moderation_expiry_loop, reveal_command, repetition_action_callback,
 )
 from handlers.delete_messages import delete_messages
+from handlers.temporary_messages import (
+    temporary_message_command, temporary_message_pending_handler,
+    temporary_message_callback, temporary_message_scheduler,
+    track_temporary_message_chat,
+)
 from games.rock_paper_scissors import (
     start_rock_paper_scissors, rock_paper_scissors_callback,
 )
@@ -138,11 +143,15 @@ async def post_init(application: Application) -> None:
         blocked_words_expiry_loop(application),
         name="blocked-words-expiry-loop",
     )
+    application.bot_data["temporary_message_scheduler_task"] = application.create_task(
+        temporary_message_scheduler(application),
+        name="temporary-message-scheduler",
+    )
     logger.info("Bot startup completed")
 
 
 async def post_shutdown(application: Application) -> None:
-    for task_key in ("moderation_expiry_task", "repetition_expiry_task", "blocked_words_expiry_task"):
+    for task_key in ("moderation_expiry_task", "repetition_expiry_task", "blocked_words_expiry_task", "temporary_message_scheduler_task"):
         task = application.bot_data.get(task_key)
         if task is not None and not task.done():
             task.cancel()
@@ -188,6 +197,25 @@ def build_application() -> Application:
     application.bot_data["settings"] = settings
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("health", health_command))
+    # Recurring temporary messages.
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.Regex(
+            r"^(?:اضف رسالة مؤقتة|اضف رساله مؤقته|الرسائل المؤقتة|الرسائل المؤقته|"
+            r"مسح الرس(?:الة|اله) المؤقت(?:ة|ه)(?:\\s+\\d+)?|"
+            r"مسح الرسائل المؤقتة|مسح الرسائل المؤقته|ضع الرسالة\\s+\\d+)(?: عام)?$"
+        ),
+        temporary_message_command,
+    ))
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS, temporary_message_pending_handler
+    ), group=-10)
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS, track_temporary_message_chat
+    ), group=-2)
+    application.add_handler(CallbackQueryHandler(
+        temporary_message_callback, pattern=r"^tmp:"
+    ))
+
 
     # Blocked words: both lists, admin controls, and callback UI.
     application.add_handler(
