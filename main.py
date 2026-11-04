@@ -50,8 +50,15 @@ from games.rock_paper_scissors import (
 )
 from games.xo import start_xo_game, xo_callback
 from games.hide_and_seek import (
-    start_hide_game, join_hide_game, begin_hide_game, end_hide_game,
-    hide_number_callback, search_number_callback,
+    start_hide_game, hide_number_callback, search_number_callback,
+)
+from games.penalties import (
+    start_penalty_game, distribute_penalties, manual_team_command,
+    distribution_callback, penalty_direction_callback,
+)
+from games.big_game_join import (
+    join_big_game_router, begin_big_game_router,
+    continue_big_game_router, end_big_game_router,
 )
 from handlers.tasliyat import (
     create_bank_account, bank_callback, my_bank_account,
@@ -230,31 +237,49 @@ def build_application() -> Application:
         start_rock_paper_scissors,
     ))
     application.add_handler(CallbackQueryHandler(
-        rock_paper_scissors_callback, pattern=r"^rps:"
-    ))
-
-    application.add_handler(MessageHandler(
-        filters.ChatType.GROUPS & filters.Regex(r"^اكس او(?:\s+\d+)?$"),
-        start_xo_game,
-    ))
-    application.add_handler(CallbackQueryHandler(xo_callback, pattern=r"^xo:"))
-
-    # Hide-and-seek game.
+        rock_paper_scissors_callback, pattern=r"^rps:    # Shared big games: hide-and-seek and penalties.
     application.add_handler(MessageHandler(
         filters.ChatType.GROUPS & filters.Regex(r"^غميضة$"),
         start_hide_game,
     ))
     application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.Regex(r"^بلنتيات$"),
+        start_penalty_game,
+    ))
+    application.add_handler(MessageHandler(
         filters.ChatType.GROUPS & filters.Regex(r"^دخول$"),
-        join_hide_game,
+        join_big_game_router,
     ))
     application.add_handler(MessageHandler(
-        filters.ChatType.GROUPS & filters.Regex(r"^\.ابدا$"),
-        begin_hide_game,
+        filters.ChatType.GROUPS & filters.Regex(r"^\\.ابدا$"),
+        begin_big_game_router,
     ))
     application.add_handler(MessageHandler(
-        filters.ChatType.GROUPS & filters.Regex(r"^\.انهاء$"),
-        end_hide_game,
+        filters.ChatType.GROUPS & filters.Regex(r"^\\.كمل$"),
+        continue_big_game_router,
+    ))
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.Regex(r"^\\.انهاء$"),
+        end_big_game_router,
+    ))
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.Regex(r"^\\.(?:احمر|ازرق)\\s+.+$"),
+        manual_team_command,
+    ))
+    application.add_handler(CallbackQueryHandler(
+        hide_number_callback, pattern=r"^hide:"
+    ))
+    application.add_handler(CallbackQueryHandler(
+        search_number_callback, pattern=r"^search:"
+    ))
+    application.add_handler(CallbackQueryHandler(
+        distribution_callback, pattern=r"^penalty:distribution:"
+    ))
+    application.add_handler(CallbackQueryHandler(
+        penalty_direction_callback, pattern=r"^penalty:direction:"
+    ))
+
+ end_hide_game,
     ))
     application.add_handler(CallbackQueryHandler(
         hide_number_callback, pattern=r"^hide:"
