@@ -95,6 +95,9 @@ from handlers.tasliyat import (
     show_scratch_codes, scratch_code, reset_scratch_cooldown,
 )
 from handlers.users import user_id_command
+from handlers.commands_menu import commands_menu_start, commands_menu_callback
+from handlers.games_menu import games_menu_command, games_menu_callback
+from handlers.games_help import games_help
 from handlers.profile_replies import (
     developer_command, change_developer_username,
     owner_command, change_owner_username,
@@ -448,6 +451,27 @@ def build_application() -> Application:
         ),
         group=9,
     )
+
+    # Help and interactive command menus.
+    application.add_handler(CommandHandler("help", commands_menu_start))
+    application.add_handler(MessageHandler(
+        filters.Regex(r"^(?:الأوامر|الاوامر)$"),
+        commands_menu_start,
+    ))
+    application.add_handler(CallbackQueryHandler(
+        commands_menu_callback, pattern=r"^cmdmenu:"
+    ))
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.Regex(r"^\.لعبة$"),
+        games_menu_command,
+    ))
+    application.add_handler(CallbackQueryHandler(
+        games_menu_callback, pattern=r"^game_menu:"
+    ))
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.Regex(r"^شرح الالعاب$"),
+        games_help,
+    ))
 
     # Bank and economy commands (legacy wording retained).
     application.add_handler(MessageHandler(filters.Regex(r"^انشاء حساب بنكي$"), create_bank_account))
