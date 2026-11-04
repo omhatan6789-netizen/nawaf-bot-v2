@@ -1,6 +1,8 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 
+from database.timing import timed
+
 from database.points import (
     add_points,
     deduct_points,
@@ -151,6 +153,7 @@ async def sell_points(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+@timed("handler.my_points")
 async def my_points(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.effective_user:
         return
@@ -158,6 +161,7 @@ async def my_points(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"🏆 نقاطك الحالية: {points}")
 
 
+@timed("handler.top_points")
 async def top_points(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.effective_user:
         return
