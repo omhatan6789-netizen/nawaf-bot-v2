@@ -21,6 +21,13 @@ from .replies import (
     load_replies_cache, save_reply, get_reply, delete_reply,
     list_replies, delete_all_replies, invalidate_replies_cache,
 )
+from .profile_replies import (
+    get_saved_developer, save_developer, ensure_group_settings,
+    get_group_settings, save_group_owner, set_admin_replies_status,
+    save_admin_reply, get_admin_reply_by_user, get_admin_reply_by_name,
+    delete_admin_reply, delete_all_admin_replies, get_all_admin_replies,
+    get_group_user_id_by_username,
+)
 from .roles import (
     get_rank,
     get_rank_level,
@@ -44,4 +51,9 @@ __all__ = [
     "check_command_permission", "check_user_permission", "set_user_permission",
     "load_replies_cache", "save_reply", "get_reply", "delete_reply",
     "list_replies", "delete_all_replies", "invalidate_replies_cache",
+    "get_saved_developer", "save_developer", "ensure_group_settings",
+    "get_group_settings", "save_group_owner", "set_admin_replies_status",
+    "save_admin_reply", "get_admin_reply_by_user", "get_admin_reply_by_name",
+    "delete_admin_reply", "delete_all_admin_replies", "get_all_admin_replies",
+    "get_group_user_id_by_username",
 ]
