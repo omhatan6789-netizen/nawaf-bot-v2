@@ -271,6 +271,7 @@ async def start_hide_game(
 
         # مؤقت البحث
         "search_task": None,
+        "hide_task": None,
 
         # رسائل الاختباء الخاصة
         "hide_messages": {},
@@ -442,11 +443,12 @@ async def begin_hide_game(
             player_id
         )
 
-    context.application.create_task(
+    game["hide_task"] = context.application.create_task(
         hide_phase_timeout(
             context,
             chat.id
-        )
+        ),
+        name=f"hide-phase-{chat.id}",
     )
 
 
@@ -1475,10 +1477,11 @@ async def end_hide_game(
     if not game:
         return
 
-    task = game.get("search_task")
-
-    if task:
-        task.cancel()
+    for task_key in ("hide_task", "search_task"):
+        task = game.get(task_key)
+        if task and not task.done():
+            task.cancel()
+        game[task_key] = None
 
 
 # ==================================================
@@ -1500,12 +1503,11 @@ async def finish_hide_game(
 
     game["phase"] = "finished"
 
-    task = game.get("search_task")
-
-    if task:
-        task.cancel()
-
-    game["search_task"] = None
+    for task_key in ("hide_task", "search_task"):
+        task = game.get(task_key)
+        if task and not task.done():
+            task.cancel()
+        game[task_key] = None
 
     alive = alive_players(game)
 
