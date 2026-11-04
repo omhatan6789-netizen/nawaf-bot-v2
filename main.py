@@ -47,6 +47,8 @@ from handlers.moderation import (
 )
 from handlers.delete_messages import delete_messages
 from ai_assistant import ai_assistant_message
+from music_call import start_music_call, shutdown_music_call
+from account_clock import start_account_clock, shutdown_account_clock
 from custom_commands import (
     build_add_command_conversation, load_custom_commands_cache,
     custom_commands_list, delete_command_start, delete_command,
@@ -161,6 +163,8 @@ async def post_init(application: Application) -> None:
     await load_emoji_reaction_rules()
     if not await check_database():
         raise RuntimeError("Database health check failed")
+    if await start_music_call():
+        await start_account_clock()
     application.bot_data["moderation_expiry_task"] = application.create_task(
         moderation_expiry_loop(application),
         name="moderation-expiry-loop",
@@ -190,6 +194,8 @@ async def post_shutdown(application: Application) -> None:
             except asyncio.CancelledError:
                 pass
     try:
+        await shutdown_account_clock()
+        await shutdown_music_call()
         await flush_pending_points()
         await shutdown_activity()
     finally:
