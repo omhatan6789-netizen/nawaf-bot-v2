@@ -708,6 +708,12 @@ async def finish_hiding(
 
     game["phase"] = "searching"
 
+    # إذا انتهى الاختباء مبكرًا، ألغِ مؤقته بدل إبقائه نائمًا حتى نهاية الـ60 ثانية.
+    hide_task = game.get("hide_task")
+    if hide_task and hide_task is not asyncio.current_task() and not hide_task.done():
+        hide_task.cancel()
+    game["hide_task"] = None
+
     await context.bot.send_message(
         chat_id=chat_id,
         text=(
