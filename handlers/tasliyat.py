@@ -11,6 +11,7 @@ from telegram.ext import ContextTypes
 from database.tasliyat import (
     games_enabled, get_points, get_bank, create_bank, delete_bank,
     claim_reward, run_investment, run_luck,
+    get_store_prices, get_possessions, purchase_item, sell_item, gift_item,
 )
 
 OWNER_ID = 8453977662
@@ -326,3 +327,174 @@ async def luck(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"• نقاطك  الحين ↢ ( {after} نقطة 💵 )\n"
         "-"
     )
+
+
+STORE_ITEMS = {
+    "برج":"🏰", "جزيرة":"🏝", "بيت":"🏠", "طيارة":"🛩",
+    "سيارة":"🏎", "سفينة":"🛳", "قطار":"🚂", "قصر":"🏯",
+    "ماسة":"💎", "طعمية":"🧆", "شاورما":"🌯", "مزرعة":"🌾",
+}
+_store_prices_cache: tuple[int, dict[str, int]] | None = None
+
+
+async def _store_prices():
+    global _store_prices_cache
+    hour = int(time.time()) // 3600
+    if _store_prices_cache and _store_prices_cache[0] == hour:
+        return dict(_store_prices_cache[1])
+    prices = await get_store_prices()
+    _store_prices_cache = (hour, dict(prices))
+    return prices
+
+
+async def store(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await _enabled():
+        return
+    message = update.effective_message
+    if not message:
+        return
+    prices = await _store_prices()
+    lines = ["اهلًا يالتاجر هذا المتجر وأسعار المنتجات:"]
+    for index, item_key in enumerate(STORE_ITEMS, 1):
+        lines.append(f"{index} - {item_key} {STORE_ITEMS[item_key]} ↤︎ {prices[item_key]} .")
+    lines.extend([
+        "",
+        "• يمديك تشتري كذا، مثال : شراء 2 سيارة",
+        "• يمديك تشتري كذا، مثال : بيع 2 سيارة",
+        "• يمديك تهدي شخص كذا، مثال : اهداء 2 سيارة بالرد",
+    ])
+    await message.reply_text("\n".join(lines))
+
+
+async def my_possessions(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await _enabled():
+        return
+    user = update.effective_user
+    message = update.effective_message
+    if not user or not message:
+        return
+    possessions = await get_possessions(user.id)
+    if not possessions:
+        await message.reply_text("• مسكين ماعندك شي رح اشتغل على نفسك بعدين تعال 😂 .")
+        return
+    lines = ["• أهلاً بك في قائمة ممتلكاتك ."]
+    lines.extend(f"( {key} ↤︎ {quantity} )" for key, quantity in possessions)
+    await message.reply_text("\n".join(lines))
+
+
+async def other_possessions(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await _enabled():
+        return
+    message = update.effective_message
+    if not message or not message.reply_to_message:
+        return
+    target = message.reply_to_message.from_user
+    if not target:
+        return
+    possessions = await get_possessions(target.id)
+    if not possessions:
+        await message.reply_text("• الرجال ماعنده شي رح تبرع له .")
+        return
+    lines = ["• قائمة ممتلكاته ."]
+    lines.extend(f"( {key} ↤︎ {quantity} )" for key, quantity in possessions)
+    await message.reply_text("\n".join(lines))
+
+
+async def buy_sell(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await _enabled():
+        return
+    message = update.effective_message
+    user = update.effective_user
+    if not message or not message.text or not user:
+        return
+    parts = message.text.strip().split(maxsplit=2)
+    if len(parts) != 3:
+        return
+    action = parts[0]
+    try:
+        quantity = int(parts[1])
+    except ValueError:
+        return
+    item_key = parts[2].strip()
+    if action not in ("شراء", "بيع") or quantity <= 0 or item_key not in STORE_ITEMS:
+        return
+    prices = await _store_prices()
+    total = prices[item_key] * quantity
+    if action == "شراء":
+        balance = await purchase_item(user.id, item_key, quantity, total)
+        if balance is None:
+            await message.reply_text("• نقاطك ماتكفي يا مطفر\n–")
+            return
+        await message.reply_text(
+            f"• مبروك تم شراء : {item_key}\n"
+            f"• العدد : {quantity}\n"
+            f"• بقيمة : {total} نقطة 💸\n"
+            f"• أصبحت نقاطك : ({balance} 💸)\n"
+            f"• اكتب ( ممتلكاتي ) لمعرفة مملكاتك"
+        )
+        return
+    value = (total * 50) // 100
+    status, result = await sell_item(user.id, item_key, quantity, value)
+    if status == "none":
+        await message.reply_text(f"• انت اصلًا ماعندك {item_key} تاكد من ممتلكاتك .")
+        return
+    if status == "short":
+        await message.reply_text(f"• عندك {result} من ({item_key}) فقط .")
+        return
+    await message.reply_text(
+        f"• مبروك تم بيع : {item_key}\n"
+        f"• العدد : {quantity}\n"
+        f"• بقيمة : {value} نقطة بعد خصم 50% 💸\n"
+        f"• نقاطك صارت : ({result} 💸)\n"
+        f"• اكتب ( ممتلكاتي ) لمعرفة مملكاتك"
+    )
+
+
+async def gift(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await _enabled():
+        return
+    message = update.effective_message
+    if not message or not message.text or not message.reply_to_message:
+        return
+    parts = message.text.strip().split(maxsplit=2)
+    if len(parts) != 3 or parts[0] != "اهداء":
+        return
+    try:
+        quantity = int(parts[1])
+    except ValueError:
+        return
+    item_key = parts[2].strip()
+    if quantity <= 0 or item_key not in STORE_ITEMS:
+        return
+    sender = update.effective_user
+    recipient = message.reply_to_message.from_user
+    if not sender or not recipient or sender.id == recipient.id:
+        return
+    status, owned = await gift_item(sender.id, recipient.id, item_key, quantity)
+    if status == "none":
+        await message.reply_text(f"• انت اصلًا ماعندك {item_key} تاكد من ممتلكاتك .")
+        return
+    if status == "short":
+        await message.reply_text(f"• عندك {owned} من ({item_key}) فقط .")
+        return
+    await message.reply_text(
+        "• عملية اهداء :\n"
+        f"• الاهداء من : {_mention(sender)}\n"
+        f"• نوع الهدية : ({item_key})\n"
+        f"• العدد : {quantity}\n"
+        f"المستلم : {_mention(recipient)}",
+        parse_mode="HTML",
+    )
+    try:
+        await context.bot.send_message(
+            chat_id=recipient.id,
+            text=(
+                "• وصلتك هدية :\n\n"
+                f"• الاهداء من : {_mention(sender)}\n"
+                f"• نوع الهدية : ({item_key})\n"
+                f"• العدد : {quantity}\n-"
+            ),
+            parse_mode="HTML",
+        )
+    except Exception:
+        pass
