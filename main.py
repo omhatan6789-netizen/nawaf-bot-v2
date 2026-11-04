@@ -45,6 +45,7 @@ from handlers.moderation import (
     moderation_expiry_loop, reveal_command, repetition_action_callback,
 )
 from handlers.delete_messages import delete_messages
+from ai_assistant import ai_assistant_message
 from handlers.temporary_messages import (
     temporary_message_command, temporary_message_pending_handler,
     temporary_message_callback, temporary_message_scheduler,
@@ -200,6 +201,10 @@ def build_application() -> Application:
     application.bot_data["settings"] = settings
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("health", health_command))
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.TEXT & ~filters.COMMAND,
+        ai_assistant_message,
+    ), group=-1000)
     # Recurring temporary messages.
     application.add_handler(MessageHandler(
         filters.ChatType.GROUPS & filters.Regex(
