@@ -9,6 +9,7 @@ from database.health import check_database
 from database.migration_runner import apply_all_migrations
 from database.activity import shutdown_activity
 from handlers.message_tracking import save_group_text_message
+from handlers.user_events import chat_member_updated
 from handlers.points import (
     add_points_command, remove_points_command, sell_points,
     my_points, top_points, flush_pending_points,
@@ -76,7 +77,8 @@ def build_application() -> Application:
     application.add_handler(MessageHandler(filters.Regex(r"^اضف(?:\s+.*)?$"), add_points_command))
     application.add_handler(MessageHandler(filters.Regex(r"^خصم(?:\s+.*)?$"), remove_points_command))
     application.add_handler(MessageHandler(filters.Regex(r"^بيع نقاطي(?:\s+.*)?$"), sell_points))
-    application.add_handler(MessageHandler(filters.ALL, save_group_text_message), group=1)
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, save_group_text_message), group=1)
+    application.add_handler(ChatMemberHandler(chat_member_updated, ChatMemberHandler.CHAT_MEMBER), group=-1)
     return application
 
 
