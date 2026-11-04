@@ -849,8 +849,9 @@ async def start_voting(context, game):
         except Exception:
             pass
 
-    context.application.create_task(
-        vote_timer(context, game)
+    game["vote_task"] = context.application.create_task(
+        vote_timer(context, game),
+        name=f"liar-vote-timeout-{game['chat_id']}",
     )
 
 
@@ -1361,7 +1362,7 @@ async def end_liar_game(
     # ==================================================
 
     tasks = [
-        game.get("timer_task"),
+        game.get("discussion_task"),
         game.get("vote_task"),
         game.get("guess_task"),
     ]
@@ -1606,11 +1607,11 @@ async def finish_game(context, game):
         except Exception:
             pass
 
-    if game.get("guess_task"):
-        try:
-            game["guess_task"].cancel()
-        except Exception:
-            pass
+    for task_key in ("discussion_task", "vote_task", "guess_task"):
+        task = game.get(task_key)
+        if task and not task.done():
+            task.cancel()
+        game[task_key] = None
 
     active_liar_games.pop(chat_id, None)
 
