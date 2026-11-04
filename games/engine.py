@@ -477,7 +477,7 @@ async def save_new_game(message, name):
 # ==================================================
 
 async def begin_add_question(message, user_id, game_name):
-    if not is_game_admin(user_id):
+    if not await is_game_admin(user_id, message.chat_id):
         await message.reply_text("هذا الأمر للمشرفين فقط.")
         return
 
@@ -796,6 +796,9 @@ async def game_message_handler(
     if normalized.startswith("حذف ") and message.reply_to_message:
         name = text[len("حذف "):].strip()
         await delete_question_by_reply(message, user.id, name)
+        return
+
+    if re.fullmatch(r"اضف\s+\d+", text):
         return
 
     if normalized.startswith("اضف "):
