@@ -51,6 +51,7 @@ from handlers.tasliyat import (
     store, my_possessions, other_possessions, buy_sell, gift,
     rob, transfer, transfer_account_number,
     transfer_message_callback, transfer_message_receiver,
+    show_scratch_codes, scratch_code, reset_scratch_cooldown,
 )
 from handlers.users import user_id_command
 from handlers.profile_replies import (
@@ -236,6 +237,10 @@ def build_application() -> Application:
     application.add_handler(CallbackQueryHandler(transfer_message_callback, pattern=r"^tasliyat:transfer_message:"))
     application.add_handler(MessageHandler(filters.ChatType.PRIVATE, transfer_message_receiver), group=-4)
     application.add_handler(CallbackQueryHandler(bank_callback, pattern=r"^tasliyat:bank:"))
+
+    application.add_handler(MessageHandler(filters.Regex(r"^عرض الاكواد$"), show_scratch_codes))
+    application.add_handler(MessageHandler(filters.Regex(r"^كشط\\s+[A-Za-z0-9]+$"), scratch_code))
+    application.add_handler(MessageHandler(filters.Regex(r"^رست الكشط$"), reset_scratch_cooldown))
     application.add_handler(MessageHandler(filters.Regex(r"^(رتبتي|رتبته(?:\s+@[A-Za-z0-9_]+|\s+\d+)?)$"), roles_command))
     application.add_handler(MessageHandler(filters.Regex(r"^كشف المجموعة$"), roles_command))
     application.add_handler(MessageHandler(filters.Regex(r"^(رفع|تنزيل) (Dev|المالك|نائب المالك|ادمن اساسي|ادمن|مميز)(?:\s+(@[A-Za-z0-9_]+|\d+))?$"), change_rank))
