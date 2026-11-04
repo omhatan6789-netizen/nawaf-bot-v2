@@ -9,13 +9,8 @@ import html
 import logging
 from typing import Any
 
-from telegram import (
-    Update,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-    ChatMemberStatus,
-    ChatType,
-)
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.constants import ChatMemberStatus, ChatType
 from telegram.ext import ApplicationHandlerStop, ContextTypes
 
 from database.profile_replies import (
