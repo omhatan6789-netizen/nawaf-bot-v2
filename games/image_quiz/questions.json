@@ -1,0 +1,853 @@
+[
+  {
+    "id": "animals_001",
+    "image": "images/animals/001.jpg",
+    "answer": "أسد",
+    "alternative_answers": [
+      "أسد",
+      "اسد",
+      "الأسد",
+      "الاسد",
+      "سبع"
+    ],
+    "category": "animals",
+    "search_query": "lion",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c6/002_Male_Lion_prowling_in_the_Serengeti_National_Park_Photo_by_Giles_Laurent.jpg/1280px-002_Male_Lion_prowling_in_the_Serengeti_National_Park_Photo_by_Giles_Laurent.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "license": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/wiki/User:Giles_Laurent\" title=\"User:Giles Laurent\">Giles Laurent</a>",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  {
+    "id": "animals_002",
+    "image": "images/animals/002.jpg",
+    "answer": "نمر",
+    "alternative_answers": [
+      "النمر",
+      "نمر"
+    ],
+    "category": "animals",
+    "search_query": "tiger",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d8/08-2011._Panthera_tigris_tigris_-_Texas_Park_-_Lanzarote_-TP00.jpg/1280px-08-2011._Panthera_tigris_tigris_-_Texas_Park_-_Lanzarote_-TP00.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "license": "CC BY-SA 3.0",
+    "artist": "<a href=\"//commons.wikimedia.org/wiki/User:Lmbuga\" title=\"User:Lmbuga\">Luis Miguel Bugallo Sánchez (Lmbuga)</a>",
+    "license_url": "https://creativecommons.org/licenses/by-sa/3.0"
+  },
+  {
+    "id": "animals_003",
+    "image": "images/animals/003.jpg",
+    "answer": "فيل",
+    "alternative_answers": [
+      "الفيل",
+      "فيل"
+    ],
+    "category": "animals",
+    "search_query": "elephant",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0b/%22The_Elephant_Clock%22%2C_Folio_from_a_Book_of_the_Knowledge_of_Ingenious_Mechanical_Devices_by_al-Jazari_MET_DP234075.jpg/1280px-%22The_Elephant_Clock%22%2C_Folio_from_a_Book_of_the_Knowledge_of_Ingenious_Mechanical_Devices_by_al-Jazari_MET_DP234075.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "license": "CC0",
+    "artist": "<bdi><a href=\"https://en.wikipedia.org/wiki/en:Ismail_al-Jazari\" class=\"extiw\" title=\"w:en:Ismail al-Jazari\"><span title=\"mathematician and engineer from Jazira, Artuqid State (1164–1206)\">al-Jazari</span></a></bdi>",
+    "license_url": "http://creativecommons.org/publicdomain/zero/1.0/deed.en"
+  },
+  {
+    "id": "animals_004",
+    "image": "images/animals/004.jpg",
+    "answer": "زرافة",
+    "alternative_answers": [
+      "الزرافة",
+      "الزرافه",
+      "زرافة",
+      "زرافه"
+    ],
+    "category": "animals",
+    "search_query": "giraffe",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2f/006_Giraffe_portrait_in_the_Lake_Manyara_National_Park_Photo_by_Giles_Laurent.jpg/1280px-006_Giraffe_portrait_in_the_Lake_Manyara_National_Park_Photo_by_Giles_Laurent.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "license": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/wiki/User:Giles_Laurent\" title=\"User:Giles Laurent\">Giles Laurent</a>",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  {
+    "id": "animals_005",
+    "image": "images/animals/005.jpg",
+    "answer": "باندا",
+    "alternative_answers": [
+      "الباندا",
+      "باندا"
+    ],
+    "category": "animals",
+    "search_query": "giant panda",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/68/Ailuropoda_melanoleuca_%28Panda_g%C3%A9ant%29_-_445.jpg/1280px-Ailuropoda_melanoleuca_%28Panda_g%C3%A9ant%29_-_445.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "license": "CC BY-SA 4.0",
+    "artist": "<div style=\"clear:both; border: 1px solid #999; margin: 1em; padding: 1em; background-color: #eeefff;\">\n<table cellspacing=\"0\" cellpadding=\"5\" style=\"background:transparent;\">\n<tbody><tr>\n<td valign=\"top\" width=\"180px\">\n</td></tr>\n<tr>\n<td align=\"center\"><small>Another one of my pictures:<br></small><span typeof=\"mw:File\"><a href=\"//commons.wikimedia.org/wiki/File:Ancre_-_20150811_11h25_(11089).jpg\" class=\"mw-file-description\"><img src=\"https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5d/Ancre_-_20150811_11h25_%2811089%29.jpg/120px-Ancre_-_20150811_11h25_%2811089%29.jpg?utm_source=commons.wikimedia.org&amp;utm_campaign=parser&amp;utm_content=thumbnail\" decoding=\"async\" loading=\"lazy\" width=\"100\" height=\"150\" class=\"mw-file-element\" srcset=\"https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5d/Ancre_-_20150811_11h25_%2811089%29.jpg/250px-Ancre_-_20150811_11h25_%2811089%29.jpg?utm_source=commons.wikimedia.org&amp;utm_campaign=parser&amp;utm_content=thumbnail 2x\" data-file-width=\"3518\" data-file-height=\"5277\"></a></span>\n<p><br>\n</p>\n</td>\n<td>This photograph was taken by <b><a href=\"//commons.wikimedia.org/wiki/User:Medium69\" title=\"User:Medium69\">Medium69</a></b> (William Crochot) and released under the license stated below. You are free to use it for any purpose as long as you credit the author (William Crochot), the Source (Wikimedia Commons) and the license (CC-BY-SA 4.0) in close relation to the image.\n</td></tr></tbody></table>\n<div style=\"clear:both; border:2px solid #00cc00; background-color:#f7f7f7; margin-top:6px;\">\n<table><tbody><tr><td style=\"padding:4px;\"><span typeof=\"mw:File\"><a href=\"//commons.wikimedia.org/wiki/File:Upload-problem2.svg\" class=\"mw-file-description\"><img src=\"https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f9/Upload-problem2.svg/120px-Upload-problem2.svg.png?utm_source=commons.wikimedia.org&amp;utm_campaign=parser&amp;utm_content=thumbnail\" decoding=\"async\" loading=\"lazy\" width=\"64\" height=\"57\" class=\"mw-file-element\" srcset=\"https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f9/Upload-problem2.svg/250px-Upload-problem2.svg.png?utm_source=commons.wikimedia.org&amp;utm_campaign=parser&amp;utm_content=thumbnail 2x\" data-file-width=\"159\" data-file-height=\"142\"></a></span>\n</td><td style=\"padding:4px;\">\n<div>\n<p>Please do not upload an updated image here without consultation with the Author. The author would like to make corrections only at his own source RAW. This ensures that the changes are preserved.<br>Please if you think that any changes should be required, please inform the author.<br>Otherwise you can upload a new image with a new name. Please use one of the templates <a href=\"//commons.wikimedia.org/wiki/Template:Derived_from\" title=\"Template:Derived from\">derivative</a> or <a href=\"//commons.wikimedia.org/wiki/Template:Extracted_from\" title=\"Template:Extracted from\">extract</a>.\n</p>\n</div>\n</td></tr></tbody></table></div>\n</div>\n<p><br>\n</p>",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  {
+    "id": "animals_006",
+    "image": "images/animals/006.jpg",
+    "answer": "دب",
+    "alternative_answers": [
+      "دب"
+    ],
+    "category": "animals",
+    "search_query": "bear",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/71/2010-kodiak-bear-1.jpg/1280px-2010-kodiak-bear-1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "license": "CC BY-SA 3.0",
+    "artist": "<a href=\"//commons.wikimedia.org/wiki/User:Yathin_sk\" title=\"User:Yathin sk\">Yathin S Krishnappa</a>",
+    "license_url": "https://creativecommons.org/licenses/by-sa/3.0"
+  },
+  {
+    "id": "animals_007",
+    "image": "images/animals/007.jpg",
+    "answer": "ذئب",
+    "alternative_answers": [
+      "الذئب",
+      "ذئب"
+    ],
+    "category": "animals",
+    "search_query": "wolf",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/68/Eurasian_wolf_2.jpg/1280px-Eurasian_wolf_2.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "license": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/w/index.php?title=User:Mas3cf&amp;action=edit&amp;redlink=1\" class=\"new\" title=\"User:Mas3cf (page does not exist)\">User:Mas3cf</a>",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  {
+    "id": "animals_008",
+    "image": "images/animals/008.jpg",
+    "answer": "ثعلب",
+    "alternative_answers": [
+      "الثعلب",
+      "ثعلب"
+    ],
+    "category": "animals",
+    "search_query": "fox",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8e/Alaska_Red_Fox_%28Vulpes_vulpes%29.jpg/1280px-Alaska_Red_Fox_%28Vulpes_vulpes%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "license": "CC BY-SA 2.0",
+    "artist": "<a rel=\"nofollow\" class=\"external text\" href=\"https://www.flickr.com/people/22170893@N06\">Gregory \"Slobirdr\" Smith</a>",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0"
+  },
+  {
+    "id": "animals_009",
+    "image": "images/animals/009.jpg",
+    "answer": "قرد",
+    "alternative_answers": [
+      "القرد",
+      "قرد"
+    ],
+    "category": "animals",
+    "search_query": "monkey",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3b/A_sitting_monkey.jpg/1280px-A_sitting_monkey.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "license": "CC BY 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/w/index.php?title=User:Uthmayn&amp;action=edit&amp;redlink=1\" class=\"new\" title=\"User:Uthmayn (page does not exist)\">Uthmayn</a>",
+    "license_url": "https://creativecommons.org/licenses/by/4.0"
+  },
+  {
+    "id": "animals_010",
+    "image": "images/animals/010.jpg",
+    "answer": "غوريلا",
+    "alternative_answers": [
+      "الغوريلا",
+      "غوريلا"
+    ],
+    "category": "animals",
+    "search_query": "gorilla",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2e/064_Mountain_gorilla_climbing_a_tree_at_Bwindi_Impenetrable_Forest_National_Park_%28crop%29_Photo_by_Giles_Laurent.jpg/1280px-064_Mountain_gorilla_climbing_a_tree_at_Bwindi_Impenetrable_Forest_National_Park_%28crop%29_Photo_by_Giles_Laurent.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "license": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/wiki/User:Giles_Laurent\" title=\"User:Giles Laurent\">Giles Laurent</a>",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  {
+    "id": "animals_011",
+    "image": "images/animals/011.jpg",
+    "answer": "شمبانزي",
+    "alternative_answers": [
+      "الشمبانزي",
+      "شمبانزي"
+    ],
+    "category": "animals",
+    "search_query": "chimpanzee",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1f/007_Chimpanzee_mother_climbing_a_tree_with_its_baby_at_Kibale_forest_National_Park_Photo_by_Giles_Laurent.jpg/1280px-007_Chimpanzee_mother_climbing_a_tree_with_its_baby_at_Kibale_forest_National_Park_Photo_by_Giles_Laurent.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "license": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/wiki/User:Giles_Laurent\" title=\"User:Giles Laurent\">Giles Laurent</a>",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  {
+    "id": "animals_012",
+    "image": "images/animals/012.jpg",
+    "answer": "كنغر",
+    "alternative_answers": [
+      "الكنغر",
+      "كنغر"
+    ],
+    "category": "animals",
+    "search_query": "kangaroo",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2f/Blackburn_Kangaroo_Q_063799.jpg/1280px-Blackburn_Kangaroo_Q_063799.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "license": "Public domain",
+    "artist": "Official photograph",
+    "license_url": null
+  },
+  {
+    "id": "animals_013",
+    "image": "images/animals/013.jpg",
+    "answer": "كوالا",
+    "alternative_answers": [
+      "الكوالا",
+      "كوالا"
+    ],
+    "category": "animals",
+    "search_query": "koala",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/72/2011-265-335_Koala_Stare_%286436267101%29.jpg/1280px-2011-265-335_Koala_Stare_%286436267101%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "license": "CC BY 2.0",
+    "artist": "<a rel=\"nofollow\" class=\"external text\" href=\"https://www.flickr.com/people/37996646802@N01\">cogdogblog</a>",
+    "license_url": "https://creativecommons.org/licenses/by/2.0"
+  },
+  {
+    "id": "animals_014",
+    "image": "images/animals/014.jpg",
+    "answer": "أرنب",
+    "alternative_answers": [
+      "أرنب",
+      "ارنب",
+      "الأرنب",
+      "الارنب"
+    ],
+    "category": "animals",
+    "search_query": "rabbit",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6b/Angora_Rabbit_Illustration.png/1280px-Angora_Rabbit_Illustration.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "license": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/w/index.php?title=User:Namyeongmi&amp;action=edit&amp;redlink=1\" class=\"new\" title=\"User:Namyeongmi (page does not exist)\">Namyeongmi</a>",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  {
+    "id": "animals_015",
+    "image": "images/animals/015.jpg",
+    "answer": "قط",
+    "alternative_answers": [
+      "قط",
+      "قطة"
+    ],
+    "category": "animals",
+    "search_query": "cat",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/87/20231125_housecat_south_meadows_PD100306.jpg/1280px-20231125_housecat_south_meadows_PD100306.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "license": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/wiki/User:Pdanese\" title=\"User:Pdanese\">Paul Danese</a>",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  {
+    "id": "animals_016",
+    "image": "images/animals/016.jpg",
+    "answer": "كلب",
+    "alternative_answers": [
+      "الكلب",
+      "كلب",
+      "كلبة"
+    ],
+    "category": "animals",
+    "search_query": "dog",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2d/Cane_corso_g%C5%82owa_profil_493o.jpg/1920px-Cane_corso_g%C5%82owa_profil_493o.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "license": null,
+    "artist": null,
+    "license_url": null,
+    "source": "Wikimedia Commons"
+  },
+  {
+    "id": "animals_017",
+    "image": "images/animals/017.jpg",
+    "answer": "حصان",
+    "alternative_answers": [
+      "الحصان",
+      "حصان"
+    ],
+    "category": "animals",
+    "search_query": "horse",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/a/a2/Biandintz_eta_zaldiak_-_modified2.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+    "license": null,
+    "artist": null,
+    "license_url": null,
+    "source": "Wikimedia Commons"
+  },
+  {
+    "id": "animals_018",
+    "image": "images/animals/018.jpg",
+    "answer": "حمار",
+    "alternative_answers": [
+      "الحمار",
+      "حمار"
+    ],
+    "category": "animals",
+    "search_query": "donkey",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/1/12/Donkey%2C_Metal_Shack_%283968027545%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+    "license": null,
+    "artist": null,
+    "license_url": null,
+    "source": "Wikimedia Commons"
+  },
+  {
+    "id": "animals_019",
+    "image": "images/animals/019.jpg",
+    "answer": "بقرة",
+    "alternative_answers": [
+      "البقرة",
+      "البقره",
+      "بقرة",
+      "بقره"
+    ],
+    "category": "animals",
+    "search_query": "cow",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b4/Arnoldstein_Radendorf_Wallfahrtskirche_Mara_Siebenbr%C3%BCnn_25052020_9091.jpg/1920px-Arnoldstein_Radendorf_Wallfahrtskirche_Mara_Siebenbr%C3%BCnn_25052020_9091.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "license": null,
+    "artist": null,
+    "license_url": null,
+    "source": "Wikimedia Commons"
+  },
+  {
+    "id": "animals_020",
+    "image": "images/animals/020.jpg",
+    "answer": "خروف",
+    "alternative_answers": [
+      "الخروف",
+      "خروف",
+      "غنم",
+      "كبش"
+    ],
+    "category": "animals",
+    "search_query": "sheep",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/20/20101020_Sheep_shepherd_at_Vistonida_lake_Glikoneri_Rhodope_Prefecture_Thrace_Greece.jpg/1920px-20101020_Sheep_shepherd_at_Vistonida_lake_Glikoneri_Rhodope_Prefecture_Thrace_Greece.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "license": null,
+    "artist": null,
+    "license_url": null,
+    "source": "Wikimedia Commons"
+  },
+  {
+    "id": "animals_021",
+    "image": "images/animals/021.jpg",
+    "answer": "ماعز",
+    "alternative_answers": [
+      "الماعز",
+      "عنزة",
+      "ماعز"
+    ],
+    "category": "animals",
+    "search_query": "goat",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f6/Baby_Goat_in_Margarita_Island%2C_Venezuela.jpg/1920px-Baby_Goat_in_Margarita_Island%2C_Venezuela.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "license": null,
+    "artist": null,
+    "license_url": null,
+    "source": "Wikimedia Commons"
+  },
+  {
+    "id": "animals_022",
+    "image": "images/animals/022.jpg",
+    "answer": "جمل",
+    "alternative_answers": [
+      "الجمل",
+      "جمل"
+    ],
+    "category": "animals",
+    "search_query": "camel",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/4/43/07._Camel_Profile%2C_near_Silverton%2C_NSW%2C_07.07.2007.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+    "license": null,
+    "artist": null,
+    "license_url": null,
+    "source": "Wikimedia Commons"
+  },
+  {
+    "id": "animals_023",
+    "image": "images/animals/023.jpg",
+    "answer": "حمار وحشي",
+    "alternative_answers": [
+      "الحمار وحشي",
+      "حمار وحشي"
+    ],
+    "category": "animals",
+    "search_query": "zebra",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f2/Callisaurus_draconoides_-_Flickr_-_gailhampshire.jpg/1920px-Callisaurus_draconoides_-_Flickr_-_gailhampshire.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "license": null,
+    "artist": null,
+    "license_url": null,
+    "source": "Wikimedia Commons"
+  },
+  {
+    "id": "animals_024",
+    "image": "images/animals/024.jpg",
+    "answer": "وحيد القرن",
+    "alternative_answers": [
+      "الوحيد القرن",
+      "وحيد القرن"
+    ],
+    "category": "animals",
+    "search_query": "rhinoceros",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8b/1776_-_John_Flamsteed_-_La_Licorne%2C_Le_Gd._Chien_%28Monoceros_%26_Canis_Major%29.jpg/1920px-1776_-_John_Flamsteed_-_La_Licorne%2C_Le_Gd._Chien_%28Monoceros_%26_Canis_Major%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "license": null,
+    "artist": null,
+    "license_url": null,
+    "source": "Wikimedia Commons"
+  },
+  {
+    "id": "animals_025",
+    "image": "images/animals/025.jpg",
+    "answer": "فرس النهر",
+    "alternative_answers": [
+      "الفرس النهر",
+      "فرس النهر"
+    ],
+    "category": "animals",
+    "search_query": "hippopotamus",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3e/A_Hippopotamus_and_Crocodile_Hunt_P5296.jpg/1920px-A_Hippopotamus_and_Crocodile_Hunt_P5296.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "license": null,
+    "artist": null,
+    "license_url": null,
+    "source": "Wikimedia Commons"
+  },
+  {
+    "id": "animals_026",
+    "image": "images/animals/026.jpg",
+    "answer": "تمساح",
+    "alternative_answers": [
+      "التمساح",
+      "تمساح"
+    ],
+    "category": "animals",
+    "search_query": "crocodile",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f2/Crocodylus_acutus_mexico_02-edit1.jpg/1920px-Crocodylus_acutus_mexico_02-edit1.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+    "license": null,
+    "artist": null,
+    "license_url": null,
+    "source": "Wikipedia",
+    "source_page": "https://en.wikipedia.org/wiki/American_crocodile",
+    "source_title": "American crocodile",
+    "search_used": "crocodile"
+  },
+  {
+    "id": "animals_027",
+    "image": "images/animals/027.jpg",
+    "answer": "سلحفاة",
+    "alternative_answers": [
+      "السلحفاة",
+      "السلحفاه",
+      "سلحفاة",
+      "سلحفاه"
+    ],
+    "category": "animals",
+    "search_query": "turtle",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a3/Green_sea_turtle_%28Chelonia_mydas%29_Moorea.jpg/1920px-Green_sea_turtle_%28Chelonia_mydas%29_Moorea.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+    "license": null,
+    "artist": null,
+    "license_url": null,
+    "source": "Wikipedia",
+    "source_page": "https://en.wikipedia.org/wiki/Green_sea_turtle",
+    "source_title": "Green sea turtle",
+    "search_used": "turtle"
+  },
+  {
+    "id": "animals_028",
+    "image": "images/animals/028.jpg",
+    "answer": "ضفدع",
+    "alternative_answers": [
+      "الضفدع",
+      "ضفدع"
+    ],
+    "category": "animals",
+    "search_query": "frog",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/47/Frog_and_saucepan.jpg/1920px-Frog_and_saucepan.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+    "license": null,
+    "artist": null,
+    "license_url": null,
+    "source": "Wikipedia",
+    "source_page": "https://en.wikipedia.org/wiki/Boiling_frog",
+    "source_title": "Boiling frog",
+    "search_used": "frog"
+  },
+  {
+    "id": "animals_029",
+    "image": "images/animals/029.jpg",
+    "answer": "ثعبان",
+    "alternative_answers": [
+      "الثعبان",
+      "ثعبان",
+      "حية"
+    ],
+    "category": "animals",
+    "search_query": "snake",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5d/086_Wild_Grass_snake_at_Lake_Geneva_Photo_by_Giles_Laurent.jpg/1280px-086_Wild_Grass_snake_at_Lake_Geneva_Photo_by_Giles_Laurent.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "license": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/wiki/User:Giles_Laurent\" title=\"User:Giles Laurent\">Giles Laurent</a>",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  {
+    "id": "animals_030",
+    "image": "images/animals/030.jpg",
+    "answer": "سحلية",
+    "alternative_answers": [
+      "السحلية",
+      "السحليه",
+      "سحلية",
+      "سحليه"
+    ],
+    "category": "animals",
+    "search_query": "lizard",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d4/Agama_%28lizard%29_12.jpg/1280px-Agama_%28lizard%29_12.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "license": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/wiki/User:OtuNwachinemere\" title=\"User:OtuNwachinemere\">OtuNwachinemere</a>",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  {
+    "id": "animals_031",
+    "image": "images/animals/031.jpg",
+    "answer": "نسر",
+    "alternative_answers": [
+      "النسر",
+      "نسر"
+    ],
+    "category": "animals",
+    "search_query": "eagle",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/87/African_fish_eagle_%28Haliaeetus_vocifer%29_Ethiopia.jpg/1280px-African_fish_eagle_%28Haliaeetus_vocifer%29_Ethiopia.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "license": "CC BY-SA 4.0",
+    "artist": "<bdi><a href=\"https://www.wikidata.org/wiki/Q54800218\" class=\"extiw\" title=\"d:Q54800218\"><span title=\"Scottish wildlife photographer\">Charles J. Sharp</span></a></bdi>",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  {
+    "id": "animals_032",
+    "image": "images/animals/032.jpg",
+    "answer": "بومة",
+    "alternative_answers": [
+      "البومة",
+      "البومه",
+      "بومة",
+      "بومه"
+    ],
+    "category": "animals",
+    "search_query": "owl",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6d/Asian_Barn_Owl_by_Tisha_Mukherjee_08.jpg/1280px-Asian_Barn_Owl_by_Tisha_Mukherjee_08.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "license": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/wiki/User:Tisha_Mukherjee\" title=\"User:Tisha Mukherjee\">Tisha Mukherjee</a>",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  {
+    "id": "animals_033",
+    "image": "images/animals/033.jpg",
+    "answer": "ببغاء",
+    "alternative_answers": [
+      "الببغاء",
+      "ببغاء"
+    ],
+    "category": "animals",
+    "search_query": "parrot",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/87/Amazon_parrot_and_gray_parrot_in_Indonesia.jpg/1280px-Amazon_parrot_and_gray_parrot_in_Indonesia.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "license": "CC BY 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/wiki/User:PhilipNalangan\" title=\"User:PhilipNalangan\">Philip Nalangan</a>",
+    "license_url": "https://creativecommons.org/licenses/by/4.0"
+  },
+  {
+    "id": "animals_034",
+    "image": "images/animals/034.jpg",
+    "answer": "بطريق",
+    "alternative_answers": [
+      "البطريق",
+      "بطريق"
+    ],
+    "category": "animals",
+    "search_query": "penguin",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/73/2019-03-03_Chinstrap_penguin_on_Barrientos_Island%2C_Antarctica.jpg/1280px-2019-03-03_Chinstrap_penguin_on_Barrientos_Island%2C_Antarctica.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "license": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/wiki/User:GRDN711\" title=\"User:GRDN711\">Gordon Leggett</a>",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  {
+    "id": "animals_035",
+    "image": "images/animals/035.jpg",
+    "answer": "فلامنغو",
+    "alternative_answers": [
+      "الفلامنغو",
+      "فلامنغو"
+    ],
+    "category": "animals",
+    "search_query": "flamingo",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b6/001_Greater_flamingo_in_flight_in_the_Camargue_Photo_by_Giles_Laurent.jpg/1280px-001_Greater_flamingo_in_flight_in_the_Camargue_Photo_by_Giles_Laurent.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "license": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/wiki/User:Giles_Laurent\" title=\"User:Giles Laurent\">Giles Laurent</a>",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  {
+    "id": "animals_036",
+    "image": "images/animals/036.jpg",
+    "answer": "طاووس",
+    "alternative_answers": [
+      "الطاووس",
+      "طاووس"
+    ],
+    "category": "animals",
+    "search_query": "peacock",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7a/012_Indian_peafowl_in_Keoladeo_National_Park_Photo_by_Giles_Laurent.jpg/1280px-012_Indian_peafowl_in_Keoladeo_National_Park_Photo_by_Giles_Laurent.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "license": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/wiki/User:Giles_Laurent\" title=\"User:Giles Laurent\">Giles Laurent</a>",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  {
+    "id": "animals_037",
+    "image": "images/animals/037.jpg",
+    "answer": "دجاجة",
+    "alternative_answers": [
+      "الدجاجة",
+      "الدجاجه",
+      "دجاجة",
+      "دجاجه"
+    ],
+    "category": "animals",
+    "search_query": "chicken",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5b/2017-05-07_AT_Wien_22_Donaustadt%2C_Blumeng%C3%A4rten_Hirschstetten%2C_Gallus_gallus_domesticus_%2851121096704%29.jpg/1280px-2017-05-07_AT_Wien_22_Donaustadt%2C_Blumeng%C3%A4rten_Hirschstetten%2C_Gallus_gallus_domesticus_%2851121096704%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "license": "CC BY-SA 2.0",
+    "artist": "<a rel=\"nofollow\" class=\"external text\" href=\"https://www.flickr.com/people/158438800@N02\">Paul Korecky</a>",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0"
+  },
+  {
+    "id": "animals_038",
+    "image": "images/animals/038.jpg",
+    "answer": "بطة",
+    "alternative_answers": [
+      "البطة",
+      "البطه",
+      "بطة",
+      "بطه"
+    ],
+    "category": "animals",
+    "search_query": "duck",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c8/Aythya_novaeseelandiae%2C_Lake_Victoria%2C_Christchurch%2C_New_Zealand.jpg/1280px-Aythya_novaeseelandiae%2C_Lake_Victoria%2C_Christchurch%2C_New_Zealand.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "license": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/wiki/User:Podzemnik\" title=\"User:Podzemnik\">Michal Klajban</a>",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  {
+    "id": "animals_039",
+    "image": "images/animals/039.jpg",
+    "answer": "ديك",
+    "alternative_answers": [
+      "الديك",
+      "ديك"
+    ],
+    "category": "animals",
+    "search_query": "rooster",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/9/95/Atomic_Rooster_2025_16_31_57_030000.jpeg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled",
+    "license": null,
+    "artist": null,
+    "license_url": null,
+    "source": "Wikipedia",
+    "source_page": "https://en.wikipedia.org/wiki/Atomic_Rooster",
+    "source_title": "Atomic Rooster",
+    "search_used": "rooster"
+  },
+  {
+    "id": "animals_040",
+    "image": "images/animals/040.jpg",
+    "answer": "سمكة",
+    "alternative_answers": [
+      "السمكة",
+      "السمكه",
+      "سمكة",
+      "سمكه"
+    ],
+    "category": "animals",
+    "search_query": "fish",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/f/f9/Albert_Fish_1903_%283x4_cropped%29.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled",
+    "license": null,
+    "artist": null,
+    "license_url": null,
+    "source": "Wikipedia",
+    "source_page": "https://en.wikipedia.org/wiki/Albert_Fish",
+    "source_title": "Albert Fish",
+    "search_used": "fish"
+  },
+  {
+    "id": "animals_041",
+    "image": "images/animals/041.jpg",
+    "answer": "قرش",
+    "alternative_answers": [
+      "القرش",
+      "قرش"
+    ],
+    "category": "animals",
+    "search_query": "shark",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0b/Cetorhinus_maximus_by_greg_skomal.JPG/1920px-Cetorhinus_maximus_by_greg_skomal.JPG?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+    "license": null,
+    "artist": null,
+    "license_url": null,
+    "source": "Wikipedia",
+    "source_page": "https://en.wikipedia.org/wiki/Basking_shark",
+    "source_title": "Basking shark",
+    "search_used": "shark"
+  },
+  {
+    "id": "animals_042",
+    "image": "images/animals/042.jpg",
+    "answer": "دلفين",
+    "alternative_answers": [
+      "الدلفين",
+      "دلفين"
+    ],
+    "category": "animals",
+    "search_query": "dolphin",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/10/Tursiops_truncatus_01.jpg/1920px-Tursiops_truncatus_01.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+    "license": null,
+    "artist": null,
+    "license_url": null,
+    "source": "Wikipedia",
+    "source_page": "https://en.wikipedia.org/wiki/Bottlenose_dolphin",
+    "source_title": "Bottlenose dolphin",
+    "search_used": "dolphin"
+  },
+  {
+    "id": "animals_043",
+    "image": "images/animals/043.jpg",
+    "answer": "حوت",
+    "alternative_answers": [
+      "الحوت",
+      "حوت"
+    ],
+    "category": "animals",
+    "search_query": "whale",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1c/Anim1754_-_Flickr_-_NOAA_Photo_Library.jpg/1920px-Anim1754_-_Flickr_-_NOAA_Photo_Library.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+    "license": null,
+    "artist": null,
+    "license_url": null,
+    "source": "Wikipedia",
+    "source_page": "https://en.wikipedia.org/wiki/Blue_whale",
+    "source_title": "Blue whale",
+    "search_used": "whale"
+  },
+  {
+    "id": "animals_044",
+    "image": "images/animals/044.jpg",
+    "answer": "أخطبوط",
+    "alternative_answers": [
+      "أخطبوط",
+      "اخطبوط",
+      "الأخطبوط",
+      "الاخطبوط"
+    ],
+    "category": "animals",
+    "search_query": "octopus",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/0/0b/Enteroctopus_dolfeini.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled",
+    "license": null,
+    "artist": null,
+    "license_url": null,
+    "source": "Wikipedia",
+    "source_page": "https://en.wikipedia.org/wiki/Giant_Pacific_octopus",
+    "source_title": "Giant Pacific octopus",
+    "search_used": "octopus"
+  },
+  {
+    "id": "animals_045",
+    "image": "images/animals/045.jpg",
+    "answer": "قنديل البحر",
+    "alternative_answers": [
+      "القنديل البحر",
+      "قنديل البحر"
+    ],
+    "category": "animals",
+    "search_query": "jellyfish",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/b/bc/Avispa_marina_cropped.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled",
+    "license": null,
+    "artist": null,
+    "license_url": null,
+    "source": "Wikipedia",
+    "source_page": "https://en.wikipedia.org/wiki/Box_jellyfish",
+    "source_title": "Box jellyfish",
+    "search_used": "jellyfish"
+  },
+  {
+    "id": "animals_046",
+    "image": "images/animals/046.jpg",
+    "answer": "سرطان البحر",
+    "alternative_answers": [
+      "السرطان البحر",
+      "سرطان البحر",
+      "سلطعون"
+    ],
+    "category": "animals",
+    "search_query": "crab",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0a/Coconut_Crab_Birgus_latro.jpg/1920px-Coconut_Crab_Birgus_latro.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+    "license": null,
+    "artist": null,
+    "license_url": null,
+    "source": "Wikipedia",
+    "source_page": "https://en.wikipedia.org/wiki/Coconut_crab",
+    "source_title": "Coconut crab",
+    "search_used": "crab"
+  },
+  {
+    "id": "animals_047",
+    "image": "images/animals/047.jpg",
+    "answer": "نجم البحر",
+    "alternative_answers": [
+      "النجم البحر",
+      "نجم البحر"
+    ],
+    "category": "animals",
+    "search_query": "starfish",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/0/0b/Acanthaster_planci_460468243_%28closeup%29.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled",
+    "license": null,
+    "artist": null,
+    "license_url": null,
+    "source": "Wikipedia",
+    "source_page": "https://en.wikipedia.org/wiki/Crown-of-thorns_starfish",
+    "source_title": "Crown-of-thorns starfish",
+    "search_used": "starfish"
+  },
+  {
+    "id": "animals_048",
+    "image": "images/animals/048.jpg",
+    "answer": "فراشة",
+    "alternative_answers": [
+      "الفراشة",
+      "الفراشه",
+      "فراشة",
+      "فراشه"
+    ],
+    "category": "animals",
+    "search_query": "butterfly",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/3/3d/Fesoj_-_Papilio_machaon_%28by%29.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled",
+    "license": null,
+    "artist": null,
+    "license_url": null,
+    "source": "Wikipedia",
+    "source_page": "https://en.wikipedia.org/wiki/Butterfly",
+    "source_title": "Butterfly",
+    "search_used": "butterfly"
+  },
+  {
+    "id": "animals_049",
+    "image": "images/animals/049.jpg",
+    "answer": "نحلة",
+    "alternative_answers": [
+      "النحلة",
+      "النحله",
+      "نحلة",
+      "نحله"
+    ],
+    "category": "animals",
+    "search_query": "bee",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2b/Anthophora_bimaculata_-_Jasione_montana_-_Tallinn.jpg/1280px-Anthophora_bimaculata_-_Jasione_montana_-_Tallinn.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "license": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/wiki/User:Iifar\" title=\"User:Iifar\">Ivar Leidus</a>",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  {
+    "id": "animals_050",
+    "image": "images/animals/050.jpg",
+    "answer": "دعسوقة",
+    "alternative_answers": [
+      "الدعسوقة",
+      "الدعسوقه",
+      "خنفساء الدعسوقة",
+      "دعسوقة",
+      "دعسوقه"
+    ],
+    "category": "animals",
+    "search_query": "ladybug",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/7/77/Coccinella-septempunctata-15-fws.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled",
+    "license": null,
+    "artist": null,
+    "license_url": null,
+    "source": "Wikipedia",
+    "source_page": "https://en.wikipedia.org/wiki/Coccinellidae",
+    "source_title": "Coccinellidae",
+    "search_used": "ladybug"
+  }
+]
