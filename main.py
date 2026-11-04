@@ -20,6 +20,8 @@ from handlers.roles import (
     roles_clear_callback,
 )
 from handlers.user_permissions import permission_command
+from handlers.command_guard import command_guard
+from handlers.command_lock import lock_command, save_lock_rank, open_command
 
 logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
@@ -94,6 +96,10 @@ def build_application() -> Application:
     application.add_handler(MessageHandler(filters.Regex(r"^مسح الرتب$"), clear_all_ranks_command))
     application.add_handler(MessageHandler(filters.Regex(r"^(منع|سماح)\s+.+$"), permission_command))
     application.add_handler(CallbackQueryHandler(roles_clear_callback, pattern=r"^roles_clear:"))
+    application.add_handler(MessageHandler(filters.Regex(r"^قفل امر .+$"), lock_command))
+    application.add_handler(MessageHandler(filters.Regex(r"^فتح امر .+$"), open_command))
+    application.add_handler(MessageHandler(filters.Regex(r"^(Dev|المالك|نائب المالك|ادمن اساسي|ادمن|مميز)$"), save_lock_rank))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, command_guard), group=-2)
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, save_group_text_message), group=1)
     application.add_handler(ChatMemberHandler(chat_member_updated, ChatMemberHandler.CHAT_MEMBER), group=-1)
     return application
