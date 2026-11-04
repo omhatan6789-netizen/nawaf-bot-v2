@@ -139,7 +139,7 @@ async def _save_session_content(update: Update, sessions: dict, special: bool):
         return
     if session.get("step") == "name":
         if not message.text:
-            await message.reply_text("❌ أرسل имя الرد كنص" if special else "❌ أرسل الاسم كنص")
+            await message.reply_text("❌ أرسل الاسم كنص" if special else "❌ أرسل الاسم كنص")
             return
         session["name"] = message.text.strip()
         session["step"] = "content"
