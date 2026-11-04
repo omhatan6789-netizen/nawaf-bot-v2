@@ -265,19 +265,15 @@ def build_application() -> Application:
         start_word_race,
     ))
     application.add_handler(MessageHandler(
-        filters.ChatType.GROUPS & filters.Regex(r"^\\.الطور$"),
+        filters.ChatType.GROUPS & filters.Regex(r"^\.الطور$"),
         word_race_mode,
     ))
     application.add_handler(MessageHandler(
-        filters.ChatType.GROUPS & filters.Regex(r"^\\.توزيع$"),
-        word_race_distribution,
-    ))
-    application.add_handler(MessageHandler(
-        filters.ChatType.GROUPS & filters.Regex(r"^\\.اضافة (?:احمر|ازرق|اخضر|اصفر)$"),
+        filters.ChatType.GROUPS & filters.Regex(r"^\.اضافة (?:احمر|ازرق|اخضر|اصفر)$"),
         word_race_manual_team,
     ))
     application.add_handler(MessageHandler(
-        filters.ChatType.GROUPS & filters.Regex(r"^\\.اضافة$"),
+        filters.ChatType.GROUPS & filters.Regex(r"^\.اضافة$"),
         word_race_add_solo,
     ))
     application.add_handler(CallbackQueryHandler(
@@ -318,7 +314,7 @@ def build_application() -> Application:
     ))
     application.add_handler(MessageHandler(
         filters.ChatType.GROUPS & filters.Regex(r"^\.وزع$"),
-        distribute_penalties,
+        distribute_big_game_router,
     ))
     application.add_handler(MessageHandler(
         filters.ChatType.GROUPS & filters.Regex(r"^\.(?:احمر|ازرق)(?:\s+\d+\*?)+$"),
