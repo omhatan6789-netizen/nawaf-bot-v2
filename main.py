@@ -71,6 +71,13 @@ from games.word_race import (
     word_race_manual_team, word_race_add_solo,
     word_race_callback, check_word_race_message,
 )
+from games.image_quiz.image_quiz import (
+    start_image_quiz, add_image_quiz_player, image_quiz_settings,
+    check_image_quiz_message, image_quiz_callback,
+    add_manual_image_command, receive_manual_image, cancel_manual_image,
+    delete_manual_image_command, receive_delete_manual_image,
+    cancel_delete_manual_image,
+)
 from handlers.tasliyat import (
     create_bank_account, bank_callback, my_bank_account,
     delete_bank_account, salary, tip, invest, luck,
@@ -250,6 +257,55 @@ def build_application() -> Application:
     application.add_handler(CallbackQueryHandler(
         rock_paper_scissors_callback, pattern=r"^rps:"
     ))
+
+    # Image quiz (same async implementation, shared join/start/continue/end routing).
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.Regex(r"^توقع الصورة$"),
+        start_image_quiz,
+    ))
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.Regex(r"^\.اعدادات$"),
+        image_quiz_settings,
+    ))
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.Regex(r"^\.اضافة$"),
+        add_image_quiz_player,
+    ))
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.Regex(r"^اضف صورة$"),
+        add_manual_image_command,
+    ))
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.Regex(r"^حذف صورة$"),
+        delete_manual_image_command,
+    ))
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.Regex(r"^الغاء اضافة صورة$"),
+        cancel_manual_image,
+    ))
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.Regex(r"^الغاء حذف صورة$"),
+        cancel_delete_manual_image,
+    ))
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.PHOTO,
+        receive_manual_image,
+        ),
+        group=11,
+    )
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.PHOTO,
+        receive_delete_manual_image,
+        ),
+        group=12,
+    )
+    application.add_handler(CallbackQueryHandler(
+        image_quiz_callback, pattern=r"^iq:"
+    ))
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.TEXT & ~filters.COMMAND,
+        check_image_quiz_message,
+    ), group=8)
 
     # Shared big games: classic liar, hide-and-seek, and penalties.
     application.add_handler(MessageHandler(
