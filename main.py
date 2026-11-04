@@ -231,6 +231,37 @@ def build_application() -> Application:
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("health", health_command))
     application.add_handler(MessageHandler(
+        filters.ChatType.PRIVATE & filters.Regex(
+            r"^/start(?:@\w+)?\s+whisper_[A-Za-z0-9_-]+$"
+        ),
+        whisper_start_handler,
+    ), group=-5)
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.Regex(r"^(?:همسه|همسة|اهمس)$"),
+        whisper_command,
+    ))
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.Regex(r"^تفعيل الهمسات$"),
+        enable_whispers_command,
+    ))
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.Regex(r"^تعطيل الهمسات$"),
+        disable_whispers_command,
+    ))
+    application.add_handler(MessageHandler(
+        filters.ChatType.PRIVATE & filters.Regex(r"^الهمسات$"),
+        whispers_list_command,
+    ))
+    application.add_handler(MessageHandler(
+        filters.ChatType.PRIVATE & (
+            filters.TEXT | filters.PHOTO | filters.ANIMATION | filters.Sticker.ALL
+        ) & ~filters.COMMAND,
+        whisper_private_message,
+    ), group=-4)
+    application.add_handler(CallbackQueryHandler(
+        whisper_callbacks, pattern=r"^wh_"
+    ))
+    application.add_handler(MessageHandler(
         filters.ChatType.GROUPS & filters.Regex(r"^تعديل لون$"),
         change_button_color_start,
     ), group=-20)
