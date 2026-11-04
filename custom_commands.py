@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from telegram import Update
 from telegram.ext import (
-    ApplicationHandlerStop, ContextTypes, ConversationHandler,
+    ApplicationHandlerStop, ContextTypes, ConversationHandler, MessageHandler, filters,
 )
 from database.custom_commands import (
     load_commands, save_command, delete_command as db_delete_command,
@@ -133,10 +133,12 @@ async def receive_new_command(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 def build_add_command_conversation():
     return ConversationHandler(
-        entry_points=[],
+        entry_points=[
+            MessageHandler(filters.Regex(r"^اضف امر$"), add_command_start),
+        ],
         states={
-            WAIT_OLD: [],
-            WAIT_NEW: [],
+            WAIT_OLD: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_old_command)],
+            WAIT_NEW: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_new_command)],
         },
         fallbacks=[],
         name="custom-command-add",
