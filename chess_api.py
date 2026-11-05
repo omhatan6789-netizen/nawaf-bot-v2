@@ -79,10 +79,13 @@ async def play_ai(game_id, user, uci):
                 raise ValueError("النقلة غير قانونية أو ليس دورك")
             moves=list(row["moves"] or [])
             san=board.san(move); board.push(move); moves.append({"uci":uci,"san":san})
+            after_player_fen=board.fen()
+            ai_move=None
             if not board.is_game_over(claim_draw=True):
-                # Give the player a short, natural pause before the bot replies.
+                # Keep the AI delay asynchronous; the board remains responsive while it thinks.
                 await asyncio.sleep(3.5)
                 ai=chess.Move.from_uci(choose_ai_move(board.fen(),row["difficulty"]))
+                ai_move=ai.uci()
                 san=board.san(ai); board.push(ai); moves.append({"uci":ai.uci(),"san":san})
             status="finished" if board.is_game_over(claim_draw=True) else "active"
             outcome=board.outcome(claim_draw=True) if status=="finished" else None
@@ -93,4 +96,6 @@ async def play_ai(game_id, user, uci):
             return {"id":game_id,"fen":board.fen(),"moves":moves,"status":status,
                     "turn":"white" if board.turn else "black",
                     "turn_name":row["white_name"] if board.turn else row["bot_name"],
-                    "white_name":row["white_name"],"black_name":row["bot_name"],"result":result,"legal_moves":[m.uci() for m in board.legal_moves] if status=="active" else []}
+                    "white_name":row["white_name"],"black_name":row["bot_name"],"result":result,
+                    "after_player_fen":after_player_fen,"ai_move":ai_move,
+                    "legal_moves":[m.uci() for m in board.legal_moves] if status=="active" else []}
