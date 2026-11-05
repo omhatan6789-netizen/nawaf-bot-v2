@@ -8,7 +8,7 @@ import os
 from threading import Thread
 
 from main import build_application
-from mini_app_server import handle_mini_app_request
+from mini_app_server import handle_mini_app_request, handle_connect4_post
 from memory_monitor import start_memory_monitor
 
 
@@ -34,6 +34,8 @@ class HealthHandler(BaseHTTPRequestHandler):
         self._respond(include_body=True)
 
     def do_POST(self):
+        if handle_connect4_post(self):
+            return
         self.send_response(404)
         self.send_header("Content-Length", "0")
         self.end_headers()
