@@ -221,7 +221,12 @@ function renderConnect4(previousBoard=null){
   result.textContent=c4Game.status==='draw'?'🤝 تعادل! تم إرجاع الرهانات':(!human&&c4Game.status==='won'?'🏆 فزت! لعب ممتاز!':'🏆 فاز '+(c4Game.winner_name||p2)+'!');
   shell.querySelector('#c4-status').textContent='انتهت المباراة';shell.querySelector('#c4-clock').textContent='—';shell.querySelector('#c4-progress').style.width='0%';
  }else if(!myTurn){
-  shell.querySelector('#c4-status').textContent=c4Game.bot_move_pending?'البوت يستعد للحركة...':'دور '+(human?(myPiece===1?p2:p1):p2);
+  const rpsLine=c4Game.rps_result
+   ? (c4Game.rps_result==='bot_starts'
+      ? '✊ حجر ورقة مقص: البوت فاز ('+({r:'حجر',p:'ورقة',s:'مقص'}[c4Game.rps_bot_choice]||'')+')'
+      : '✊ حجر ورقة مقص: أنت فزت ('+({r:'حجر',p:'ورقة',s:'مقص'}[c4Game.rps_bot_choice]||'')+')')
+   : '';
+  shell.querySelector('#c4-status').textContent=rpsLine?(rpsLine+' — '+(c4Game.bot_move_pending?'البوت يبدأ الآن':'انتظر دورك')):(c4Game.bot_move_pending?'البوت يستعد للحركة...':'دور '+(human?(myPiece===1?p2:p1):p2));
   shell.querySelector('#c4-clock').textContent='انتظار';
   players.forEach((el,i)=>el.classList.toggle('active',i===activeIndex));
   if(c4Game.bot_move_pending){
@@ -240,7 +245,12 @@ function renderConnect4(previousBoard=null){
 async function runC4BotMove(){
  if(c4Busy||!c4Game||!c4Game.bot_move_pending)return;
  c4Busy=true;const previous=c4Game.board.map(row=>row.slice());
- try{c4Game=await c4Request('/api/connect4/bot-move',{game_id:c4Game.id});c4Busy=false;renderConnect4(previous);}
+ try{
+  const rpsInfo={rps_result:c4Game.rps_result,rps_player_choice:c4Game.rps_player_choice,rps_bot_choice:c4Game.rps_bot_choice};
+  c4Game=await c4Request('/api/connect4/bot-move',{game_id:c4Game.id});
+  Object.assign(c4Game,Object.fromEntries(Object.entries(rpsInfo).filter(([,v])=>v!==undefined)));
+  c4Busy=false;renderConnect4(previous);
+ }
  catch(e){c4Busy=false;const s=document.getElementById('c4-status');if(s)s.textContent=e.message;c4BotTimer=setTimeout(runC4BotMove,1500);}
 }
 async function pollConnect4State(){
