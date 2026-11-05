@@ -487,7 +487,7 @@ def build_application() -> Application:
     application.add_handler(MessageHandler(
         filters.ChatType.GROUPS & (filters.TEXT | filters.PHOTO),
         game_message_handler,
-    ), group=30)
+    ), group=11)
 
     # Shared big games: classic liar, hide-and-seek, and penalties.
     application.add_handler(MessageHandler(
