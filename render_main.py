@@ -9,6 +9,7 @@ from threading import Thread
 
 from main import build_application
 from mini_app_server import handle_mini_app_request, handle_chess_post
+from memory_monitor import start_memory_monitor
 
 
 class HealthHandler(BaseHTTPRequestHandler):
@@ -57,4 +58,5 @@ def start_health_server():
 
 if __name__ == "__main__":
     start_health_server()
+    start_memory_monitor(interval_seconds=60)
     build_application().run_polling()
