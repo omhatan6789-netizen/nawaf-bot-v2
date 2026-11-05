@@ -574,11 +574,11 @@ def build_application() -> Application:
         image_quiz_settings,
     ))
     application.add_handler(MessageHandler(
-        filters.ChatType.GROUPS & filters.Regex(r"^اضف صورة$"),
+        filters.ChatType.GROUPS & filters.Regex(r"^(?:اضف صور توقع|اضف صورة)$"),
         add_manual_image_command,
     ))
     application.add_handler(MessageHandler(
-        filters.ChatType.GROUPS & filters.Regex(r"^حذف صورة$"),
+        filters.ChatType.GROUPS & filters.Regex(r"^(?:حذف صور توقع|حذف صورة)$"),
         delete_manual_image_command,
     ))
     application.add_handler(MessageHandler(
