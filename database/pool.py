@@ -3,7 +3,9 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import logging
-from typing import Optional
+import time
+from contextlib import asynccontextmanager
+from typing import Optional, AsyncIterator
 
 import asyncpg
 
@@ -33,6 +35,20 @@ def _log_query(record: asyncpg.Record) -> None:
 async def _init_connection(connection: asyncpg.Connection) -> None:
     """Attach per-query timing to every connection created by the pool."""
     connection.add_query_logger(_log_query)
+
+
+@asynccontextmanager
+async def acquire_timed(pool: asyncpg.Pool, label: str) -> AsyncIterator[asyncpg.Connection]:
+    """Measure time spent waiting for a pooled PostgreSQL connection."""
+    started = time.perf_counter()
+    async with pool.acquire() as connection:
+        elapsed_ms = (time.perf_counter() - started) * 1000
+        perf_logger.info(
+            "PERF database.pool_acquire label=%s duration_ms=%.1f",
+            label,
+            elapsed_ms,
+        )
+        yield connection
 
 
 async def init_pool(settings: Settings) -> asyncpg.Pool:
