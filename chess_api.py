@@ -1,4 +1,4 @@
-import hashlib, hmac, json, time
+import asyncio, hashlib, hmac, json, time
 from urllib.parse import parse_qsl
 import uuid
 import chess
@@ -80,6 +80,8 @@ async def play_ai(game_id, user, uci):
             moves=list(row["moves"] or [])
             san=board.san(move); board.push(move); moves.append({"uci":uci,"san":san})
             if not board.is_game_over(claim_draw=True):
+                # Give the player a short, natural pause before the bot replies.
+                await asyncio.sleep(3.5)
                 ai=chess.Move.from_uci(choose_ai_move(board.fen(),row["difficulty"]))
                 san=board.san(ai); board.push(ai); moves.append({"uci":ai.uci(),"san":san})
             status="finished" if board.is_game_over(claim_draw=True) else "active"
