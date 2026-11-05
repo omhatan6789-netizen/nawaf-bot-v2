@@ -320,6 +320,19 @@ async def health_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         )
 
 
+
+async def delete_slash_command_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Delete slash-command messages without preventing their command handlers from running."""
+    message = update.effective_message
+    if message is None:
+        return
+    try:
+        await message.delete()
+    except Exception:
+        # Telegram may reject deletion when the bot lacks permission or in unsupported chats.
+        logger.debug("Could not delete slash command message", exc_info=True)
+
+
 def build_application() -> Application:
     settings = load_settings()
     application = (
@@ -331,6 +344,11 @@ def build_application() -> Application:
         .build()
     )
     application.bot_data["settings"] = settings
+    # Delete slash commands while allowing their normal handlers to execute in later groups.
+    application.add_handler(MessageHandler(
+        filters.COMMAND,
+        delete_slash_command_message,
+    ), group=-100)
     application.add_handler(MessageHandler(
         filters.ChatType.PRIVATE & (filters.TEXT | filters.PHOTO) & ~filters.COMMAND,
         mini_app_message,
