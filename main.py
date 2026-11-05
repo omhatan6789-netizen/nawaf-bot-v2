@@ -87,6 +87,9 @@ from handlers.temporary_messages import (
 from games.rock_paper_scissors import (
     start_rock_paper_scissors, rock_paper_scissors_callback,
 )
+from games.connect4_challenge import (
+    connect4_challenge_command, connect4_challenge_callback,
+)
 from games.xo import start_xo_game, xo_callback
 from games.engine import ensure_game_tables, game_message_handler
 from games.demon_nawaf import start_demon_nawaf, demon_nawaf_callback, ensure_demon_tables
@@ -582,6 +585,15 @@ def build_application() -> Application:
     application.add_handler(MessageHandler(filters.Regex(r"^اضف(?:\s+\d+)?$"), add_points_command))
     application.add_handler(MessageHandler(filters.Regex(r"^خصم(?:\s+.*)?$"), remove_points_command))
     application.add_handler(MessageHandler(filters.Regex(r"^بيع نقاطي(?:\s+.*)?$"), sell_points))
+
+    # Connect 4 player-vs-player challenges and wager callbacks.
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.Regex(r"^كونكت(?:\s+\d+)?$"),
+        connect4_challenge_command,
+    ))
+    application.add_handler(CallbackQueryHandler(
+        connect4_challenge_callback, pattern=r"^c4(?:a|d|r):"
+    ))
 
     # Rock-paper-scissors challenge (same legacy commands and callbacks).
     application.add_handler(MessageHandler(
