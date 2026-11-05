@@ -335,11 +335,7 @@ def build_application() -> Application:
         filters.StatusUpdate.VIDEO_CHAT_ENDED, voice_chat_ended
     ))
     application.add_handler(MessageHandler(
-        filters.ChatType.PRIVATE & (
-            filters.PHOTO | filters.VIDEO | filters.ANIMATION | filters.STICKER
-            | filters.VOICE | filters.AUDIO | filters.DOCUMENT | filters.VIDEO_NOTE
-            | filters.CONTACT | filters.LOCATION | filters.VENUE
-        ),
+        filters.ChatType.PRIVATE,
         handle_send_media,
     ), group=-8)
     application.add_handler(ChatMemberHandler(
