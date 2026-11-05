@@ -253,13 +253,13 @@ async def run_investment(user_id: int, now: int, cooldown_seconds: int, amount: 
         ),
         credited AS (
             UPDATE points
-            SET points = points + $5
+            SET points = points + $5::BIGINT
             WHERE user_id = $1
               AND EXISTS (SELECT 1 FROM claimed)
               AND $4 > 0
               AND COALESCE((SELECT points FROM lock_points), 0) >= $4
-              AND $5 IS NOT NULL
-              AND $5 > 0
+              AND $5::BIGINT IS NOT NULL
+              AND $5::BIGINT > 0
             RETURNING points
         )
         SELECT
@@ -268,7 +268,7 @@ async def run_investment(user_id: int, now: int, cooldown_seconds: int, amount: 
                     THEN 'cooldown'
                 WHEN $4 <= 0 OR COALESCE((SELECT points FROM lock_points), 0) < $4
                     THEN 'insufficient'
-                WHEN $5 IS NOT NULL THEN 'success'
+                WHEN $5::BIGINT IS NOT NULL THEN 'success'
                 ELSE 'failed'
             END AS status,
             COALESCE(
@@ -287,38 +287,71 @@ async def run_investment(user_id: int, now: int, cooldown_seconds: int, amount: 
     return str(row["status"]), int(row["balance"] or 0), int(row["remaining"] or 0)
 
 
+@timed("db.tasliyat.run_luck")
 async def run_luck(user_id: int, now: int, cooldown_seconds: int, amount: int, won: bool) -> tuple[str, int, int, int]:
-    """Apply a win/loss and cooldown under one row lock."""
+    """Apply a luck result and cooldown atomically in one DB round trip."""
     pool = get_pool()
+    until = now + cooldown_seconds
+    query = """
+        WITH ensure_user AS (
+            INSERT INTO users(user_id) VALUES($1)
+            ON CONFLICT(user_id) DO NOTHING
+            RETURNING user_id
+        ),
+        ensure_points AS (
+            INSERT INTO points(user_id, points)
+            SELECT $1, 0 WHERE (SELECT COUNT(*) FROM ensure_user) >= 0
+            ON CONFLICT(user_id) DO NOTHING
+            RETURNING points
+        ),
+        existing_points AS (
+            SELECT points FROM points
+            WHERE user_id = $1 AND NOT EXISTS (SELECT 1 FROM ensure_points)
+            FOR UPDATE
+        ),
+        lock_points AS (
+            SELECT points FROM ensure_points
+            UNION ALL
+            SELECT points FROM existing_points
+        ),
+        claimed AS (
+            INSERT INTO tasliyat_cooldowns(user_id, luck_until)
+            SELECT $1, $3
+            WHERE $4 > 0 AND COALESCE((SELECT points FROM lock_points), 0) >= $4
+            ON CONFLICT(user_id) DO UPDATE
+            SET luck_until = EXCLUDED.luck_until
+            WHERE tasliyat_cooldowns.luck_until <= $2
+            RETURNING luck_until
+        ),
+        cooldown_state AS (
+            SELECT luck_until AS cooldown_until FROM tasliyat_cooldowns
+            WHERE user_id = $1 AND NOT EXISTS (SELECT 1 FROM claimed)
+        ),
+        changed_points AS (
+            UPDATE points
+            SET points = points + CASE WHEN $5 THEN $4 ELSE -$4 END
+            WHERE user_id = $1 AND EXISTS (SELECT 1 FROM claimed)
+            RETURNING points
+        )
+        SELECT
+            CASE
+                WHEN COALESCE((SELECT cooldown_until FROM cooldown_state), 0) > $2 THEN 'cooldown'
+                WHEN $4 <= 0 OR COALESCE((SELECT points FROM lock_points), 0) < $4 THEN 'insufficient'
+                WHEN $5 THEN 'won'
+                ELSE 'lost'
+            END AS status,
+            COALESCE((SELECT points FROM lock_points), 0) AS before_balance,
+            COALESCE((SELECT points FROM changed_points), (SELECT points FROM lock_points), 0) AS after_balance,
+            GREATEST(0, COALESCE((SELECT cooldown_until FROM cooldown_state), 0) - $2) AS remaining
+    """
     async with pool.acquire() as conn:
-        async with conn.transaction():
-            await _ensure_user(conn, user_id)
-            balance = int(await conn.fetchval(
-                "SELECT points FROM points WHERE user_id=$1 FOR UPDATE", user_id
-            ) or 0)
-            await conn.execute(
-                "INSERT INTO tasliyat_cooldowns(user_id) VALUES($1) ON CONFLICT(user_id) DO NOTHING",
-                user_id,
-            )
-            current_until = int(await conn.fetchval(
-                "SELECT luck_until FROM tasliyat_cooldowns WHERE user_id=$1 FOR UPDATE",
-                user_id,
-            ) or 0)
-            if current_until > now:
-                return "cooldown", balance, balance, current_until - now
-            if amount <= 0 or balance < amount:
-                return "insufficient", balance, balance, 0
-            await conn.execute(
-                "UPDATE tasliyat_cooldowns SET luck_until=$2 WHERE user_id=$1",
-                user_id, now + cooldown_seconds,
-            )
-            delta = amount if won else -amount
-            new_balance = int(await conn.fetchval(
-                "UPDATE points SET points=points+$2 WHERE user_id=$1 RETURNING points",
-                user_id, delta,
-            ))
-    return ("won" if won else "lost"), balance, new_balance, 0
-
+        row = await conn.fetchrow(query, user_id, now, until, amount, won)
+    return (
+        str(row["status"]),
+        int(row["before_balance"] or 0),
+        int(row["after_balance"] or 0),
+        int(row["remaining"] or 0),
+    )
 
 STORE_ITEMS = {
     "برج": {"emoji":"🏰","min":2188,"max":4375},
