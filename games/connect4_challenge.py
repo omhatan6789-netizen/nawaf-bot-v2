@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, WebAppInfo
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
 from database.pool import get_pool
@@ -245,9 +245,10 @@ async def connect4_challenge_callback(update: Update, context: ContextTypes.DEFA
                WHERE id=$1 AND status='choosing'""",
             challenge_id, uuid.UUID(game["id"]),
         )
-        web_url = f"https://nawaf-bot-v2.onrender.com/mini-app?game_id={game['id']}"
+        me = await context.bot.get_me()
+        start_url = f"https://t.me/{me.username}?start=c4_{game['id']}"
         keyboard = InlineKeyboardMarkup([[
-            InlineKeyboardButton("🔴 فتح لعبة كونكت 4", web_app=WebAppInfo(url=web_url))
+            InlineKeyboardButton("🔴 فتح لعبة كونكت 4", url=start_url)
         ]])
         starter_name = updated["challenger_name"] if starter_id == updated["challenger_id"] else updated["opponent_name"]
         try:
