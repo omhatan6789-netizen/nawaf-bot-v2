@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
-import urllib.request
+import logging
 from pathlib import Path
 from urllib.parse import unquote
 
@@ -79,7 +78,7 @@ async def _payload(top=None):
         ],
     }
 
-def _run(coro, timeout=12):
+def _run(coro, timeout=20):
     if _loop is None:
         raise RuntimeError("Mini App backend is not ready")
     return asyncio.run_coroutine_threadsafe(coro, _loop).result(timeout=timeout)
@@ -113,12 +112,19 @@ def handle_mini_app_request(handler):
     if path.startswith("/tg-file/"):
         file_id = unquote(path[len("/tg-file/"):])
         try:
-            file = _run(_bot.get_file(file_id))
-            token = os.environ["BOT_TOKEN"]
-            url = f"https://api.telegram.org/file/bot{token}/{file.file_path}"
-            with urllib.request.urlopen(url, timeout=15) as response:
-                body = response.read()
-                content_type = response.headers.get("Content-Type", "image/jpeg")
+            telegram_file = _run(_bot.get_file(file_id))
+            body = _run(telegram_file.download_as_bytearray())
+            body = bytes(body)
+            if body.startswith(b"\x89PNG\r\n\x1a\n"):
+                content_type = "image/png"
+            elif body.startswith(b"\xff\xd8\xff"):
+                content_type = "image/jpeg"
+            elif body.startswith((b"GIF87a", b"GIF89a")):
+                content_type = "image/gif"
+            elif body.startswith(b"RIFF") and body[8:12] == b"WEBP":
+                content_type = "image/webp"
+            else:
+                raise ValueError("Unsupported image format returned by Telegram")
             handler.send_response(200)
             handler.send_header("Content-Type", content_type)
             handler.send_header("Cache-Control", "public, max-age=3600")
@@ -126,6 +132,7 @@ def handle_mini_app_request(handler):
             handler.end_headers()
             handler.wfile.write(body)
         except Exception:
+            logging.getLogger(__name__).exception("Failed to serve Mini App image")
             handler.send_error(404, "Image not found")
         return True
     return False
