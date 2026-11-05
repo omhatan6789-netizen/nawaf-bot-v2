@@ -55,7 +55,7 @@ function showTop(kind,title){
 document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>{
  const a=b.dataset.action;
  if(a==='help'){openBot('help');return;}
- if(a==='games'){openBot();return;}
+ if(a==='games'){openBot('games');return;}
  const names={points:'توب النقاط',active:'توب المتفاعلين',robbers:'توب الحرامية'};
  showTop(a,names[a]||'التوب');
 });
