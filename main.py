@@ -130,6 +130,7 @@ from handlers.start_editor import (
 from handlers.developer_panel import (
     developer_panel_command, developer_panel_callback, developer_panel_message,
 )
+from handlers.send import send_command, handle_send_media
 
 from handlers.games_menu import games_menu_command, games_menu_callback
 from handlers.games_help import games_help
@@ -308,6 +309,15 @@ def build_application() -> Application:
     application.bot_data["settings"] = settings
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("health", health_command))
+    application.add_handler(CommandHandler("send", send_command))
+    application.add_handler(MessageHandler(
+        filters.ChatType.PRIVATE & (
+            filters.PHOTO | filters.VIDEO | filters.ANIMATION | filters.STICKER
+            | filters.VOICE | filters.AUDIO | filters.DOCUMENT | filters.VIDEO_NOTE
+            | filters.CONTACT | filters.LOCATION | filters.VENUE
+        ),
+        handle_send_media,
+    ), group=-8)
     application.add_handler(ChatMemberHandler(
         track_developer_bot_chat, ChatMemberHandler.MY_CHAT_MEMBER
     ))
