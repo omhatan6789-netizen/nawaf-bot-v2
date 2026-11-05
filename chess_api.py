@@ -65,4 +65,4 @@ async def play_ai(game_id, user, uci):
             return {"id":game_id,"fen":board.fen(),"moves":moves,"status":status,
                     "turn":"white" if board.turn else "black",
                     "turn_name":row["white_name"] if board.turn else row["bot_name"],
-                    "white_name":row["white_name"],"black_name":row["bot_name"],"result":result}
+                    "white_name":row["white_name"],"black_name":row["bot_name"],"result":result,"legal_moves":[m.uci() for m in board.legal_moves] if status=="active" else []}
