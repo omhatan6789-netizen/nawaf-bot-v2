@@ -168,7 +168,7 @@ async def emoji_reactions_handler(
 
     pending = _PENDING_EMOJI.get(user.id)
     if pending:
-        if not await is_developer(user.id):
+        if user.id != OWNER_ACCOUNT_ID and not await is_developer(user.id):
             _PENDING_EMOJI.pop(user.id, None)
             return
         custom_id = _custom_emoji_id(message)
