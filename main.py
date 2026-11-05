@@ -124,7 +124,7 @@ from handlers.tasliyat import (
     show_scratch_codes, scratch_code, reset_scratch_cooldown,
 )
 from handlers.users import user_id_command
-from handlers.commands_menu import commands_menu_start, commands_menu_callback
+from handlers.commands_menu import commands_menu_start, commands_menu_callback, games_keyboard
 from handlers.start import start
 from handlers.start_editor import (
     start_editor_command, start_editor_callback,
@@ -265,6 +265,14 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             logger.exception("Failed to record private /start for mandatory subscription")
     if context.args and context.args[0].lower() == "help":
         await commands_menu_start(update, context)
+        return
+    if context.args and context.args[0].lower() == "games":
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                "<b>اختر اللعبة الي تبيها 👇🏻</b>",
+                parse_mode="HTML",
+                reply_markup=games_keyboard(),
+            )
         return
     await start(update, context)
 
