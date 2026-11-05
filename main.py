@@ -280,6 +280,25 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             )
         except Exception:
             logger.exception("Failed to record private /start for mandatory subscription")
+    if context.args and context.args[0].startswith("c4_"):
+        game_id = context.args[0][3:]
+        try:
+            import uuid
+            uuid.UUID(game_id)
+            from telegram import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
+            game_url = f"https://nawaf-bot-v2.onrender.com/mini-app?game_id={game_id}"
+            await update.effective_message.reply_text(
+                "تم تجهيز تحدي كونكت 4. افتح اللعبة من الزر بالأسفل.",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton(
+                        "🔴 فتح لعبة كونكت 4",
+                        web_app=WebAppInfo(url=game_url),
+                    )
+                ]]),
+            )
+        except Exception:
+            await update.effective_message.reply_text("رابط لعبة كونكت 4 غير صالح.")
+        return
     if context.args and context.args[0].lower() == "help":
         await commands_menu_start(update, context)
         return
