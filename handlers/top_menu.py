@@ -68,19 +68,19 @@ async def _build_top_text(kind: str) -> str:
     if kind == "active":
         rows = await pool.fetch(
             """
-            SELECT user_id, first_name, username, messages
+            SELECT user_id, first_name, username, activity_messages
             FROM users
-            WHERE messages > 0
+            WHERE activity_messages > 0
               AND COALESCE(is_bot, FALSE) = FALSE
               AND COALESCE(first_name, '') <> 'Deleted Account'
-            ORDER BY messages DESC, user_id ASC
+            ORDER BY activity_messages DESC, user_id ASC
             LIMIT 10
             """
         )
         lines = ["توب المتفاعلين:", ""]
         for place, row in enumerate(rows, 1):
             name = row["first_name"] or row["username"] or "مستخدم"
-            lines.append(f"{place} - {name} : {int(row['messages'] or 0)} رسالة")
+            lines.append(f"{place} - {name} : {int(row['activity_messages'] or 0)} رسالة")
         return "\n".join(lines) if rows else "توب المتفاعلين:\n\nلا يوجد ترتيب حتى الآن."
 
     return "تعذر عرض التوب المطلوب."
