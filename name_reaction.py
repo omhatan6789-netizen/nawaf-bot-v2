@@ -85,31 +85,6 @@ restrict_notice_times = {}
 # حفظ الإعدادات
 # ==========================================
 
-def load_settings():
-    default = {
-        "replies_enabled": DEFAULT_ENABLED,
-        "muted": {},
-        "restricted": {}
-    }
-
-    try:
-        if SETTINGS_FILE.exists():
-            with SETTINGS_FILE.open("r", encoding="utf-8") as file:
-                data = json.load(file)
-
-            if isinstance(data, dict):
-                default["replies_enabled"] = bool(
-                    data.get("replies_enabled", DEFAULT_ENABLED)
-                )
-
-                default["muted"] = data.get("muted", {})
-                default["restricted"] = data.get("restricted", {})
-
-    except Exception as exc:
-        print(f"[NAME REACTION] Settings load error: {exc}")
-
-    return default
-
 replies_enabled = DEFAULT_ENABLED
 muted_users = {}
 restricted_users = {}
@@ -171,7 +146,7 @@ async def load_settings():
 
     print("[NAME REACTION] Settings loaded from PostgreSQL.")
 
-async def await save_settings():
+async def save_settings():
     data = {
         "replies_enabled": replies_enabled,
         "muted": muted_users,
@@ -518,10 +493,10 @@ async def _reply_control_handler(client, message):
         return
 
     # --------------------------
-    # تفعيل الردود
+    # فتح الردود
     # --------------------------
 
-    if text == "تفعيل الردود":
+    if text == "فتح الردود":
 
         replies_enabled = True
         await save_settings()
@@ -542,10 +517,10 @@ async def _reply_control_handler(client, message):
         return
 
     # --------------------------
-    # تعطيل الردود
+    # قفل الردود
     # --------------------------
 
-    if text == "تعطيل الردود":
+    if text == "قفل الردود":
 
         replies_enabled = False
         await save_settings()
