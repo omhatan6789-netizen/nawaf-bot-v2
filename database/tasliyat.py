@@ -159,7 +159,7 @@ async def claim_reward(user_id: int, column: str, now: int, cooldown_seconds: in
         ),
         claimed AS (
             INSERT INTO tasliyat_cooldowns(user_id, {column})
-            VALUES($1, $3)
+            SELECT $1, $3 WHERE EXISTS (SELECT 1 FROM lock_points)
             ON CONFLICT(user_id) DO UPDATE
             SET {column} = EXCLUDED.{column}
             WHERE tasliyat_cooldowns.{column} <= $2
