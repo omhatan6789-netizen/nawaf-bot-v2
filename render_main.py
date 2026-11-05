@@ -8,7 +8,7 @@ import os
 from threading import Thread
 
 from main import build_application
-from mini_app_server import handle_mini_app_request
+from mini_app_server import handle_mini_app_request, handle_chess_post
 
 
 class HealthHandler(BaseHTTPRequestHandler):
@@ -31,6 +31,13 @@ class HealthHandler(BaseHTTPRequestHandler):
         if handle_mini_app_request(self):
             return
         self._respond(include_body=True)
+
+    def do_POST(self):
+        if handle_chess_post(self):
+            return
+        self.send_response(404)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
 
     def do_HEAD(self):
         # UptimeRobot and some proxies probe endpoints with HEAD requests.
