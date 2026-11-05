@@ -258,7 +258,7 @@ async def _show_search(message, context, query, requester):
 
     try:
 
-        results = await asyncio.to_thread(_search_youtube, query)
+        results = await _search_youtube(query)
 
         if not results:
 
@@ -406,9 +406,7 @@ async def _play_selected(
 
         with tempfile.TemporaryDirectory(prefix="music_call_") as folder:
 
-            file_path, info = await asyncio.to_thread(
-
-                _download_audio,
+            file_path, info = await _download_audio(
 
                 video["url"],
 
