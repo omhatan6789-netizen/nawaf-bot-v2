@@ -7,7 +7,8 @@
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
 :root{color-scheme:dark;--red:#9e1018;--muted:rgba(255,255,255,.58)}
-*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% 0%,#a20e18 0%,#650a10 40%,#16090b 100%);color:#fff;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;padding:0 15px 34px}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% 0%,#a20e18 0%,#650a10 40%,#16090b 100%);color:#fff;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;padding:0 15px 34px}
 .wrap{max-width:620px;margin:auto}.hero{width:100%;height:220px;overflow:hidden;border-radius:0 0 22px 22px;background:linear-gradient(140deg,#b20e1b,#21090d);box-shadow:0 12px 32px #0006}.hero img{width:100%;height:100%;object-fit:cover;display:none}
 .brand{text-align:center;margin:17px 0 22px;color:rgba(255,255,255,.48);font-size:13px;letter-spacing:1.5px;font-weight:600}
 .section-title{font-size:14px;color:#ffffffb8;margin:20px 4px 10px}
@@ -18,8 +19,49 @@
 .custom-card .thumb{width:48px;height:48px;border-radius:50%;object-fit:cover;background:#eee;flex:none}.custom-card .label{font-weight:750;flex:1;text-align:center;font-size:15px;overflow-wrap:anywhere}.dots{font-size:22px;color:#777;line-height:1}
 .custom-card.large{display:block;padding:0 0 13px;text-align:center}.custom-card.large .large-image{width:100%;height:185px;object-fit:cover;display:block;background:#eee}.custom-card.large .label{display:block;padding:12px 12px 0;font-size:17px}
 .empty{color:#ffffffbb;text-align:center;font-size:13px;padding:12px}.back-button{width:100%;margin-top:14px;border:1px solid #fff;border-radius:14px;background:#fff;color:#1a1111;min-height:52px;font-size:15px;font-weight:750;box-shadow:0 4px 0 #260609;cursor:pointer}#page-content .custom-card{min-height:58px}
-
-
+button{font-family:inherit}
+.c4-shell{max-width:500px;margin:0 auto;padding:8px 0 12px}
+.c4-heading{text-align:center;margin:4px 0 16px}.c4-heading h2{font-size:25px;margin:0 0 5px;font-weight:900}.c4-heading p{margin:0;color:#ffffff9c;font-size:12px}
+.c4-panel{background:linear-gradient(145deg,#ffffff16,#1606097a);border:1px solid #ffffff24;border-radius:22px;padding:17px;box-shadow:0 12px 30px #0004}
+.c4-label{font-size:13px;color:#ffffffb5;margin:2px 0 11px;font-weight:700}
+.c4-levels{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+.c4-level{border:1px solid #ffffff35;border-radius:13px;padding:12px 8px;background:#17090b88;color:#fff;font-weight:800;font-size:14px;cursor:pointer}
+.c4-level small{display:block;color:#ffffff8a;font-weight:500;font-size:10px;margin-top:3px}
+.c4-level.active{border-color:#ffb0b4;background:linear-gradient(140deg,#b31a24,#621017);box-shadow:0 0 0 2px #ff525233}
+.c4-start,.c4-secondary{width:100%;border:0;border-radius:14px;min-height:49px;margin-top:14px;font-weight:900;font-size:15px;cursor:pointer}
+.c4-start{background:linear-gradient(100deg,#fff,#ffe7e8);color:#5c0b12;box-shadow:0 4px 0 #5a090e}
+.c4-secondary{background:#ffffff16;color:#fff;border:1px solid #ffffff32}
+.c4-players{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:13px}
+.c4-player{display:flex;align-items:center;gap:8px;background:#1007098c;border:1px solid #ffffff20;border-radius:14px;padding:9px 11px;min-width:0;flex:1}
+.c4-disc{width:18px;height:18px;border-radius:50%;flex:none;box-shadow:inset 0 3px 5px #fff6,inset 0 -4px 6px #0005,0 2px 5px #0005}
+.c4-disc.red{background:radial-gradient(circle at 35% 28%,#ff9a9f,#ed2637 52%,#970c1a)}
+.c4-disc.yellow{background:radial-gradient(circle at 35% 28%,#fff6b0,#ffcb35 55%,#b87905)}
+.c4-player strong{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.c4-player small{display:block;color:#ffffff75;font-size:10px}
+.c4-vs{color:#ffffff78;font-size:11px;font-weight:900}
+.c4-status{background:#1007099c;border:1px solid #ffffff20;border-radius:14px;padding:11px 13px;margin-bottom:12px}
+.c4-statusline{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;font-weight:800}
+.c4-clock{font-variant-numeric:tabular-nums;color:#ffd1d3;font-weight:900}
+.c4-track{height:5px;border-radius:8px;background:#ffffff18;margin-top:9px;overflow:hidden}
+.c4-progress{height:100%;width:100%;background:linear-gradient(90deg,#ffb4b7,#f53b4c);border-radius:8px;transition:width .2s linear}
+.c4-board-wrap{position:relative;width:100%;max-width:455px;margin:0 auto}
+.c4-board{position:relative;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-template-rows:repeat(6,minmax(0,1fr));gap:clamp(4px,1.5vw,8px);aspect-ratio:7/6;padding:clamp(7px,2vw,11px);border-radius:19px;background:linear-gradient(145deg,#3185ed,#1051b8 60%,#093b8e);border:2px solid #8bc5ff;box-shadow:inset 0 5px 10px #ffffff32,inset 0 -9px 15px #001c5b77,0 12px 25px #0008;overflow:hidden}
+.c4-slot{border:0;padding:0;min-width:0;min-height:0;border-radius:50%;background:radial-gradient(circle at 45% 38%,#082b68,#061b49 74%);box-shadow:inset 0 4px 8px #0009,inset 0 -2px 3px #ffffff12;cursor:pointer;position:relative;z-index:1}
+.c4-slot:disabled{cursor:default}
+.c4-slot .c4-disc{display:block;width:100%;height:100%;border-radius:50%;box-shadow:inset 0 4px 6px #fff6,inset 0 -6px 8px #0006,0 2px 4px #001b4d88;animation:c4-drop .22s ease-out}
+.c4-slot .c4-disc.red{background:radial-gradient(circle at 35% 25%,#ffb4b8,#f02e40 52%,#a5091d)}
+.c4-slot .c4-disc.yellow{background:radial-gradient(circle at 35% 25%,#fff8c4,#ffce3c 55%,#bd7900)}
+@keyframes c4-drop{from{transform:translateY(-9px) scale(.82);opacity:.5}to{transform:translateY(0) scale(1);opacity:1}}
+.c4-win-svg{position:absolute;inset:0;width:100%;height:100%;z-index:3;pointer-events:none;overflow:visible}
+.c4-win-svg line{stroke:#fff;stroke-width:9;stroke-linecap:round;filter:drop-shadow(0 0 5px #fff) drop-shadow(0 0 9px #ffdf5a);stroke-dasharray:1;animation:c4-line .45s ease-out}
+@keyframes c4-line{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+.c4-result{display:none;text-align:center;font-weight:900;font-size:19px;margin:14px 0 0;padding:12px;border-radius:14px;background:#ffffff13;border:1px solid #ffffff2a}
+.c4-result.show{display:block}
+.c4-hint{text-align:center;color:#ffffff7d;font-size:11px;margin:10px 0 0}
+.c4-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+.c4-actions button{margin:0;min-height:44px;font-size:13px}
+.c4-error{color:#ffd4d6;text-align:center;font-size:12px;padding:10px 0}
+@media(max-width:380px){.hero{height:175px}.c4-panel{padding:12px}.c4-board{gap:4px;padding:6px}.c4-player{padding:7px}.c4-player strong{font-size:11px}}
 </style></head>
 <body><main class="wrap">
 <div class="hero"><img id="banner" alt=""></div>
@@ -42,7 +84,7 @@ const home=document.getElementById('home');
 const page=document.getElementById('page');
 const pageTitle=document.getElementById('page-title');
 const pageContent=document.getElementById('page-content');
-function showHome(){page.hidden=true;home.hidden=false;}
+function showHome(){stopC4Timer();page.hidden=true;home.hidden=false;}
 function openBot(startParam=''){if(!botUsername)return;const link='https://t.me/'+botUsername+(startParam?'?start='+encodeURIComponent(startParam):'');if(tg?.openTelegramLink)tg.openTelegramLink(link);else location.href=link;}
 function showTop(kind,title){
  home.hidden=true;page.hidden=false;pageTitle.textContent=title;pageContent.replaceChildren();
@@ -56,10 +98,79 @@ function showTop(kind,title){
 }
 
 function showGames(){
- home.hidden=true;page.hidden=false;pageTitle.textContent='الألعاب 🎮';pageContent.replaceChildren();
- const empty=document.createElement('div');empty.className='empty';empty.textContent='قريبًا ألعاب جديدة 🎮';pageContent.appendChild(empty);
+ stopC4Timer();home.hidden=true;page.hidden=false;pageTitle.textContent='الألعاب 🎮';pageContent.replaceChildren();
+ const card=document.createElement('button');card.className='custom-card';card.style.width='100%';card.style.cursor='pointer';
+ const icon=document.createElement('span');icon.style.fontSize='30px';icon.textContent='🔴';card.appendChild(icon);
+ const label=document.createElement('span');label.className='label';label.textContent='كونكت 4';card.appendChild(label);
+ const hint=document.createElement('span');hint.className='dots';hint.textContent='ابدأ';card.appendChild(hint);
+ card.onclick=showConnect4Setup;pageContent.appendChild(card);
 }
 
+let c4Difficulty='متوسط',c4Game=null,c4Timer=null,c4Tick=null,c4Busy=false,c4Seconds=15;
+const c4Levels=[['سهل','مناسب للتجربة'],['متوسط','تحدي متوازن'],['صعب','يفكر قبل أن يلعب'],['مستحيل','أقوى تحدي']];
+function stopC4Timer(){if(c4Timer)clearTimeout(c4Timer);if(c4Tick)clearInterval(c4Tick);c4Timer=null;c4Tick=null;}
+function c4Shell(){pageContent.innerHTML='<div class="c4-shell" id="c4-shell"></div>';return document.getElementById('c4-shell');}
+function showConnect4Setup(){
+ stopC4Timer();c4Game=null;c4Busy=false;
+ const shell=c4Shell();
+ shell.innerHTML='<div class="c4-heading"><h2>كونكت 4 <span style="font-size:20px">🔴🟡</span></h2><p>كوّن أربعة أقراص متصلة قبل البوت</p></div><div class="c4-panel"><div class="c4-label">اختر مستوى البوت</div><div class="c4-levels" id="c4-levels"></div><button class="c4-start" id="c4-start">ابدأ التحدي ✦</button><div class="c4-hint">لديك 15 ثانية في كل دور</div></div>';
+ const levels=shell.querySelector('#c4-levels');
+ c4Levels.forEach(([name,desc])=>{const b=document.createElement('button');b.className='c4-level'+(c4Difficulty===name?' active':'');b.innerHTML=name+'<small>'+desc+'</small>';b.onclick=()=>{c4Difficulty=name;levels.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));};levels.appendChild(b);});
+ shell.querySelector('#c4-start').onclick=startConnect4;
+}
+async function c4Request(path,payload){
+ const initData=tg?.initData||'';
+ if(!initData)throw new Error('افتح الميني آب من داخل تيليجرام حتى نتحقق من حسابك');
+ const response=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...payload,initData})});
+ const data=await response.json().catch(()=>({}));
+ if(!response.ok||!data.ok)throw new Error(data.error||'تعذر الاتصال بالسيرفر');
+ return data.game;
+}
+async function startConnect4(){
+ const btn=document.getElementById('c4-start');if(btn){btn.disabled=true;btn.textContent='جاري تجهيز اللوحة...';}
+ try{c4Game=await c4Request('/api/connect4/new',{difficulty:c4Difficulty});renderConnect4();}
+ catch(e){const shell=document.getElementById('c4-shell');if(shell){const error=document.createElement('div');error.className='c4-error';error.textContent=e.message;shell.appendChild(error);if(btn){btn.disabled=false;btn.textContent='ابدأ التحدي ✦';}}}
+}
+function renderConnect4(){
+ stopC4Timer();const shell=c4Shell();
+ const names={سهل:'سهل',متوسط:'متوسط',صعب:'صعب',مستحيل:'مستحيل'};
+ shell.innerHTML='<div class="c4-heading"><h2>كونكت 4</h2><p>المستوى: '+names[c4Game.difficulty]+'</p></div><div class="c4-players"><div class="c4-player"><i class="c4-disc red"></i><div><strong>أنت</strong><small>الأحمر</small></div></div><span class="c4-vs">VS</span><div class="c4-player"><i class="c4-disc yellow"></i><div><strong>بوت نواف</strong><small>الأصفر</small></div></div></div><div class="c4-status"><div class="c4-statusline"><span id="c4-status">دورك! اختر عمودًا</span><span class="c4-clock" id="c4-clock">15 ثانية</span></div><div class="c4-track"><div class="c4-progress" id="c4-progress"></div></div></div><div class="c4-board-wrap"><div class="c4-board" id="c4-board"></div><svg class="c4-win-svg" id="c4-win-svg" viewBox="0 0 700 600" preserveAspectRatio="none"></svg></div><div class="c4-result" id="c4-result"></div><div class="c4-actions"><button class="c4-secondary" id="c4-again">مباراة جديدة ↻</button><button class="c4-secondary" id="c4-level-back">تغيير المستوى</button></div><div class="c4-hint">اضغط على أي خانة في العمود لإسقاط القرص</div>';
+ const board=shell.querySelector('#c4-board');
+ c4Game.board.forEach((row,r)=>row.forEach((piece,c)=>{
+  const slot=document.createElement('button');slot.className='c4-slot';slot.type='button';slot.setAttribute('aria-label','العمود '+(c+1));
+  if(piece){const disc=document.createElement('span');disc.className='c4-disc '+(piece===1?'red':'yellow');slot.appendChild(disc);}
+  slot.disabled=c4Busy||c4Game.status!=='playing'||row[0]!==0;
+  slot.onclick=()=>submitConnect4Move(c);board.appendChild(slot);
+ }));
+ shell.querySelector('#c4-again').onclick=startConnect4;
+ shell.querySelector('#c4-level-back').onclick=showConnect4Setup;
+ if(c4Game.winning_cells?.length===4){
+  const first=c4Game.winning_cells[0],last=c4Game.winning_cells[3];
+  const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+  line.setAttribute('x1',(first[1]+.5)*100);line.setAttribute('y1',(first[0]+.5)*100);
+  line.setAttribute('x2',(last[1]+.5)*100);line.setAttribute('y2',(last[0]+.5)*100);
+  line.setAttribute('pathLength','1');shell.querySelector('#c4-win-svg').appendChild(line);
+ }
+ if(c4Game.status!=='playing'){
+  const result=shell.querySelector('#c4-result');result.classList.add('show');
+  result.textContent=c4Game.status==='won'?'🏆 فزت! لعب ممتاز!':c4Game.status==='lost'?'🤖 فاز بوت نواف! حاول مرة ثانية':'🤝 تعادل! مباراة قوية';
+  shell.querySelector('#c4-status').textContent='انتهت المباراة';shell.querySelector('#c4-clock').textContent='—';
+  shell.querySelector('#c4-progress').style.width='0%';
+ }else{shell.querySelector('#c4-status').textContent='دورك! اختر عمودًا';startC4Timer();}
+}
+function startC4Timer(){
+ stopC4Timer();c4Seconds=15;const started=Date.now();
+ const update=()=>{const left=Math.max(0,15-(Date.now()-started)/1000);const clock=document.getElementById('c4-clock'),bar=document.getElementById('c4-progress');if(clock)clock.textContent=Math.ceil(left)+' ثانية';if(bar)bar.style.width=(left/15*100)+'%';if(left<=0){stopC4Timer();const legal=c4Game.board[0].map((v,i)=>v===0?i:null).filter(v=>v!==null);if(legal.length)submitConnect4Move(legal[Math.floor(Math.random()*legal.length)],true);}};
+ update();c4Tick=setInterval(update,200);c4Timer=setTimeout(update,15100);
+}
+async function submitConnect4Move(col,automatic=false){
+ if(c4Busy||!c4Game||c4Game.status!=='playing')return;
+ c4Busy=true;stopC4Timer();
+ const status=document.getElementById('c4-status');if(status)status.textContent=automatic?'انتهى الوقت! اخترنا لك حركة عشوائية':'البوت يفكر...';
+ document.querySelectorAll('.c4-slot').forEach(x=>x.disabled=true);
+ try{c4Game=await c4Request('/api/connect4/move',{game_id:c4Game.id,column:col});c4Busy=false;renderConnect4();}
+ catch(e){c4Busy=false;const s=document.getElementById('c4-status');if(s)s.textContent=e.message;startC4Timer();}
+}
 document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>{
  const a=b.dataset.action;
  if(a==='help'){openBot('help');return;}
