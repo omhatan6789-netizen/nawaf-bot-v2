@@ -29,7 +29,7 @@ body.chess-mode .hero,body.chess-mode .brand{display:none}
 .chess-turn{background:#101010;color:#fff;border-radius:15px;text-align:center;padding:10px 12px;margin:0 auto 12px;box-shadow:0 4px 0 #0003}
 .chess-turn small{display:block;font-size:12px;opacity:.8}
 .chess-turn strong{display:block;font-size:19px;margin-top:2px}
-.chess-board{width:min(94vw,500px);aspect-ratio:1;margin:auto;display:grid;grid-template-columns:repeat(8,1fr);border:5px solid #573c2a;border-radius:5px;overflow:hidden;box-shadow:0 12px 28px #234b5c55;direction:ltr;touch-action:manipulation}
+.chess-board{width:min(94vw,500px);aspect-ratio:1;margin:auto;display:grid;position:relative;grid-template-columns:repeat(8,1fr);border:5px solid #573c2a;border-radius:5px;overflow:hidden;box-shadow:0 12px 28px #234b5c55;direction:ltr;touch-action:manipulation}
 .chess-square{border:0;border-radius:0;display:grid;place-items:center;padding:0;font-size:clamp(27px,8vw,53px);line-height:1;cursor:pointer;position:relative;isolation:isolate;transition:background-color .16s ease,box-shadow .16s ease}
 .chess-square.light{background:#f0d9b5;color:#171717}.chess-square.dark{background:#b58863;color:#171717}
 .chess-piece{display:block;line-height:1;transform:translateY(-1px);user-select:none;pointer-events:none;transition:transform .18s ease,filter .18s ease}
@@ -162,6 +162,21 @@ function refreshChessBoard(){
   if(piece){const span=document.createElement('span');span.className='chess-piece '+(piece===piece.toUpperCase()?'white-piece':'black-piece');span.textContent=chessPieces[piece]||'';sq.appendChild(span);}
  }
 }
+async function animateChessMove(from,to,piece){
+ if(!chessBoardEl||!piece)return;
+ const source=chessSquareEls[from],dest=chessSquareEls[to],boardRect=chessBoardEl.getBoundingClientRect();
+ if(!source||!dest)return;
+ const sourceRect=source.getBoundingClientRect(),destRect=dest.getBoundingClientRect();
+ const moving=document.createElement('span');
+ moving.className='chess-piece '+(piece===piece.toUpperCase()?'white-piece':'black-piece');
+ moving.textContent=chessPieces[piece]||'';moving.style.cssText='position:absolute;z-index:30;display:grid;place-items:center;width:12.5%;height:12.5%;font-size:clamp(27px,8vw,53px);left:'+(sourceRect.left-boardRect.left)+'px;top:'+(sourceRect.top-boardRect.top)+'px;transition:transform .34s cubic-bezier(.2,.8,.2,1);';
+ const hidden=dest.querySelector('.chess-piece');if(hidden)hidden.style.visibility='hidden';
+ chessBoardEl.appendChild(moving);
+ await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+ moving.style.transform='translate('+(destRect.left-sourceRect.left)+'px,'+(destRect.top-sourceRect.top)+'px)';
+ await new Promise(resolve=>setTimeout(resolve,370));
+ moving.remove();if(hidden)hidden.style.visibility='';
+}
 function selectChessSquare(square,piece){
  if(!chessGame||chessGame.status!=='active')return;
  const legal=chessGame.legal_moves||[];
@@ -173,11 +188,14 @@ function selectChessSquare(square,piece){
  chessSelected=null;refreshChessBoard();
 }
 async function submitChessMove(move){
- const from=move.slice(0,2),to=move.slice(2,4),source=chessSquareEls[from],dest=chessSquareEls[to];
- if(source&&dest){source.classList.add('chess-move-flash');dest.classList.add('chess-move-flash');}
+ const from=move.slice(0,2),to=move.slice(2,4),movingPiece=chessPieceAt(chessGame.fen,from),oldMoveCount=(chessGame.moves||[]).length;
  chessSelected=null;refreshChessBoard();
- try{chessGame=await chessRequest('/api/chess/move',{game_id:chessGame.id,move});refreshChessBoard();
-  for(const sq of Object.values(chessSquareEls))sq.classList.remove('chess-move-flash');
+ try{
+  await animateChessMove(from,to,movingPiece);
+  chessGame=await chessRequest('/api/chess/move',{game_id:chessGame.id,move});
+  refreshChessBoard();
+  const added=(chessGame.moves||[]).slice(oldMoveCount);
+  if(added.length>1){const reply=added[added.length-1].uci;const replyTo=reply.slice(2,4);await animateChessMove(reply.slice(0,2),replyTo,chessPieceAt(chessGame.fen,replyTo));}
   if(chessGame.status==='active'){const status=document.getElementById('chess-status');if(status)status.textContent='دور '+(chessGame.turn_name||chessBotName)+' · اختر القطعة التالية';}
   const turnName=document.querySelector('.chess-turn strong');if(turnName)turnName.textContent=chessGame.turn_name||chessBotName;
   const status=document.getElementById('chess-status');if(status&&chessGame.status==='finished')status.textContent=chessGame.result==='draw'?'انتهت المباراة بالتعادل':chessGame.result==='white'?'فزت بالمباراة!':'فاز '+chessBotName;
