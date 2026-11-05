@@ -8,6 +8,10 @@ from typing import Any, Callable
 
 logger = logging.getLogger("nawaf.performance")
 
+# httpx's default INFO log prints full request URLs. Telegram bot URLs contain
+# the bot token, so suppress those logs rather than risking credential exposure.
+logging.getLogger("httpx").setLevel(logging.WARNING)
+
 
 def timed(label: str):
     """Log total wall-clock duration of an async handler or DB operation."""
