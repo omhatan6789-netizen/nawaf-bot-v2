@@ -1,3 +1,6 @@
+import logging
+import time
+
 from telegram import Update
 from telegram.ext import ContextTypes
 
@@ -11,6 +14,8 @@ from database.points import (
     sell_points_for_messages,
     flush_pending_points,
 )
+
+logger = logging.getLogger("nawaf.performance")
 
 OWNER_ID = 8453977662
 POINTS_PER_MESSAGE = 10
@@ -165,13 +170,38 @@ async def my_points(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def top_points(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.effective_user:
         return
+
+    started = time.perf_counter()
     rows = await get_points_leaderboard(10)
+    fetched = time.perf_counter()
+    logger.info(
+        "PERF handler.top_points.fetch_duration_ms=%.1f",
+        (fetched - started) * 1000,
+    )
+
     if not rows:
+        send_started = time.perf_counter()
         await update.message.reply_text("❌ لا يوجد ترتيب حتى الآن")
+        logger.info(
+            "PERF handler.top_points.telegram_reply_duration_ms=%.1f",
+            (time.perf_counter() - send_started) * 1000,
+        )
         return
 
+    format_started = time.perf_counter()
     lines = ["🏆 ترتيب اللاعبين", ""]
     for place, row in enumerate(rows, 1):
         name = row["first_name"] or "مستخدم"
         lines.append(f"{place} - {name} : {row['points'] or 0} نقطة")
-    await update.message.reply_text("\n".join(lines))
+    response_text = "\n".join(lines)
+    formatted = time.perf_counter()
+    logger.info(
+        "PERF handler.top_points.format_duration_ms=%.1f",
+        (formatted - format_started) * 1000,
+    )
+
+    await update.message.reply_text(response_text)
+    logger.info(
+        "PERF handler.top_points.telegram_reply_duration_ms=%.1f",
+        (time.perf_counter() - formatted) * 1000,
+    )
