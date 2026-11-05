@@ -10,7 +10,6 @@ from music_call import get_music_client
 
 
 ACCOUNT_ID = 6496915877
-BASE_NAME = "Nawaf"
 TIMEZONE = ZoneInfo("Asia/Riyadh")
 
 _clock_task = None
@@ -41,7 +40,7 @@ async def _clock_loop():
             me = await client.get_me()
 
             # إزالة الساعة القديمة إن وجدت
-            base_name = BASE_NAME
+            base_name = CLOCK_PATTERN.sub("", me.first_name).strip()
 
             now = datetime.now(TIMEZONE)
             clock = now.strftime("%I:%M %p")
