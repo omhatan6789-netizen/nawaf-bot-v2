@@ -237,12 +237,46 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     if user and chat and chat.type == "private":
         try:
             await get_pool().execute(
-                "INSERT INTO developer_private_starts(user_id) VALUES($1) ON CONFLICT(user_id) DO NOTHING",
+                """INSERT INTO developer_private_starts
+                   (user_id, username, first_name)
+                   VALUES($1, $2, $3)
+                   ON CONFLICT(user_id) DO UPDATE SET
+                       username=EXCLUDED.username,
+                       first_name=EXCLUDED.first_name,
+                       last_start_at=CURRENT_TIMESTAMP""",
                 user.id,
+                user.username or "",
+                user.first_name or "",
             )
         except Exception:
             logger.exception("Failed to record private /start for mandatory subscription")
     await start(update, context)
+
+
+async def track_developer_bot_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    member_update = update.my_chat_member
+    if not member_update:
+        return
+    chat = member_update.chat
+    if not chat or chat.type not in ("group", "supergroup", "channel"):
+        return
+    active = member_update.new_chat_member.status not in ("left", "kicked")
+    try:
+        await get_pool().execute(
+            """INSERT INTO developer_bot_chats
+               (chat_id, chat_type, title, username, active)
+               VALUES($1, $2, $3, $4, $5)
+               ON CONFLICT(chat_id) DO UPDATE SET
+                   chat_type=EXCLUDED.chat_type,
+                   title=EXCLUDED.title,
+                   username=EXCLUDED.username,
+                   active=EXCLUDED.active,
+                   updated_at=CURRENT_TIMESTAMP""",
+            chat.id, chat.type, chat.title or "", chat.username or "",
+            1 if active else 0,
+        )
+    except Exception:
+        logger.exception("Failed to track bot chat %s", chat.id)
 
 
 async def health_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -271,6 +305,9 @@ def build_application() -> Application:
     application.bot_data["settings"] = settings
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("health", health_command))
+    application.add_handler(ChatMemberHandler(
+        track_developer_bot_chat, ChatMemberHandler.MY_CHAT_MEMBER
+    ))
     application.add_handler(CommandHandler("starteditor", start_editor_command))
     application.add_handler(MessageHandler(
         filters.ChatType.PRIVATE & filters.Regex(r"^تعديل ستارت$"),
