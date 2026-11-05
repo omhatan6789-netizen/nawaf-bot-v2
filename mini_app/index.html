@@ -17,11 +17,12 @@
 .custom{display:grid;gap:12px}.custom-card{position:relative;display:flex;align-items:center;gap:12px;padding:10px 13px;border:1px solid #171010;border-radius:16px;background:#fff;color:#171010;box-shadow:0 5px 0 #160608;min-height:74px;text-decoration:none;overflow:hidden}
 .custom-card .thumb{width:48px;height:48px;border-radius:50%;object-fit:cover;background:#eee;flex:none}.custom-card .label{font-weight:750;flex:1;text-align:center;font-size:15px;overflow-wrap:anywhere}.dots{font-size:22px;color:#777;line-height:1}
 .custom-card.large{display:block;padding:0 0 13px;text-align:center}.custom-card.large .large-image{width:100%;height:185px;object-fit:cover;display:block;background:#eee}.custom-card.large .label{display:block;padding:12px 12px 0;font-size:17px}
-.empty{color:#ffffff88;text-align:center;font-size:13px;padding:12px}
+.empty{color:#ffffffbb;text-align:center;font-size:13px;padding:12px}.back-button{width:100%;margin-top:14px;border:1px solid #fff;border-radius:14px;background:#fff;color:#1a1111;min-height:52px;font-size:15px;font-weight:750;box-shadow:0 4px 0 #260609;cursor:pointer}#page-content .custom-card{min-height:58px}
 </style></head>
 <body><main class="wrap">
 <div class="hero"><img id="banner" alt=""></div>
 <div class="brand">Dev bot ~ نواف</div>
+<div id="home">
 <div class="section-title">القوائم</div>
 <div class="menu">
 <button data-action="points">توب النقاط</button><button data-action="active">توب المتفاعلين</button>
@@ -29,12 +30,48 @@
 <button data-action="help">الأوامر</button>
 </div>
 <div class="section-title">إضافات</div><div class="custom" id="custom"></div>
+</div>
+<section id="page" hidden><div class="section-title" id="page-title"></div><div class="custom" id="page-content"></div><button id="back-home" class="back-button">↩ رجوع للقائمة الرئيسية</button></section>
 </main>
 <script>
 const tg=window.Telegram?.WebApp;tg?.ready();tg?.expand();
-const api=async()=>{const r=await fetch('/api/mini-app');if(!r.ok)throw new Error('api');return r.json()};
-function openTarget(url){if(!url)return;if(/^https?:\/\//i.test(url)){if(tg?.openTelegramLink&&/^(https?:\/\/)?t\.me\//i.test(url))tg.openTelegramLink(url);else if(tg?.openLink)tg.openLink(url);else location.href=url;}}
-document.querySelectorAll('[data-action]').forEach(b=>b.onclick=async()=>{const a=b.dataset.action;if(a==='help'){openTarget('https://t.me/lnll0bot?start=help');return;}if(a==='games'){openTarget('https://t.me/lnll0bot');return;}const root=document.getElementById('custom');root.innerHTML='<div class="empty">جاري تحميل الترتيب...</div>';try{const r=await fetch('/api/mini-app?top='+encodeURIComponent(a));const d=await r.json();root.replaceChildren();const back=document.createElement('button');back.className='custom-card';back.textContent='↩ رجوع للأزرار';back.onclick=()=>location.reload();root.appendChild(back);(d.leaderboard||[]).forEach((item,i)=>{const row=document.createElement('div');row.className='custom-card';const name=document.createElement('span');name.className='label';name.textContent=(i+1)+' - '+item.name+' : '+item.value+' '+item.unit;row.appendChild(name);root.appendChild(row);});if(!d.leaderboard?.length){const empty=document.createElement('div');empty.className='empty';empty.textContent='لا يوجد ترتيب حتى الآن';root.appendChild(empty);}}catch(e){root.textContent='تعذر تحميل الترتيب الآن';}});
-(async()=>{try{const data=await api();if(data.banner){const im=document.getElementById('banner');im.src=data.banner;im.style.display='block';}
-const root=document.getElementById('custom');for(const b of data.buttons||[]){const a=document.createElement('a');a.className='custom-card'+(b.type==='large'?' large':'');a.href=b.target;a.target='_blank';a.rel='noopener';a.style.background=b.color||'#fff';if(b.type==='large'){if(b.image){const im=document.createElement('img');im.className='large-image';im.src=b.image;a.appendChild(im);}const name=document.createElement('span');name.className='label';name.textContent=b.title;a.appendChild(name);}else{if(b.image){const im=document.createElement('img');im.className='thumb';im.src=b.image;a.appendChild(im);}const name=document.createElement('span');name.className='label';name.textContent=b.title;a.appendChild(name);const dots=document.createElement('span');dots.className='dots';dots.textContent='⋮';a.appendChild(dots);}root.appendChild(a);}}catch(e){document.getElementById('custom').innerHTML='<div class="empty">تعذر تحميل الإضافات حاليًا</div>';}})();
+let botUsername='';
+const home=document.getElementById('home');
+const page=document.getElementById('page');
+const pageTitle=document.getElementById('page-title');
+const pageContent=document.getElementById('page-content');
+function showHome(){page.hidden=true;home.hidden=false;}
+function openBot(startParam=''){if(!botUsername)return;const link='https://t.me/'+botUsername+(startParam?'?start='+encodeURIComponent(startParam):'');if(tg?.openTelegramLink)tg.openTelegramLink(link);else location.href=link;}
+function showTop(kind,title){
+ home.hidden=true;page.hidden=false;pageTitle.textContent=title;pageContent.replaceChildren();
+ const loading=document.createElement('div');loading.className='empty';loading.textContent='جاري تحميل الترتيب...';pageContent.appendChild(loading);
+ fetch('/api/mini-app?top='+encodeURIComponent(kind)).then(async r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}).then(data=>{
+  pageContent.replaceChildren();
+  if(!Array.isArray(data.leaderboard))throw new Error('No leaderboard data');
+  if(!data.leaderboard.length){const e=document.createElement('div');e.className='empty';e.textContent='لا يوجد ترتيب حتى الآن';pageContent.appendChild(e);return;}
+  data.leaderboard.forEach((item,i)=>{const row=document.createElement('div');row.className='custom-card';const name=document.createElement('span');name.className='label';name.textContent=(i+1)+'  •  '+item.name+'  —  '+item.value+' '+item.unit;row.appendChild(name);pageContent.appendChild(row);});
+ }).catch(()=>{pageContent.replaceChildren();const e=document.createElement('div');e.className='empty';e.textContent='تعذر تحميل الترتيب حاليًا، حاول مرة ثانية';pageContent.appendChild(e);});
+}
+document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>{
+ const a=b.dataset.action;
+ if(a==='help'){openBot('help');return;}
+ if(a==='games'){openBot();return;}
+ const names={points:'توب النقاط',active:'توب المتفاعلين',robbers:'توب الحرامية'};
+ showTop(a,names[a]||'التوب');
+});
+document.getElementById('back-home').onclick=showHome;
+(async()=>{
+ try{
+  const r=await fetch('/api/mini-app');if(!r.ok)throw new Error('API');
+  const data=await r.json();botUsername=data.bot_username||'';
+  if(data.banner){const im=document.getElementById('banner');im.src=data.banner;im.style.display='block';}
+  const root=document.getElementById('custom');
+  for(const b of data.buttons||[]){
+   const a=document.createElement('a');a.className='custom-card'+(b.type==='large'?' large':'');a.href=b.target;a.target='_blank';a.rel='noopener';a.style.background=b.color||'#fff';
+   if(b.type==='large'){if(b.image){const im=document.createElement('img');im.className='large-image';im.src=b.image;a.appendChild(im);}const name=document.createElement('span');name.className='label';name.textContent=b.title;a.appendChild(name);}
+   else{if(b.image){const im=document.createElement('img');im.className='thumb';im.src=b.image;a.appendChild(im);}const name=document.createElement('span');name.className='label';name.textContent=b.title;a.appendChild(name);const dots=document.createElement('span');dots.className='dots';dots.textContent='⋮';a.appendChild(dots);}
+   root.appendChild(a);
+  }
+ }catch(e){document.getElementById('custom').innerHTML='<div class="empty">تعذر تحميل الإضافات حاليًا</div>';}
+})();
 </script></body></html>
