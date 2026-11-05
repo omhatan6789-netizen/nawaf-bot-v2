@@ -123,6 +123,11 @@ from handlers.tasliyat import (
 from handlers.users import user_id_command
 from handlers.commands_menu import commands_menu_start, commands_menu_callback
 from handlers.start import start
+from handlers.start_editor import (
+    start_editor_command, start_editor_callback,
+    start_editor_special_callback, start_editor_message,
+)
+
 from handlers.games_menu import games_menu_command, games_menu_callback
 from handlers.games_help import games_help
 from handlers.profile_replies import (
@@ -266,6 +271,19 @@ def build_application() -> Application:
     application.bot_data["settings"] = settings
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("health", health_command))
+    application.add_handler(CommandHandler("starteditor", start_editor_command))
+    application.add_handler(CallbackQueryHandler(
+        start_editor_callback,
+        pattern=r"^startedit:(?:menu|message|buttons|add_button|order_button|delete_button|access|image)$",
+    ))
+    application.add_handler(CallbackQueryHandler(
+        start_editor_special_callback,
+        pattern=r"^startedit:(?:access_add|access_delete|image_add|image_delete|image_delete_all)$",
+    ))
+    application.add_handler(MessageHandler(
+        filters.ChatType.PRIVATE & (filters.TEXT | filters.PHOTO) & ~filters.COMMAND,
+        start_editor_message,
+    ), group=-3)
     application.add_handler(build_add_command_conversation(), group=-2)
     application.add_handler(MessageHandler(
         filters.TEXT & ~filters.COMMAND, delete_command
