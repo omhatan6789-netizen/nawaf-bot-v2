@@ -265,7 +265,7 @@ async function pollConnect4State(){
 }
 function startC4Timer(){
  stopC4Timer();if(!c4Game?.your_turn)return;
- c4Seconds=15;const started=Date.now();
+ c4Seconds=15;const started=Number(c4Game.turn_started_at)||Date.now();
  const update=()=>{const left=Math.max(0,15-(Date.now()-started)/1000);const clock=document.getElementById('c4-clock'),bar=document.getElementById('c4-progress');if(clock)clock.textContent=Math.ceil(left)+' ثانية';if(bar)bar.style.width=(left/15*100)+'%';if(left<=0){stopC4Timer();const legal=c4Game.board[0].map((v,i)=>v===0?i:null).filter(v=>v!==null);if(legal.length)submitConnect4Move(legal[Math.floor(Math.random()*legal.length)],true);}};
  update();c4Tick=setInterval(update,200);c4Timer=setTimeout(update,15100);
 }
