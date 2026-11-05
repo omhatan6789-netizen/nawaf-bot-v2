@@ -127,6 +127,9 @@ from handlers.start_editor import (
     start_editor_command, start_editor_callback,
     start_editor_special_callback, start_editor_message,
 )
+from handlers.developer_panel import (
+    developer_panel_command, developer_panel_callback, developer_panel_message,
+)
 
 from handlers.games_menu import games_menu_command, games_menu_callback
 from handlers.games_help import games_help
@@ -308,6 +311,17 @@ def build_application() -> Application:
     application.add_handler(ChatMemberHandler(
         track_developer_bot_chat, ChatMemberHandler.MY_CHAT_MEMBER
     ))
+    application.add_handler(MessageHandler(
+        filters.ChatType.PRIVATE & filters.Regex(r"^اوامر المطور$"),
+        developer_panel_command,
+    ), group=-9)
+    application.add_handler(CallbackQueryHandler(
+        developer_panel_callback, pattern=r"^devpanel:"
+    ))
+    application.add_handler(MessageHandler(
+        filters.ChatType.PRIVATE & ~filters.COMMAND,
+        developer_panel_message,
+    ), group=-9)
     application.add_handler(CommandHandler("starteditor", start_editor_command))
     application.add_handler(MessageHandler(
         filters.ChatType.PRIVATE & filters.Regex(r"^تعديل ستارت$"),
