@@ -53,9 +53,9 @@ async def new_ai(user, bot_name, difficulty, clock):
     board = chess.Board()
     await get_pool().execute(
         """INSERT INTO chess_games
-        (id,game_type,status,white_user_id,white_name,bot_name,difficulty,
+        (id,game_type,status,white_user_id,white_name,black_name,bot_name,difficulty,
          time_control_seconds,white_time_ms,black_time_ms,clock_started_at,fen)
-        VALUES($1,'ai','active',$2,$3,$4,$5,$6,$7,$7,NOW(),$8)""",
+        VALUES($1,'ai','active',$2,$3,$4,$4,$5,$6,$7,$7,NOW(),$8)""",
         game_id,int(user["id"]),(user.get("first_name") or "لاعب")[:80],
         bot_name[:80],difficulty,clock,clock*1000,board.fen())
     return {"id":game_id,"fen":board.fen(),"turn":"white",
