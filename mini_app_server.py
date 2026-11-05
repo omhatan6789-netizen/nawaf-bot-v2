@@ -145,7 +145,7 @@ def handle_chess_post(handler):
     try:
         length = min(int(handler.headers.get("Content-Length", "0")), 65536)
         payload = json.loads(handler.rfile.read(length) or b"{}")
-        from chess_api import telegram_user, new_ai, play_ai
+        from chess_api import telegram_user, new_ai, play_ai, read_game, resign_game
         user = telegram_user(payload.get("initData", ""), _bot.token)
         if handler.path.split("?", 1)[0] == "/api/chess/new":
             me = _run(_bot.get_me())
@@ -155,6 +155,10 @@ def handle_chess_post(handler):
         elif handler.path.split("?", 1)[0] == "/api/chess/move":
             game = _run(play_ai(str(payload.get("game_id", "")), user,
                                 str(payload.get("move", ""))))
+        elif handler.path.split("?", 1)[0] == "/api/chess/state":
+            game = _run(read_game(str(payload.get("game_id", "")), user))
+        elif handler.path.split("?", 1)[0] == "/api/chess/resign":
+            game = _run(resign_game(str(payload.get("game_id", "")), user))
         else:
             raise ValueError("طلب غير معروف")
         body = json.dumps({"ok": True, "game": game}, ensure_ascii=False).encode()
