@@ -1,6 +1,7 @@
 import asyncio
 import html
 import json
+import logging
 import random
 import re
 import time
@@ -15,6 +16,7 @@ from database.points import add_points
 from database.timing import timed
 from games.defaults import DEFAULT_GAMES, get_default_questions
 
+logger = logging.getLogger("nawaf.performance")
 
 OWNER_ID = 8453977662
 QUESTION_TIMEOUT = 300
@@ -399,9 +401,14 @@ async def check_answer(message):
         elapsed_text = f"{minutes} دقيقة و {seconds:.2f} ثانية"
 
     try:
+        points_started = time.perf_counter()
         total_points = await add_points(
             user.id,
             POINTS_REWARD
+        )
+        logger.info(
+            "PERF handler.game_answer.add_points_duration_ms=%.1f",
+            (time.perf_counter() - points_started) * 1000,
         )
 
     except Exception:
@@ -414,11 +421,16 @@ async def check_answer(message):
     name = html.escape(user.first_name or "لاعب")
     mention = f'<a href="tg://user?id={user.id}">{name}</a>'
 
+    reply_started = time.perf_counter()
     await message.reply_text(
         "• صح عليك!! " + mention + "\n"
         f"• جبتها ب {elapsed_text}\n"
         f"• نقاطك صارت <b>{total_points}</b>",
         parse_mode=ParseMode.HTML
+    )
+    logger.info(
+        "PERF handler.game_answer.telegram_reply_duration_ms=%.1f",
+        (time.perf_counter() - reply_started) * 1000,
     )
 
     return True
