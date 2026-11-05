@@ -139,7 +139,7 @@ function renderConnect4(){
  c4Game.board.forEach((row,r)=>row.forEach((piece,c)=>{
   const slot=document.createElement('button');slot.className='c4-slot';slot.type='button';slot.setAttribute('aria-label','العمود '+(c+1));
   if(piece){const disc=document.createElement('span');disc.className='c4-disc '+(piece===1?'red':'yellow');slot.appendChild(disc);}
-  slot.disabled=c4Busy||c4Game.status!=='playing'||row[0]!==0;
+  slot.disabled=c4Busy||c4Game.status!=='playing'||c4Game.board[0][c]!==0;
   slot.onclick=()=>submitConnect4Move(c);board.appendChild(slot);
  }));
  shell.querySelector('#c4-again').onclick=startConnect4;
