@@ -13,6 +13,7 @@ from pyrogram.handlers import MessageHandler
 from pyrogram.errors import FloodWait
 
 from music_call import get_music_client
+from database.pool import get_pool
 
 # ==========================================
 # الإعدادات
@@ -109,34 +110,89 @@ def load_settings():
 
     return default
 
-settings = load_settings()
+replies_enabled = DEFAULT_ENABLED
+muted_users = {}
+restricted_users = {}
 
-replies_enabled = settings["replies_enabled"]
-muted_users = settings["muted"]
-restricted_users = settings["restricted"]
+async def load_settings():
+    global replies_enabled, muted_users, restricted_users
 
-def save_settings():
+    default = {
+        "replies_enabled": DEFAULT_ENABLED,
+        "muted": {},
+        "restricted": {}
+    }
+
+    pool = get_pool()
+    raw = await pool.fetchval(
+        "SELECT settings FROM name_reaction_settings WHERE id = 1"
+    )
+
+    if raw is None:
+        # استيراد ملف الإعدادات القديم مرة واحدة إن كان ما زال موجوداً.
+        imported = default
+        try:
+            if SETTINGS_FILE.exists():
+                with SETTINGS_FILE.open("r", encoding="utf-8") as file:
+                    old_data = json.load(file)
+                if isinstance(old_data, dict):
+                    imported = {
+                        "replies_enabled": bool(old_data.get("replies_enabled", DEFAULT_ENABLED)),
+                        "muted": old_data.get("muted", {}),
+                        "restricted": old_data.get("restricted", {})
+                    }
+        except Exception as exc:
+            print(f"[NAME REACTION] Legacy settings import error: {exc}")
+
+        await pool.execute(
+            """
+            INSERT INTO name_reaction_settings (id, settings)
+            VALUES (1, $1::jsonb)
+            ON CONFLICT (id) DO NOTHING
+            """,
+            json.dumps(imported, ensure_ascii=False)
+        )
+        raw = await pool.fetchval(
+            "SELECT settings FROM name_reaction_settings WHERE id = 1"
+        )
+
+    if isinstance(raw, str):
+        raw = json.loads(raw)
+
+    if isinstance(raw, dict):
+        replies_enabled = bool(raw.get("replies_enabled", DEFAULT_ENABLED))
+        muted_users = raw.get("muted", {})
+        restricted_users = raw.get("restricted", {})
+
+    if not isinstance(muted_users, dict):
+        muted_users = {}
+    if not isinstance(restricted_users, dict):
+        restricted_users = {}
+
+    print("[NAME REACTION] Settings loaded from PostgreSQL.")
+
+async def await save_settings():
+    data = {
+        "replies_enabled": replies_enabled,
+        "muted": muted_users,
+        "restricted": restricted_users
+    }
+
     try:
-        temp_file = SETTINGS_FILE.with_suffix(".tmp")
-
-        data = {
-            "replies_enabled": replies_enabled,
-            "muted": muted_users,
-            "restricted": restricted_users
-        }
-
-        with temp_file.open("w", encoding="utf-8") as file:
-            json.dump(
-                data,
-                file,
-                ensure_ascii=False,
-                indent=2
-            )
-
-        temp_file.replace(SETTINGS_FILE)
-
+        pool = get_pool()
+        await pool.execute(
+            """
+            INSERT INTO name_reaction_settings (id, settings, updated_at)
+            VALUES (1, $1::jsonb, NOW())
+            ON CONFLICT (id) DO UPDATE
+            SET settings = EXCLUDED.settings,
+                updated_at = NOW()
+            """,
+            json.dumps(data, ensure_ascii=False)
+        )
     except Exception as exc:
         print(f"[NAME REACTION] Settings save error: {exc}")
+        raise
 
 # ==========================================
 # اسم المستخدم
@@ -334,7 +390,7 @@ async def moderate_user(message, action):
             return
 
         muted_users[user_id] = display_name
-        save_settings()
+        await save_settings()
 
         await message.reply_text(MUTE_REPLY)
 
@@ -351,7 +407,7 @@ async def moderate_user(message, action):
             return
 
         del muted_users[user_id]
-        save_settings()
+        await save_settings()
 
         await message.reply_text(UNMUTE_REPLY)
 
@@ -368,7 +424,7 @@ async def moderate_user(message, action):
             return
 
         restricted_users[user_id] = display_name
-        save_settings()
+        await save_settings()
 
         await message.reply_text(RESTRICT_REPLY)
 
@@ -388,7 +444,7 @@ async def moderate_user(message, action):
 
         restrict_notice_times.pop(user_id, None)
 
-        save_settings()
+        await save_settings()
 
         await message.reply_text(UNRESTRICT_REPLY)
 
@@ -468,7 +524,7 @@ async def _reply_control_handler(client, message):
     if text == "تفعيل الردود":
 
         replies_enabled = True
-        save_settings()
+        await save_settings()
 
         try:
             await message.reply_text(ENABLE_REPLY)
@@ -492,7 +548,7 @@ async def _reply_control_handler(client, message):
     if text == "تعطيل الردود":
 
         replies_enabled = False
-        save_settings()
+        await save_settings()
 
         try:
             await message.reply_text(DISABLE_REPLY)
@@ -596,7 +652,7 @@ async def _private_moderation_handler(client, message):
             changed = True
 
     if changed:
-        save_settings()
+        await save_settings()
 
     # التحقق من الكتم أو التقييد
 
@@ -947,6 +1003,14 @@ async def start_name_reaction():
             "[NAME REACTION] Music account is not connected."
         )
 
+        return
+
+    # تحميل إعدادات الردود والكتم والتقييد من قاعدة البيانات
+    try:
+        await load_settings()
+    except Exception as exc:
+        print(f"[NAME REACTION] Cannot load persistent settings: {exc}")
+        _client = None
         return
 
     # أوامر الحساب
