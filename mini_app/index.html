@@ -30,10 +30,17 @@ body.chess-mode .hero,body.chess-mode .brand{display:none}
 .chess-turn small{display:block;font-size:12px;opacity:.8}
 .chess-turn strong{display:block;font-size:19px;margin-top:2px}
 .chess-board{width:min(94vw,500px);aspect-ratio:1;margin:auto;display:grid;grid-template-columns:repeat(8,1fr);border:5px solid #573c2a;border-radius:5px;overflow:hidden;box-shadow:0 12px 28px #234b5c55;direction:ltr;touch-action:manipulation}
-.chess-square{border:0;border-radius:0;display:grid;place-items:center;padding:0;font-size:clamp(27px,8vw,53px);line-height:1;cursor:pointer;position:relative}
+.chess-square{border:0;border-radius:0;display:grid;place-items:center;padding:0;font-size:clamp(27px,8vw,53px);line-height:1;cursor:pointer;position:relative;isolation:isolate;transition:background-color .16s ease,box-shadow .16s ease}
 .chess-square.light{background:#f0d9b5;color:#171717}.chess-square.dark{background:#b58863;color:#171717}
-.chess-square.selected{box-shadow:inset 0 0 0 4px #24a8e5}
-.chess-square.target:after{content:"";width:22%;aspect-ratio:1;border-radius:50%;background:#1a9ed080;position:absolute}
+.chess-piece{display:block;line-height:1;transform:translateY(-1px);user-select:none;pointer-events:none;transition:transform .18s ease,filter .18s ease}
+.chess-piece.white-piece{color:#fff!important;-webkit-text-stroke:1.15px #343434;text-shadow:0 2px 1px #0008,0 0 3px #0008;filter:drop-shadow(0 2px 1px #0006)}
+.chess-piece.black-piece{color:#171717!important;-webkit-text-stroke:.65px #f6f0e6;text-shadow:0 1px 1px #fff8;filter:drop-shadow(0 2px 1px #0005)}
+.chess-square.selected{z-index:2;box-shadow:inset 0 0 0 4px #21a9e9, inset 0 0 18px #21a9e966}
+.chess-square.target:after{content:"";position:absolute;inset:19%;border:3px solid #087eaa;border-radius:50%;box-shadow:0 0 0 3px #fff9,0 0 12px #087eaa88;pointer-events:none}
+.chess-square.target:not(.occupied):before{content:"✦";position:absolute;font-size:clamp(15px,4vw,23px);color:#087eaa;text-shadow:0 1px 3px #fff;z-index:1}
+.chess-square.capture-target:after{inset:7%;border:4px solid #d84c39;box-shadow:0 0 0 3px #fff9,0 0 14px #d84c3988}
+.chess-move-flash{animation:chessMoveFlash .48s ease-out}
+@keyframes chessMoveFlash{0%{box-shadow:inset 0 0 0 5px #1ba6dc, inset 0 0 24px #1ba6dc99}100%{box-shadow:inset 0 0 0 0 transparent}}
 .chess-controls{display:flex;gap:8px;margin:12px auto;max-width:500px}
 .chess-controls button,.chess-option{flex:1;border:0;border-radius:12px;padding:12px 8px;background:#111;color:#fff;font-weight:750}
 .chess-option{background:#fff;color:#173746;border:2px solid #d5edf5}
@@ -79,7 +86,7 @@ function showTop(kind,title){
  }).catch(()=>{pageContent.replaceChildren();const e=document.createElement('div');e.className='empty';e.textContent='تعذر تحميل الترتيب حاليًا، حاول مرة ثانية';pageContent.appendChild(e);});
 }
 
-let chessBotName='البوت', chessGame=null, chessSelected=null, chessDifficulty='متوسط', chessClock=0;
+let chessBotName='البوت', chessGame=null, chessSelected=null, chessDifficulty='متوسط', chessClock=0, chessBoardEl=null, chessSquareEls={};
 function showGames(){
  document.body.classList.add('chess-mode');home.hidden=true;page.hidden=false;
  pageTitle.textContent='الألعاب 🎮';pageContent.replaceChildren();
@@ -115,38 +122,45 @@ async function startChessGame(){
 }
 const chessPieces={'K':'♔','Q':'♕','R':'♖','B':'♗','N':'♘','P':'♙','k':'♚','q':'♛','r':'♜','b':'♝','n':'♞','p':'♟'};
 function renderChessGame(){
- pageContent.replaceChildren();const wrap=document.createElement('div');wrap.className='chess-wrap';wrap.appendChild(chessDecor());
+ pageContent.replaceChildren();chessSquareEls={};const wrap=document.createElement('div');wrap.className='chess-wrap';wrap.appendChild(chessDecor());
  const panel=document.createElement('div');panel.className='chess-panel';
  const turn=document.createElement('div');turn.className='chess-turn';
  const label=document.createElement('small');label.textContent='دور اللاعب';
  const name=document.createElement('strong');name.textContent=chessGame.turn_name||chessBotName;
  turn.append(label,name);panel.appendChild(turn);
- const boardEl=document.createElement('div');boardEl.className='chess-board';
- const ranks=chessGame.fen.split(' ')[0].split('/');
- const legal=chessGame.legal_moves||[];
- for(let r=0;r<8;r++){
-  let file=0;
-  for(const ch of ranks[r]){
-   if(/[1-8]/.test(ch)){for(let n=0;n<Number(ch);n++,file++)addChessSquare(r,file,null);}
-   else{addChessSquare(r,file,ch);file++;}
-  }
+ chessBoardEl=document.createElement('div');chessBoardEl.className='chess-board';
+ for(let r=0;r<8;r++)for(let f=0;f<8;f++){
+  const coord=String.fromCharCode(97+f)+(8-r),sq=document.createElement('button');
+  sq.type='button';sq.className='chess-square '+((r+f)%2?'dark':'light');sq.dataset.square=coord;
+  sq.onclick=()=>selectChessSquare(coord,chessPieceAt(chessGame.fen,coord));chessSquareEls[coord]=sq;chessBoardEl.appendChild(sq);
  }
- function addChessSquare(r,f,piece){
-  const sq=document.createElement('button');sq.className='chess-square '+((r+f)%2?'dark':'light');
-  const coord=String.fromCharCode(97+f)+(8-r);sq.dataset.square=coord;
-  sq.textContent=piece?chessPieces[piece]||'': '';
-  if(chessSelected===coord)sq.classList.add('selected');
-  if(chessSelected&&legal.some(m=>m.startsWith(chessSelected+coord)))sq.classList.add('target');
-  sq.onclick=()=>selectChessSquare(coord,piece);boardEl.appendChild(sq);
- }
- panel.appendChild(boardEl);
- const status=document.createElement('div');status.className='chess-status';
+ panel.appendChild(chessBoardEl);
+ refreshChessBoard();
+ const status=document.createElement('div');status.className='chess-status';status.id='chess-status';
  status.textContent=chessGame.status==='finished'?(chessGame.result==='draw'?'انتهت المباراة بالتعادل':chessGame.result==='white'?'فزت بالمباراة!':'فاز '+chessBotName):'اختر قطعة ثم اختر المربع الذي تريد الانتقال إليه';
  panel.appendChild(status);
  const controls=document.createElement('div');controls.className='chess-controls';
  const resign=document.createElement('button');resign.textContent='استسلام';resign.onclick=()=>{if(confirm('هل تريد الاستسلام؟')){alert('سيتم تفعيل الاستسلام مع نظام المباريات الكامل.');}};controls.appendChild(resign);
  const back=document.createElement('button');back.className='chess-back';back.textContent='رجوع للألعاب';back.onclick=showGames;controls.appendChild(back);
  panel.appendChild(controls);wrap.appendChild(panel);pageContent.appendChild(wrap);
+}
+function chessPieceAt(fen,coord){
+ const [files,rank]=[fen.split(' ')[0].split('/'),8-Number(coord[1])];let file=0;
+ for(const ch of files[rank]){if(/[1-8]/.test(ch))file+=Number(ch);else{if(file==="abcdefgh".indexOf(coord[0]))return ch;file++;}}
+ return null;
+}
+function refreshChessBoard(){
+ if(!chessBoardEl||!chessGame)return;
+ const legal=chessGame.legal_moves||[];
+ for(const [coord,sq] of Object.entries(chessSquareEls)){
+  const piece=chessPieceAt(chessGame.fen,coord);
+  sq.replaceChildren();sq.classList.toggle('selected',chessSelected===coord);
+  sq.classList.toggle('occupied',!!piece);
+  const isTarget=!!chessSelected&&legal.some(m=>m.startsWith(chessSelected+coord));
+  sq.classList.toggle('target',isTarget);
+  sq.classList.toggle('capture-target',isTarget&&!!piece);
+  if(piece){const span=document.createElement('span');span.className='chess-piece '+(piece===piece.toUpperCase()?'white-piece':'black-piece');span.textContent=chessPieces[piece]||'';sq.appendChild(span);}
+ }
 }
 function selectChessSquare(square,piece){
  if(!chessGame||chessGame.status!=='active')return;
@@ -155,12 +169,19 @@ function selectChessSquare(square,piece){
   const matches=legal.filter(m=>m.startsWith(chessSelected+square));
   if(matches.length){const move=matches.find(m=>m.length===5&&m.endsWith('q'))||matches[0];submitChessMove(move);return;}
  }
- if(piece&&piece===piece.toUpperCase()){chessSelected=square;renderChessGame();return;}
- chessSelected=null;renderChessGame();
+ if(piece&&piece===piece.toUpperCase()){chessSelected=square;refreshChessBoard();return;}
+ chessSelected=null;refreshChessBoard();
 }
 async function submitChessMove(move){
- try{chessGame=await chessRequest('/api/chess/move',{game_id:chessGame.id,move});chessSelected=null;renderChessGame();}
- catch(e){alert(e.message);chessSelected=null;renderChessGame();}
+ const from=move.slice(0,2),to=move.slice(2,4),source=chessSquareEls[from],dest=chessSquareEls[to];
+ if(source&&dest){source.classList.add('chess-move-flash');dest.classList.add('chess-move-flash');}
+ chessSelected=null;refreshChessBoard();
+ try{chessGame=await chessRequest('/api/chess/move',{game_id:chessGame.id,move});refreshChessBoard();
+  for(const sq of Object.values(chessSquareEls))sq.classList.remove('chess-move-flash');
+  if(chessGame.status==='active'){const status=document.getElementById('chess-status');if(status)status.textContent='دور '+(chessGame.turn_name||chessBotName)+' · اختر القطعة التالية';}
+  const turnName=document.querySelector('.chess-turn strong');if(turnName)turnName.textContent=chessGame.turn_name||chessBotName;
+  const status=document.getElementById('chess-status');if(status&&chessGame.status==='finished')status.textContent=chessGame.result==='draw'?'انتهت المباراة بالتعادل':chessGame.result==='white'?'فزت بالمباراة!':'فاز '+chessBotName;
+ }catch(e){alert(e.message);refreshChessBoard();}
 }
 
 document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>{
