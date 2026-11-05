@@ -33,7 +33,7 @@ async def top_menu_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     )
 
 
-async def _build_top_text(kind: str) -> str:
+async def _build_top_text(kind: str, chat_id: int | None = None) -> str:
     pool = get_pool()
 
     if kind == "points":
@@ -66,22 +66,42 @@ async def _build_top_text(kind: str) -> str:
         return "\n".join(lines) if rows else "توب الحرامية:\n\nأكثر ناس يزرفون:\n\nلا يوجد ترتيب حتى الآن."
 
     if kind == "active":
-        rows = await pool.fetch(
-            """
-            SELECT user_id, first_name, username, activity_messages
-            FROM users
-            WHERE activity_messages > 0
-              AND COALESCE(is_bot, FALSE) = FALSE
-              AND COALESCE(first_name, '') <> 'Deleted Account'
-            ORDER BY activity_messages DESC, user_id ASC
-            LIMIT 10
-            """
-        )
-        lines = ["توب المتفاعلين:", ""]
+        if chat_id is not None:
+            rows = await pool.fetch(
+                """
+                SELECT u.user_id, u.first_name, u.username, ca.message_count
+                FROM chat_activity AS ca
+                JOIN users AS u ON u.user_id = ca.user_id
+                WHERE ca.chat_id = $1
+                  AND ca.message_count > 0
+                  AND COALESCE(u.is_bot, FALSE) = FALSE
+                  AND COALESCE(u.first_name, '') <> 'Deleted Account'
+                ORDER BY ca.message_count DESC, u.user_id ASC
+                LIMIT 10
+                """,
+                chat_id,
+            )
+            count_key = "message_count"
+            title = "توب المتفاعلين في هذا القروب:"
+        else:
+            rows = await pool.fetch(
+                """
+                SELECT user_id, first_name, username, activity_messages
+                FROM users
+                WHERE activity_messages > 0
+                  AND COALESCE(is_bot, FALSE) = FALSE
+                  AND COALESCE(first_name, '') <> 'Deleted Account'
+                ORDER BY activity_messages DESC, user_id ASC
+                LIMIT 10
+                """
+            )
+            count_key = "activity_messages"
+            title = "توب المتفاعلين العام:"
+        lines = [title, ""]
         for place, row in enumerate(rows, 1):
             name = row["first_name"] or row["username"] or "مستخدم"
-            lines.append(f"{place} - {name} : {int(row['activity_messages'] or 0)} رسالة")
-        return "\n".join(lines) if rows else "توب المتفاعلين:\n\nلا يوجد ترتيب حتى الآن."
+            lines.append(f"{place} - {name} : {int(row[count_key] or 0)} رسالة")
+        return "\n".join(lines) if rows else f"{title}\n\nلا يوجد ترتيب حتى الآن."
 
     return "تعذر عرض التوب المطلوب."
 
@@ -105,5 +125,7 @@ async def top_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     if kind not in {"points", "robbers", "active"}:
         return
 
-    text = await _build_top_text(kind)
+    chat = query.message.chat if query.message else None
+    chat_id = chat.id if chat and chat.type in ('group', 'supergroup') else None
+    text = await _build_top_text(kind, chat_id=chat_id)
     await query.edit_message_text(text, reply_markup=_back_keyboard())
