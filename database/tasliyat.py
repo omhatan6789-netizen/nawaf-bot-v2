@@ -141,7 +141,7 @@ async def claim_reward(user_id: int, column: str, now: int, cooldown_seconds: in
         ),
         ensure_points AS (
             INSERT INTO points(user_id, points)
-            SELECT $1 WHERE (SELECT COUNT(*) FROM ensure_user) >= 0
+            SELECT $1, 0 WHERE (SELECT COUNT(*) FROM ensure_user) >= 0
             ON CONFLICT(user_id) DO NOTHING
             RETURNING points
         ),
@@ -212,7 +212,7 @@ async def run_investment(user_id: int, now: int, cooldown_seconds: int, amount: 
         ),
         ensure_points AS (
             INSERT INTO points(user_id, points)
-            SELECT $1 WHERE (SELECT COUNT(*) FROM ensure_user) >= 0
+            SELECT $1, 0 WHERE (SELECT COUNT(*) FROM ensure_user) >= 0
             ON CONFLICT(user_id) DO NOTHING
             RETURNING points
         ),
