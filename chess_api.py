@@ -20,6 +20,32 @@ def telegram_user(init_data, token):
         raise ValueError("تعذر تحديد حسابك")
     return user
 
+
+async def read_game(game_id, user):
+    row = await get_pool().fetchrow("SELECT * FROM chess_games WHERE id=$1", game_id)
+    if not row or int(user["id"]) != row["white_user_id"]:
+        raise ValueError("المباراة غير موجودة لهذا الحساب")
+    board = chess.Board(row["fen"])
+    return {"id":row["id"],"fen":row["fen"],"moves":list(row["moves"] or []),
+            "status":row["status"],"result":row["result"],
+            "turn":"white" if board.turn else "black",
+            "turn_name":row["white_name"] if board.turn else row["bot_name"],
+            "white_name":row["white_name"],"black_name":row["bot_name"],
+            "legal_moves":[m.uci() for m in board.legal_moves] if row["status"]=="active" else []}
+
+async def resign_game(game_id, user):
+    pool=get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            row=await conn.fetchrow("SELECT * FROM chess_games WHERE id=$1 FOR UPDATE",game_id)
+            if not row or int(user["id"])!=row["white_user_id"]:
+                raise ValueError("المباراة غير موجودة لهذا الحساب")
+            if row["status"]!="active":
+                raise ValueError("المباراة منتهية")
+            await conn.execute("UPDATE chess_games SET status='finished',result='black',updated_at=NOW(),finished_at=NOW() WHERE id=$1",game_id)
+            row=await conn.fetchrow("SELECT * FROM chess_games WHERE id=$1",game_id)
+    return await read_game(game_id,user)
+
 async def new_ai(user, bot_name, difficulty, clock):
     if difficulty not in ("سهل","متوسط","صعب","مستحيل") or clock not in (0,600):
         raise ValueError("إعدادات المباراة غير صحيحة")
