@@ -1,0 +1,39 @@
+name: Transfer penalty images to new bot
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  transfer:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install requests
+        run: python -m pip install requests
+
+      - name: Transfer images
+        env:
+          OLD_BOT_TOKEN: ${{ secrets.OLD_BOT_TOKEN }}
+          NEW_BOT_TOKEN: ${{ secrets.NEW_BOT_TOKEN }}
+        run: python scripts/transfer_penalty_images.py
+
+      - name: Commit updated file IDs
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add games/penalties.py
+          git diff --cached --quiet && echo 'No changes to commit.' && exit 1
+          git commit -m 'Update penalty image IDs for new bot'
+          git push origin HEAD:main
