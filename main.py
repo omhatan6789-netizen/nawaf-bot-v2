@@ -20,7 +20,11 @@ from handlers.points import (
     my_points, flush_pending_points,
 )
 from handlers.top_menu import top_menu_command, top_menu_callback
-from handlers.reset_stats import (\n    reset_active_local_command, reset_active_global_command,\n    reset_points_command, my_messages_command, stats_reset_callback,\n)\nfrom handlers.roles import (
+from handlers.reset_stats import (
+    reset_active_local_command, reset_active_global_command,
+    reset_points_command, my_messages_command, stats_reset_callback,
+)
+from handlers.roles import (
     roles_command, change_rank, dev_list_command, rank_list_command,
     clear_dev_command, clear_rank_command, clear_all_ranks_command,
     roles_clear_callback,
