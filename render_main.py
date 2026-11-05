@@ -8,6 +8,7 @@ import os
 from threading import Thread
 
 from main import build_application
+from mini_app_server import handle_mini_app_request
 
 
 class HealthHandler(BaseHTTPRequestHandler):
@@ -27,6 +28,8 @@ class HealthHandler(BaseHTTPRequestHandler):
             self.wfile.write(body)
 
     def do_GET(self):
+        if handle_mini_app_request(self):
+            return
         self._respond(include_body=True)
 
     def do_HEAD(self):
