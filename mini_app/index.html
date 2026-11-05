@@ -154,14 +154,15 @@ function showGames(){
  card.onclick=showConnect4Setup;pageContent.appendChild(card);
 }
 
-let c4Difficulty='متوسط',c4Game=null,c4Timer=null,c4Tick=null,c4Busy=false,c4Seconds=15;
+let c4Difficulty='متوسط',c4Game=null,c4Timer=null,c4Tick=null,c4Busy=false,c4Seconds=15,c4BotTimer=null,c4PollTimer=null;
+const c4GameIdFromUrl=new URLSearchParams(window.location.search).get('game_id');
 const c4Levels=[['سهل','مناسب للتجربة'],['متوسط','تحدي متوازن'],['صعب','يفكر قبل أن يلعب'],['مستحيل','أقوى تحدي']];
-function stopC4Timer(){if(c4Timer)clearTimeout(c4Timer);if(c4Tick)clearInterval(c4Tick);c4Timer=null;c4Tick=null;}
+function stopC4Timer(){if(c4Timer)clearTimeout(c4Timer);if(c4Tick)clearInterval(c4Tick);if(c4BotTimer)clearTimeout(c4BotTimer);if(c4PollTimer)clearTimeout(c4PollTimer);c4Timer=null;c4Tick=null;c4BotTimer=null;c4PollTimer=null;}
 function c4Shell(){document.body.classList.add('c4-active');pageContent.innerHTML='<div class="c4-shell" id="c4-shell"></div>';return document.getElementById('c4-shell');}
 function showConnect4Setup(){
  stopC4Timer();c4Game=null;c4Busy=false;
  const shell=c4Shell();
- shell.innerHTML='<div class="c4-heading"><h2>كونكت 4 <span style="font-size:20px">🔴🔵</span></h2><p>كوّن أربعة أقراص متصلة قبل البوت</p></div><div class="c4-panel"><div class="c4-label">اختر مستوى البوت</div><div class="c4-levels" id="c4-levels"></div><button class="c4-start" id="c4-start">ابدأ التحدي ✦</button><div class="c4-hint">لديك 15 ثانية في كل دور</div></div>';
+ shell.innerHTML='<div class="c4-heading"><h2>كونكت 4 <span style="font-size:20px">🔴🔵</span></h2><p>كوّن أربعة أقراص متصلة قبل البوت</p></div><div class="c4-panel"><div class="c4-label">اختر مستوى البوت</div><div class="c4-levels" id="c4-levels"></div><button class="c4-start" id="c4-start">ابدأ التحدي ✦</button><div class="c4-hint">يتم تحديد اللاعب الأول بحجر ورقة مقص</div></div>';
  const levels=shell.querySelector('#c4-levels');
  c4Levels.forEach(([name,desc])=>{const b=document.createElement('button');b.className='c4-level'+(c4Difficulty===name?' active':'');b.innerHTML=name+'<small>'+desc+'</small>';b.onclick=()=>{c4Difficulty=name;levels.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));};levels.appendChild(b);});
  shell.querySelector('#c4-start').onclick=startConnect4;
@@ -176,50 +177,87 @@ async function c4Request(path,payload){
 }
 async function startConnect4(){
  const btn=document.getElementById('c4-start');if(btn){btn.disabled=true;btn.textContent='جاري تجهيز اللوحة...';}
- try{c4Game=await c4Request('/api/connect4/new',{difficulty:c4Difficulty});renderConnect4();}
- catch(e){const shell=document.getElementById('c4-shell');if(shell){const error=document.createElement('div');error.className='c4-error';error.textContent=e.message;shell.appendChild(error);if(btn){btn.disabled=false;btn.textContent='ابدأ التحدي ✦';}}}
+ try{
+  c4Game=c4GameIdFromUrl
+   ? await c4Request('/api/connect4/state',{game_id:c4GameIdFromUrl})
+   : await c4Request('/api/connect4/new',{difficulty:c4Difficulty});
+  renderConnect4();
+ }catch(e){const shell=document.getElementById('c4-shell');if(shell){const error=document.createElement('div');error.className='c4-error';error.textContent=e.message;shell.appendChild(error);if(btn){btn.disabled=false;btn.textContent='ابدأ التحدي ✦';}}}
 }
 function renderConnect4(previousBoard=null){
  stopC4Timer();const shell=c4Shell();
- const names={سهل:'سهل',متوسط:'متوسط',صعب:'صعب',مستحيل:'مستحيل'};
- shell.innerHTML='<div class="c4-heading"><h2>كونكت 4</h2><p>المستوى: '+names[c4Game.difficulty]+'</p></div><div class="c4-players"><div class="c4-player"><i class="c4-disc red"></i><div><strong>أنت</strong><small>الأحمر</small></div></div><span class="c4-vs">VS</span><div class="c4-player"><i class="c4-disc blue"></i><div><strong>بوت نواف</strong><small>الأزرق</small></div></div></div><div class="c4-status"><div class="c4-statusline"><span id="c4-status">دورك! اختر عمودًا</span><span class="c4-clock" id="c4-clock">15 ثانية</span></div><div class="c4-track"><div class="c4-progress" id="c4-progress"></div></div></div><div class="c4-board-wrap"><div class="c4-board" id="c4-board"></div><svg class="c4-win-svg" id="c4-win-svg" viewBox="0 0 700 600" preserveAspectRatio="none"></svg></div><div class="c4-result" id="c4-result"></div><div class="c4-actions"><button class="c4-secondary" id="c4-again">مباراة جديدة ↻</button><button class="c4-secondary" id="c4-level-back">تغيير المستوى</button></div><div class="c4-hint">اضغط على أي خانة في العمود لإسقاط القرص</div>';
+ const human=c4Game.game_mode==='human';
+ const p1=human?(c4Game.player1_name||'اللاعب الأول'):'أنت';
+ const p2=human?(c4Game.player2_name||'اللاعب الثاني'):(c4Game.bot_name||'البوت');
+ const myPiece=c4Game.my_piece||1;
+ shell.innerHTML='<div class="c4-heading"><h2>كونكت 4</h2><p>'+(human?'مباراة بين لاعبين':'المستوى: '+c4Game.difficulty)+'</p></div><div class="c4-players"><div class="c4-player"><i class="c4-disc red"></i><div><strong></strong><small>الأحمر</small></div></div><span class="c4-vs">VS</span><div class="c4-player"><i class="c4-disc blue"></i><div><strong></strong><small>الأزرق</small></div></div></div><div class="c4-status"><div class="c4-statusline"><span id="c4-status">...</span><span class="c4-clock" id="c4-clock">15 ثانية</span></div><div class="c4-track"><div class="c4-progress" id="c4-progress"></div></div></div><div class="c4-board-wrap"><div class="c4-board" id="c4-board"></div><svg class="c4-win-svg" id="c4-win-svg" viewBox="0 0 700 600" preserveAspectRatio="none"></svg></div><div class="c4-result" id="c4-result"></div><div class="c4-actions"><button class="c4-secondary" id="c4-again">مباراة جديدة ↻</button><button class="c4-secondary" id="c4-level-back">رجوع</button></div><div class="c4-hint">اضغط على أي خانة في العمود لإسقاط القرص</div>';
+ const players=shell.querySelectorAll('.c4-player');
+ players[0].querySelector('strong').textContent=p1;players[1].querySelector('strong').textContent=p2;
  const board=shell.querySelector('#c4-board');
- const arrowRow=document.createElement('div');arrowRow.className='c4-arrows';for(let c=0;c<7;c++){const arrow=document.createElement('button');arrow.type='button';arrow.className='c4-arrow'+(c4Busy||c4Game.status!=='playing'?'':' active');arrow.textContent='↓';arrow.setAttribute('aria-label','العب في العمود '+(c+1));arrow.disabled=c4Game.board[0][c]!==0||c4Game.status!=='playing';arrow.onclick=()=>submitConnect4Move(c);arrowRow.appendChild(arrow);}board.parentElement.insertBefore(arrowRow,board);
- c4Game.board.forEach((row,r)=>row.forEach((piece,c)=>{
-  const slot=document.createElement('button');slot.className='c4-slot';slot.type='button';slot.setAttribute('aria-label','العمود '+(c+1));
-  if(piece){const disc=document.createElement('span');const isNew=previousBoard&&previousBoard[r][c]===0;disc.className='c4-disc '+(piece===1?'red':'blue')+(isNew?' falling':'');if(isNew)disc.style.animationDelay=(r*.035)+'s';slot.appendChild(disc);}
-  slot.disabled=c4Busy||c4Game.status!=='playing'||c4Game.board[0][c]!==0;
-  slot.onclick=()=>submitConnect4Move(c);board.appendChild(slot);
+ const myTurn=!!c4Game.your_turn;
+ const activeIndex=human?(myPiece===1?0:1):(c4Game.bot_move_pending?1:0);
+ const arrowRow=document.createElement('div');arrowRow.className='c4-arrows';
+ for(let col=0;col<7;col++){const arrow=document.createElement('button');arrow.type='button';arrow.className='c4-arrow'+(myTurn&&c4Game.status==='playing'?' active':'');arrow.textContent='↓';arrow.setAttribute('aria-label','العب في العمود '+(col+1));arrow.disabled=!myTurn||c4Game.board[0][col]!==0||c4Game.status!=='playing';arrow.onclick=()=>submitConnect4Move(col);arrowRow.appendChild(arrow);}
+ board.parentElement.insertBefore(arrowRow,board);
+ c4Game.board.forEach((row,r)=>row.forEach((piece,col)=>{
+  const slot=document.createElement('button');slot.className='c4-slot';slot.type='button';slot.setAttribute('aria-label','العمود '+(col+1));
+  if(piece){const disc=document.createElement('span');const isNew=previousBoard&&previousBoard[r][col]===0;disc.className='c4-disc '+(piece===1?'red':'blue')+(isNew?' falling':'');if(isNew)disc.style.animationDelay=(r*.035)+'s';slot.appendChild(disc);}
+  slot.disabled=!myTurn||c4Game.status!=='playing'||c4Game.board[0][col]!==0;
+  slot.onclick=()=>submitConnect4Move(col);board.appendChild(slot);
  }));
- shell.querySelector('#c4-again').onclick=startConnect4;
+ shell.querySelector('#c4-again').onclick=()=>{if(human){showConnect4Setup();}else{c4GameIdFromUrl?showConnect4Setup():startConnect4();}};
  shell.querySelector('#c4-level-back').onclick=showConnect4Setup;
  if(c4Game.winning_cells?.length===4){
   const first=c4Game.winning_cells[0],last=c4Game.winning_cells[3];
   const svg=shell.querySelector('#c4-win-svg'),boardEl=shell.querySelector('#c4-board');
   const center=(cell)=>{const slot=boardEl.children[cell[0]*7+cell[1]],rect=slot.getBoundingClientRect(),base=svg.getBoundingClientRect();return {x:(rect.left+rect.width/2-base.left)/base.width*700,y:(rect.top+rect.height/2-base.top)/base.height*600};};
   const a=center(first),b=center(last),line=document.createElementNS('http://www.w3.org/2000/svg','line');
-  line.setAttribute('x1',a.x);line.setAttribute('y1',a.y);line.setAttribute('x2',b.x);line.setAttribute('y2',b.y);
-  line.setAttribute('pathLength','1');svg.appendChild(line);
+  line.setAttribute('x1',a.x);line.setAttribute('y1',a.y);line.setAttribute('x2',b.x);line.setAttribute('y2',b.y);line.setAttribute('pathLength','1');svg.appendChild(line);
  }
  if(c4Game.status!=='playing'){
   const result=shell.querySelector('#c4-result');result.classList.add('show');
-  result.textContent=c4Game.status==='won'?'🏆 فزت! لعب ممتاز!':c4Game.status==='lost'?'🤖 فاز بوت نواف! حاول مرة ثانية':'🤝 تعادل! مباراة قوية';
-  shell.querySelector('#c4-status').textContent='انتهت المباراة';shell.querySelector('#c4-clock').textContent='—';
-  shell.querySelector('#c4-progress').style.width='0%';
- }else{shell.querySelector('#c4-status').textContent='دورك! اختر عمودًا';shell.querySelectorAll('.c4-player').forEach((el,i)=>{el.classList.toggle('active',i===0);el.style.setProperty('--turn-color',i===0?'#ff3448':'#278bff');});shell.querySelectorAll('.c4-arrow').forEach(el=>{el.classList.add('active');el.style.setProperty('--turn-color','#ff3448');});startC4Timer();}
+  result.textContent=c4Game.status==='draw'?'🤝 تعادل! تم إرجاع الرهانات':(c4Game.status==='won'?'🏆 فاز ':'🏆 فاز ')+(c4Game.winner_name|| (c4Game.status==='won'?'أنت':p2))+'!';
+  shell.querySelector('#c4-status').textContent='انتهت المباراة';shell.querySelector('#c4-clock').textContent='—';shell.querySelector('#c4-progress').style.width='0%';
+ }else if(!myTurn){
+  shell.querySelector('#c4-status').textContent=c4Game.bot_move_pending?'البوت يستعد للحركة...':'دور '+(human?(myPiece===1?p2:p1):p2);
+  shell.querySelector('#c4-clock').textContent='انتظار';
+  players.forEach((el,i)=>el.classList.toggle('active',i===activeIndex));
+  if(c4Game.bot_move_pending){c4BotTimer=setTimeout(runC4BotMove,1000);}
+  else if(human)pollConnect4State();
+ }else{
+  shell.querySelector('#c4-status').textContent='دورك! اختر عمودًا';
+  players.forEach((el,i)=>{el.classList.toggle('active',i===(human?(myPiece===1?0:1):0));el.style.setProperty('--turn-color',i===(human?(myPiece===1?0:1):0)?'#ff3448':'#278bff');});
+  shell.querySelectorAll('.c4-arrow').forEach(el=>el.style.setProperty('--turn-color',myPiece===1?'#ff3448':'#278bff'));
+  startC4Timer();
+ }
+}
+async function runC4BotMove(){
+ if(c4Busy||!c4Game||!c4Game.bot_move_pending)return;
+ c4Busy=true;const previous=c4Game.board.map(row=>row.slice());
+ try{c4Game=await c4Request('/api/connect4/bot-move',{game_id:c4Game.id});c4Busy=false;renderConnect4(previous);}
+ catch(e){c4Busy=false;const s=document.getElementById('c4-status');if(s)s.textContent=e.message;c4BotTimer=setTimeout(runC4BotMove,1500);}
+}
+async function pollConnect4State(){
+ if(c4PollTimer||!c4Game||c4Game.game_mode!=='human'||c4Game.status!=='playing')return;
+ c4PollTimer=setTimeout(async()=>{
+  c4PollTimer=null;
+  try{const next=await c4Request('/api/connect4/state',{game_id:c4Game.id});
+   if(JSON.stringify(next.board)!==JSON.stringify(c4Game.board)||next.status!==c4Game.status||next.your_turn!==c4Game.your_turn){const previous=c4Game.board.map(row=>row.slice());c4Game=next;renderConnect4(previous);}
+   else pollConnect4State();
+  }catch(e){pollConnect4State();}
+ },1300);
 }
 function startC4Timer(){
- stopC4Timer();c4Seconds=15;const started=Date.now();
+ stopC4Timer();if(!c4Game?.your_turn)return;
+ c4Seconds=15;const started=Date.now();
  const update=()=>{const left=Math.max(0,15-(Date.now()-started)/1000);const clock=document.getElementById('c4-clock'),bar=document.getElementById('c4-progress');if(clock)clock.textContent=Math.ceil(left)+' ثانية';if(bar)bar.style.width=(left/15*100)+'%';if(left<=0){stopC4Timer();const legal=c4Game.board[0].map((v,i)=>v===0?i:null).filter(v=>v!==null);if(legal.length)submitConnect4Move(legal[Math.floor(Math.random()*legal.length)],true);}};
  update();c4Tick=setInterval(update,200);c4Timer=setTimeout(update,15100);
 }
 async function submitConnect4Move(col,automatic=false){
- if(c4Busy||!c4Game||c4Game.status!=='playing')return;
- const previousBoard=c4Game.board.map(row=>row.slice());
- c4Busy=true;stopC4Timer();
- document.querySelectorAll('.c4-player').forEach((el,i)=>el.classList.toggle('active',i===1));document.querySelectorAll('.c4-player').forEach((el,i)=>el.style.setProperty('--turn-color',i===1?'#278bff':'#ff3448'));document.querySelectorAll('.c4-arrow').forEach(el=>{el.classList.add('active');el.style.setProperty('--turn-color','#278bff');});
- const status=document.getElementById('c4-status');if(status)status.textContent=automatic?'انتهى الوقت! اخترنا لك حركة عشوائية':'البوت يفكر...';
- document.querySelectorAll('.c4-slot').forEach(x=>x.disabled=true);
+ if(c4Busy||!c4Game||c4Game.status!=='playing'||!c4Game.your_turn)return;
+ const previousBoard=c4Game.board.map(row=>row.slice());c4Busy=true;stopC4Timer();
+ document.querySelectorAll('.c4-slot,.c4-arrow').forEach(x=>x.disabled=true);
+ const status=document.getElementById('c4-status');if(status)status.textContent=automatic?'انتهى الوقت! اخترنا لك حركة عشوائية':'جاري إسقاط القرص...';
  try{c4Game=await c4Request('/api/connect4/move',{game_id:c4Game.id,column:col});c4Busy=false;renderConnect4(previousBoard);}
  catch(e){c4Busy=false;const s=document.getElementById('c4-status');if(s)s.textContent=e.message;startC4Timer();}
 }
