@@ -17,6 +17,12 @@ from database.points import (
 
 logger = logging.getLogger("nawaf.performance")
 
+async def _timed_reply(message, label: str, *args, **kwargs):
+    started = time.perf_counter()
+    result = await message.reply_text(*args, **kwargs)
+    logger.info("PERF %s duration_ms=%.1f", label, (time.perf_counter() - started) * 1000)
+    return result
+
 OWNER_ID = 8453977662
 POINTS_PER_MESSAGE = 10
 
@@ -163,7 +169,7 @@ async def my_points(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.effective_user:
         return
     points = await get_points(update.effective_user.id)
-    await update.message.reply_text(f"🏆 نقاطك الحالية: {points}")
+    await _timed_reply(update.message, "handler.my_points.telegram_reply", f"🏆 نقاطك الحالية: {points}")
 
 
 @timed("handler.top_points")
