@@ -131,6 +131,10 @@ from handlers.developer_panel import (
     developer_panel_command, developer_panel_callback, developer_panel_message,
 )
 from handlers.send import send_command, handle_send_media
+from handlers.music import (
+    music_message_handler, music_callback, voice_chat_started, voice_chat_ended,
+)
+from handlers.youtube_audio import youtube_audio_search, youtube_audio_callback
 
 from handlers.games_menu import games_menu_command, games_menu_callback
 from handlers.games_help import games_help
@@ -310,6 +314,26 @@ def build_application() -> Application:
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("health", health_command))
     application.add_handler(CommandHandler("send", send_command))
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.TEXT & ~filters.COMMAND,
+        music_message_handler,
+    ), group=-1002)
+    application.add_handler(CallbackQueryHandler(
+        music_callback, pattern=r"^musicpick:"
+    ))
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.TEXT & ~filters.COMMAND,
+        youtube_audio_search,
+    ), group=-1001)
+    application.add_handler(CallbackQueryHandler(
+        youtube_audio_callback, pattern=r"^ytpick:"
+    ))
+    application.add_handler(MessageHandler(
+        filters.StatusUpdate.VIDEO_CHAT_STARTED, voice_chat_started
+    ))
+    application.add_handler(MessageHandler(
+        filters.StatusUpdate.VIDEO_CHAT_ENDED, voice_chat_ended
+    ))
     application.add_handler(MessageHandler(
         filters.ChatType.PRIVATE & (
             filters.PHOTO | filters.VIDEO | filters.ANIMATION | filters.STICKER
