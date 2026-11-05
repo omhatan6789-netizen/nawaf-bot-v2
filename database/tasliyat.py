@@ -268,7 +268,7 @@ async def run_investment(user_id: int, now: int, cooldown_seconds: int, amount: 
                     THEN 'cooldown'
                 WHEN $4 <= 0 OR COALESCE((SELECT points FROM lock_points), 0) < $4
                     THEN 'insufficient'
-                WHEN $5::BIGINT IS NOT NULL THEN 'success'
+                WHEN $5::BIGINT > 0 THEN 'success'
                 ELSE 'failed'
             END AS status,
             COALESCE(
