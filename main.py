@@ -263,6 +263,9 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             )
         except Exception:
             logger.exception("Failed to record private /start for mandatory subscription")
+    if context.args and context.args[0].lower() == "help":
+        await commands_menu_start(update, context)
+        return
     await start(update, context)
 
 
