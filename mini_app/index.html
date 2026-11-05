@@ -86,7 +86,7 @@ function showTop(kind,title){
  }).catch(()=>{pageContent.replaceChildren();const e=document.createElement('div');e.className='empty';e.textContent='تعذر تحميل الترتيب حاليًا، حاول مرة ثانية';pageContent.appendChild(e);});
 }
 
-let chessBotName='البوت', chessGame=null, chessSelected=null, chessDifficulty='متوسط', chessClock=0, chessBoardEl=null, chessSquareEls={};
+let chessBotName='البوت', chessGame=null, chessSelected=null, chessDifficulty='متوسط', chessClock=0, chessBoardEl=null, chessSquareEls={}, chessThinking=false;
 function showGames(){
  document.body.classList.add('chess-mode');home.hidden=true;page.hidden=false;
  pageTitle.textContent='الألعاب 🎮';pageContent.replaceChildren();
@@ -185,7 +185,7 @@ async function animateChessMove(from,to,piece,commitVisual=false){
  }
 }
 function selectChessSquare(square,piece){
- if(!chessGame||chessGame.status!=='active')return;
+ if(!chessGame||chessGame.status!=='active'||chessThinking)return;
  const legal=chessGame.legal_moves||[];
  if(chessSelected){
   const matches=legal.filter(m=>m.startsWith(chessSelected+square));
@@ -195,6 +195,7 @@ function selectChessSquare(square,piece){
  chessSelected=null;refreshChessBoard();
 }
 async function submitChessMove(move){
+ if(chessThinking)return;chessThinking=true;
  const from=move.slice(0,2),to=move.slice(2,4),movingPiece=chessPieceAt(chessGame.fen,from);
  chessSelected=null;refreshChessBoard();
  try{
@@ -214,7 +215,8 @@ async function submitChessMove(move){
   const nameEl=document.querySelector('.chess-turn strong');if(nameEl)nameEl.textContent=activeName;
   const finalStatus=document.getElementById('chess-status');
   if(finalStatus)finalStatus.textContent=chessGame.status==='finished'?(chessGame.result==='draw'?'انتهت المباراة بالتعادل':chessGame.result==='white'?'فزت بالمباراة!':'فاز '+chessBotName):'دور '+activeName+' · اختر القطعة التالية';
- }catch(e){alert(e.message);refreshChessBoard();}
+  chessThinking=false;
+ }catch(e){chessThinking=false;alert(e.message);refreshChessBoard();}
 }
 
 document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>{
