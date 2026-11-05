@@ -435,7 +435,7 @@ def build_application() -> Application:
     application.add_handler(MessageHandler(
         filters.ChatType.GROUPS & filters.TEXT & ~filters.COMMAND,
         emoji_reactions_handler,
-    ), group=-1001)
+    ), group=-1003)
     application.add_handler(MessageHandler(
         filters.ChatType.GROUPS & filters.TEXT & ~filters.COMMAND,
         ai_assistant_message,
