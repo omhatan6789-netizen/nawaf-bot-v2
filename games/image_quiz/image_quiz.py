@@ -296,108 +296,47 @@ def load_questions() -> List[dict]:
 async def choose_question(
     state: ImageQuizState
 ) -> Optional[dict]:
-
-    questions = load_questions()
+    # اللعبة تعتمد حصريًا على الصور التي يضيفها المطورون يدويًا.
+    # لا نقرأ questions.json ولا نستخدم أي صور افتراضية.
     manual_images = await load_manual_images()
-
     all_questions = []
 
-    # -----------------------------------------------------
-    # الصور الأصلية
-    # -----------------------------------------------------
-
-    for index, question in enumerate(questions):
-
-        if not isinstance(question, dict):
-            continue
-
-        question_copy = dict(question)
-
-        question_id = str(
-            question_copy.get(
-                "id",
-                f"question_{index}"
-            )
-        )
-
-        question_copy["_quiz_source"] = "builtin"
-        question_copy["_quiz_id"] = question_id
-
-        all_questions.append(
-            question_copy
-        )
-
-    # -----------------------------------------------------
-    # الصور المضافة يدويًا
-    # -----------------------------------------------------
-
     for index, image in enumerate(manual_images):
-
         if not isinstance(image, dict):
             continue
 
         file_id = image.get("file_id")
-
-        if not file_id:
-            continue
-
         answer = image.get("answer")
-
-        if not isinstance(answer, str):
+        if not file_id or not isinstance(answer, str) or not answer.strip():
             continue
 
-        question_id = str(
-            image.get(
-                "id",
-                f"manual_{index}"
-            )
-        )
-
-        question = {
+        question_id = str(image.get("id") or f"manual_{index}")
+        all_questions.append({
             "id": question_id,
             "answer": answer,
-            "alternative_answers": image.get(
-                "alternative_answers",
-                []
-            ),
+            "alternative_answers": image.get("alternative_answers", []),
             "_quiz_source": "manual",
             "_quiz_id": question_id,
-            "file_id": file_id
-        }
-
-        all_questions.append(question)
+            "file_id": file_id,
+        })
 
     if not all_questions:
         return None
 
-    available = []
+    available = [
+        question for question in all_questions
+        if str(question.get("_quiz_id", "")) not in state.used_question_ids
+    ]
 
-    for question in all_questions:
-        question_id = str(
-            question.get("_quiz_id", "")
-        )
-
-        if question_id not in state.used_question_ids:
-            available.append(question)
-
-    # إذا انتهت جميع الصور نعيد استخدامها
+    # بعد استخدام كل الصور نعيد خلطها ونسمح باستخدامها من جديد.
     if not available:
         state.used_question_ids.clear()
         available = all_questions.copy()
 
-    if not available:
-        return None
-
     question = random.choice(available)
-
-    question_id = str(
-        question.get("_quiz_id", "")
-    )
-
+    question_id = str(question.get("_quiz_id", ""))
     if question_id:
-        state.used_question_ids.add(
-            question_id
-        )
+        state.used_question_ids.add(question_id)
 
     return question
 
@@ -973,9 +912,8 @@ async def start_round(
         await context.bot.send_message(
             chat_id=state.chat_id,
             text=(
-                "❌ لا توجد صور في مكتبة توقع الصورة.\n\n"
-                "تأكد من وجود `questions.json` "
-                "أو أضف صورًا باستخدام `اضف صور توقع`."
+                "❌ ما فيه صور مضافة للعبة توقع الصورة.\n\n"
+                "أضف صورك يدويًا باستخدام الأمر `اضف صور توقع`."
             ),
             parse_mode="Markdown"
         )
