@@ -67,7 +67,7 @@ def _monitor_loop(interval_seconds):
         rss_delta = round(snapshot["rss_mb"] - previous, 1) if previous is not None else 0.0
         previous = snapshot["rss_mb"]
         fields = " ".join(f"{key}={value}" for key, value in snapshot.items() if value is not None)
-        fields += f" rss_delta_1m_mb={rss_delta}"
+        fields += f" rss_delta_prev_mb={rss_delta}"
         limit = snapshot.get("container_limit_mb")
         usage = snapshot.get("container_mb")
         if limit and usage is not None and usage >= limit * 0.75:
@@ -77,7 +77,14 @@ def _monitor_loop(interval_seconds):
         _stop.wait(interval_seconds)
 
 
-def start_memory_monitor(interval_seconds=60):
+def log_memory_checkpoint(label):
+    """Log a named startup/runtime checkpoint with current process memory."""
+    snapshot = _memory_snapshot()
+    fields = " ".join(f"{key}={value}" for key, value in snapshot.items() if value is not None)
+    logger.info("MEMORY_CHECKPOINT label=%s %s", label, fields)
+
+
+def start_memory_monitor(interval_seconds=15):
     """Start one daemon monitor thread; safe to call more than once."""
     global _thread
     if _thread is not None and _thread.is_alive():
