@@ -64,6 +64,9 @@ async def my_messages_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         "SELECT COALESCE(messages, 0) FROM users WHERE user_id=$1",
         user.id,
     )
+    # The current group text message is tracked later in the update pipeline.
+    if update.effective_chat and update.effective_chat.type in ("group", "supergroup") and not user.is_bot:
+        count = int(count or 0) + 1
     await message.reply_text(f"• رسائلك ~ {int(count or 0):,}")
 
 
