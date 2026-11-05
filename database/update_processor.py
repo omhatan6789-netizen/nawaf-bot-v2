@@ -19,6 +19,14 @@ class ChatSerialUpdateProcessor(BaseUpdateProcessor):
         super().__init__(max_concurrent_updates=max_concurrent_updates)
         self._locks = tuple(asyncio.Lock() for _ in range(lock_stripes))
 
+    async def initialize(self) -> None:
+        """Initialize the update processor."""
+        return None
+
+    async def shutdown(self) -> None:
+        """Shut down the update processor."""
+        return None
+
     def _lock_for(self, update: object) -> tuple[asyncio.Lock, str]:
         chat = getattr(update, "effective_chat", None)
         if chat is not None:
