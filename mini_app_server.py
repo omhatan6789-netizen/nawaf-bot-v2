@@ -137,3 +137,35 @@ def handle_mini_app_request(handler):
             handler.send_error(404, "Image not found")
         return True
     return False
+
+
+def handle_connect4_post(handler):
+    path = handler.path.split("?", 1)[0]
+    if path not in ("/api/connect4/new", "/api/connect4/move"):
+        return False
+    try:
+        length = min(int(handler.headers.get("Content-Length", "0")), 16384)
+        payload = json.loads(handler.rfile.read(length) or b"{}")
+        from games.connect4 import verify_init_data, create_game, play_move
+        if _bot is None:
+            raise RuntimeError("البوت ما زال يستعد، حاول بعد قليل")
+        user = verify_init_data(payload.get("initData", ""), _bot.token)
+        if path.endswith("/new"):
+            state = _run(create_game(int(user["id"]), payload.get("difficulty", "متوسط")))
+        else:
+            state = _run(play_move(int(user["id"]), payload.get("game_id", ""), payload.get("column")))
+        body = json.dumps({"ok": True, "game": state}, ensure_ascii=False).encode()
+        handler.send_response(200)
+    except ValueError as exc:
+        body = json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False).encode()
+        handler.send_response(400)
+    except Exception:
+        logging.getLogger(__name__).exception("Connect 4 request failed")
+        body = json.dumps({"ok": False, "error": "تعذر تنفيذ الحركة الآن، حاول مرة ثانية"} , ensure_ascii=False).encode()
+        handler.send_response(503)
+    handler.send_header("Content-Type", "application/json; charset=utf-8")
+    handler.send_header("Cache-Control", "no-store")
+    handler.send_header("Content-Length", str(len(body)))
+    handler.end_headers()
+    handler.wfile.write(body)
+    return True
