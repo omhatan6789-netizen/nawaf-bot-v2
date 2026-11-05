@@ -197,7 +197,7 @@ function renderConnect4(previousBoard=null){
  players[0].querySelector('strong').textContent=p1;players[1].querySelector('strong').textContent=p2;
  const board=shell.querySelector('#c4-board');
  const myTurn=!!c4Game.your_turn;
- const activeIndex=human?(myPiece===1?0:1):(c4Game.bot_move_pending?1:0);
+ const activeIndex=human?(myTurn?(myPiece===1?0:1):(myPiece===1?1:0)):(c4Game.bot_move_pending?1:0);
  const arrowRow=document.createElement('div');arrowRow.className='c4-arrows';
  for(let col=0;col<7;col++){const arrow=document.createElement('button');arrow.type='button';arrow.className='c4-arrow'+(myTurn&&c4Game.status==='playing'?' active':'');arrow.textContent='↓';arrow.setAttribute('aria-label','العب في العمود '+(col+1));arrow.disabled=!myTurn||c4Game.board[0][col]!==0||c4Game.status!=='playing';arrow.onclick=()=>submitConnect4Move(col);arrowRow.appendChild(arrow);}
  board.parentElement.insertBefore(arrowRow,board);
