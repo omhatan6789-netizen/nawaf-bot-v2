@@ -20,11 +20,14 @@ def _rps_winner(a: str, b: str) -> int:
 
 
 def _rps_keyboard(challenge_id: str):
-    return InlineKeyboardMarkup([[
-        InlineKeyboardButton("✊ حجر", callback_data=f"c4r:{challenge_id}:r"),
-        InlineKeyboardButton("✋ ورقة", callback_data=f"c4r:{challenge_id}:p"),
-        InlineKeyboardButton("✌️ مقص", callback_data=f"c4r:{challenge_id}:s"),
-    ]])
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("✊ حجر", callback_data=f"c4r:{challenge_id}:r"),
+            InlineKeyboardButton("✋ ورقة", callback_data=f"c4r:{challenge_id}:p"),
+            InlineKeyboardButton("✌️ مقص", callback_data=f"c4r:{challenge_id}:s"),
+        ],
+        [InlineKeyboardButton("إلغاء وإرجاع الرهان", callback_data=f"c4x:{challenge_id}")],
+    ])
 
 
 async def connect4_challenge_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -156,6 +159,29 @@ async def connect4_challenge_callback(update: Update, context: ContextTypes.DEFA
         )
         await query.edit_message_reply_markup(reply_markup=None)
         await query.answer("تم قبول التحدي وحُجز الرهان.")
+        return
+
+    if action == "c4x":
+        if user_id not in (row["challenger_id"], row["opponent_id"]):
+            await query.answer("هذا التحدي ليس لك.", show_alert=True)
+            return
+        if row["status"] != "choosing":
+            await query.answer("لا يمكن إلغاء التحدي في هذه المرحلة.", show_alert=True)
+            return
+        cancelled = await pool.fetchval(
+            """UPDATE connect4_challenges SET status='cancelled',updated_at=NOW()
+               WHERE id=$1 AND status='choosing' RETURNING id""",
+            challenge_id,
+        )
+        if cancelled:
+            from database.points import settle_two_player_wager
+            await settle_two_player_wager(
+                int(row["challenger_id"]), int(row["opponent_id"]), int(row["wager"]), None
+            )
+            await query.edit_message_text("تم إلغاء تحدي كونكت 4 وإرجاع الرهان للاعبين.")
+            await query.answer("تم إرجاع الرهان.")
+        else:
+            await query.answer("تم إلغاء التحدي مسبقًا.", show_alert=True)
         return
 
     if action == "c4r":
