@@ -4,6 +4,7 @@ import uuid
 import chess
 from database.pool import get_pool
 from chess_engine import choose_ai_move
+from memory_monitor import log_memory_checkpoint
 
 def telegram_user(init_data, token):
     data = dict(parse_qsl(init_data or "", keep_blank_values=True))
@@ -84,7 +85,12 @@ async def play_ai(game_id, user, uci):
             if not board.is_game_over(claim_draw=True):
                 # Keep the AI delay asynchronous; the board remains responsive while it thinks.
                 await asyncio.sleep(3.5)
+                log_memory_checkpoint("chess_before_ai_search")
+                ai_started = time.monotonic()
                 ai=chess.Move.from_uci(choose_ai_move(board.fen(),row["difficulty"]))
+                log_memory_checkpoint("chess_after_ai_search")
+                import logging
+                logging.getLogger("nawaf.chess").info("CHESS_AI_SEARCH difficulty=%s duration_ms=%.1f", row["difficulty"], (time.monotonic()-ai_started)*1000)
                 ai_move=ai.uci()
                 san=board.san(ai); board.push(ai); moves.append({"uci":ai.uci(),"san":san})
             status="finished" if board.is_game_over(claim_draw=True) else "active"
