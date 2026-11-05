@@ -11,6 +11,8 @@ from database.custom_commands import (
 )
 
 OWNER_ID = 8453977662
+OWNER_ACCOUNT_ID = 6496915877
+AUTHORIZED_OWNER_IDS = {OWNER_ID, OWNER_ACCOUNT_ID}
 WAIT_OLD, WAIT_NEW = range(2)
 add_command_sessions = {}
 _custom_commands_cache = None
@@ -70,7 +72,7 @@ def clear_custom_commands_cache():
 async def add_command_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.effective_message
     user = update.effective_user
-    if not message or not user or user.id != OWNER_ID:
+    if not message or not user or user.id not in AUTHORIZED_OWNER_IDS:
         return ConversationHandler.END
     add_command_sessions[user.id] = {}
     context.user_data["custom_command"] = True
