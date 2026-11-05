@@ -592,7 +592,7 @@ def build_application() -> Application:
         connect4_challenge_command,
     ))
     application.add_handler(CallbackQueryHandler(
-        connect4_challenge_callback, pattern=r"^c4(?:a|d|r):"
+        connect4_challenge_callback, pattern=r"^c4(?:a|d|r|x):"
     ))
 
     # Rock-paper-scissors challenge (same legacy commands and callbacks).
