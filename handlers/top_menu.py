@@ -100,7 +100,7 @@ async def _build_top_text(kind: str, chat_id: int | None = None) -> str:
         lines = [title, ""]
         for place, row in enumerate(rows, 1):
             name = row["first_name"] or row["username"] or "مستخدم"
-            lines.append(f"{place} - {name} : {int(row[count_key] or 0)} رسالة")
+            lines.append(f"{place} - {name} : ( رسالة {int(row[count_key] or 0)} )")
         return "\n".join(lines) if rows else f"{title}\n\nلا يوجد ترتيب حتى الآن."
 
     return "تعذر عرض التوب المطلوب."
