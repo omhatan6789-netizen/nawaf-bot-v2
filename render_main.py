@@ -58,5 +58,5 @@ def start_health_server():
 
 if __name__ == "__main__":
     start_health_server()
-    start_memory_monitor(interval_seconds=60)
+    start_memory_monitor(interval_seconds=15)
     build_application().run_polling()
