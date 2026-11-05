@@ -224,7 +224,11 @@ function renderConnect4(previousBoard=null){
   shell.querySelector('#c4-status').textContent=c4Game.bot_move_pending?'البوت يستعد للحركة...':'دور '+(human?(myPiece===1?p2:p1):p2);
   shell.querySelector('#c4-clock').textContent='انتظار';
   players.forEach((el,i)=>el.classList.toggle('active',i===activeIndex));
-  if(c4Game.bot_move_pending){c4BotTimer=setTimeout(runC4BotMove,1800);}
+  if(c4Game.bot_move_pending){
+   let fallDelay=0;
+   if(previousBoard){for(let r=0;r<6;r++){for(let col=0;col<7;col++){if(previousBoard[r][col]===0&&c4Game.board[r][col]!==0)fallDelay=Math.max(fallDelay,r*35);}}}
+   c4BotTimer=setTimeout(runC4BotMove,1620+fallDelay);
+  }
   else if(human)pollConnect4State();
  }else{
   shell.querySelector('#c4-status').textContent=c4Game.rps_result?(c4Game.rps_result==='bot_starts'?'✊ حجر ورقة مقص: فاز '+p2+' ('+({r:'حجر',p:'ورقة',s:'مقص'}[c4Game.rps_bot_choice]||'')+') ويبدأ أولًا':'✊ حجر ورقة مقص: فزت ('+({r:'حجر',p:'ورقة',s:'مقص'}[c4Game.rps_bot_choice]||'')+') وتبدأ أولًا'):'دورك! اختر عمودًا';
