@@ -127,60 +127,159 @@ async def _claim_cooldown(conn: Any, user_id: int, column: str, now: int, until:
 
 @timed("db.tasliyat.claim_reward")
 async def claim_reward(user_id: int, column: str, now: int, cooldown_seconds: int, amount: int) -> tuple[bool, int, int]:
-    """Claim a cooldown and credit the reward atomically."""
+    """Atomically claim a reward in one database round trip."""
+    if column not in _COOLDOWN_COLUMNS:
+        raise ValueError("Invalid cooldown column")
+
     pool = get_pool()
+    until = now + cooldown_seconds
+    query = f"""
+        WITH ensure_user AS (
+            INSERT INTO users(user_id) VALUES($1)
+            ON CONFLICT(user_id) DO NOTHING
+            RETURNING user_id
+        ),
+        ensure_points AS (
+            INSERT INTO points(user_id, points)
+            SELECT $1 WHERE (SELECT COUNT(*) FROM ensure_user) >= 0
+            ON CONFLICT(user_id) DO NOTHING
+            RETURNING user_id
+        ),
+        lock_points AS (
+            SELECT points
+            FROM points
+            WHERE user_id = $1
+              AND (SELECT COUNT(*) FROM ensure_points) >= 0
+            FOR UPDATE
+        ),
+        ensure_cooldown AS (
+            INSERT INTO tasliyat_cooldowns(user_id)
+            SELECT $1 WHERE EXISTS (SELECT 1 FROM lock_points)
+            ON CONFLICT(user_id) DO NOTHING
+            RETURNING user_id
+        ),
+        lock_cooldown AS (
+            SELECT {column} AS cooldown_until
+            FROM tasliyat_cooldowns
+            WHERE user_id = $1
+              AND (SELECT COUNT(*) FROM ensure_cooldown) >= 0
+            FOR UPDATE
+        ),
+        claimed AS (
+            UPDATE tasliyat_cooldowns
+            SET {column} = $3
+            WHERE user_id = $1
+              AND {column} <= $2
+              AND EXISTS (SELECT 1 FROM lock_cooldown)
+            RETURNING {column}
+        ),
+        credited AS (
+            UPDATE points
+            SET points = points + $4
+            WHERE user_id = $1
+              AND EXISTS (SELECT 1 FROM claimed)
+            RETURNING points
+        )
+        SELECT
+            EXISTS (SELECT 1 FROM claimed) AS claimed,
+            COALESCE(
+                (SELECT points FROM credited),
+                (SELECT points FROM lock_points),
+                0
+            ) AS balance,
+            CASE
+                WHEN EXISTS (SELECT 1 FROM claimed) THEN 0
+                ELSE GREATEST(
+                    0,
+                    COALESCE((SELECT cooldown_until FROM lock_cooldown), 0) - $2
+                )
+            END AS remaining
+    """
     async with pool.acquire() as conn:
-        async with conn.transaction():
-            await _ensure_user(conn, user_id)
-            await conn.fetchval(
-                "SELECT points FROM points WHERE user_id=$1 FOR UPDATE",
-                user_id,
-            )
-            claimed, remaining = await _claim_cooldown(
-                conn, user_id, column, now, now + cooldown_seconds
-            )
-            if not claimed:
-                balance = await conn.fetchval("SELECT points FROM points WHERE user_id=$1", user_id)
-                return False, int(balance or 0), remaining
-            balance = await conn.fetchval(
-                "UPDATE points SET points=points+$2 WHERE user_id=$1 RETURNING points",
-                user_id, amount,
-            )
-    return True, int(balance), 0
+        row = await conn.fetchrow(query, user_id, now, until, amount)
+
+    return bool(row["claimed"]), int(row["balance"] or 0), int(row["remaining"] or 0)
 
 
 @timed("db.tasliyat.run_investment")
 async def run_investment(user_id: int, now: int, cooldown_seconds: int, amount: int, profit: int | None) -> tuple[str, int, int]:
-    """Validate funds, claim cooldown, and apply an optional profit atomically."""
+    """Validate and apply an investment atomically in one database round trip."""
     pool = get_pool()
+    until = now + cooldown_seconds
+    query = """
+        WITH ensure_user AS (
+            INSERT INTO users(user_id) VALUES($1)
+            ON CONFLICT(user_id) DO NOTHING
+            RETURNING user_id
+        ),
+        ensure_points AS (
+            INSERT INTO points(user_id, points)
+            SELECT $1 WHERE (SELECT COUNT(*) FROM ensure_user) >= 0
+            ON CONFLICT(user_id) DO NOTHING
+            RETURNING user_id
+        ),
+        lock_points AS (
+            SELECT points
+            FROM points
+            WHERE user_id = $1
+              AND (SELECT COUNT(*) FROM ensure_points) >= 0
+            FOR UPDATE
+        ),
+        ensure_cooldown AS (
+            INSERT INTO tasliyat_cooldowns(user_id)
+            SELECT $1 WHERE EXISTS (SELECT 1 FROM lock_points)
+            ON CONFLICT(user_id) DO NOTHING
+            RETURNING user_id
+        ),
+        lock_cooldown AS (
+            SELECT investment_until AS cooldown_until
+            FROM tasliyat_cooldowns
+            WHERE user_id = $1
+              AND (SELECT COUNT(*) FROM ensure_cooldown) >= 0
+            FOR UPDATE
+        ),
+        claimed AS (
+            UPDATE tasliyat_cooldowns
+            SET investment_until = $3
+            WHERE user_id = $1
+              AND investment_until <= $2
+              AND $4 > 0
+              AND (SELECT points FROM lock_points) >= $4
+              AND EXISTS (SELECT 1 FROM lock_cooldown)
+            RETURNING investment_until
+        ),
+        credited AS (
+            UPDATE points
+            SET points = points + $5
+            WHERE user_id = $1
+              AND EXISTS (SELECT 1 FROM claimed)
+              AND $5 IS NOT NULL
+              AND $5 > 0
+            RETURNING points
+        )
+        SELECT
+            CASE
+                WHEN COALESCE((SELECT cooldown_until FROM lock_cooldown), 0) > $2
+                    THEN 'cooldown'
+                WHEN $4 <= 0 OR COALESCE((SELECT points FROM lock_points), 0) < $4
+                    THEN 'insufficient'
+                WHEN $5 IS NOT NULL THEN 'success'
+                ELSE 'failed'
+            END AS status,
+            COALESCE(
+                (SELECT points FROM credited),
+                (SELECT points FROM lock_points),
+                0
+            ) AS balance,
+            GREATEST(
+                0,
+                COALESCE((SELECT cooldown_until FROM lock_cooldown), 0) - $2
+            ) AS remaining
+    """
     async with pool.acquire() as conn:
-        async with conn.transaction():
-            await _ensure_user(conn, user_id)
-            balance = int(await conn.fetchval(
-                "SELECT points FROM points WHERE user_id=$1 FOR UPDATE", user_id
-            ) or 0)
-            await conn.execute(
-                "INSERT INTO tasliyat_cooldowns(user_id) VALUES($1) ON CONFLICT(user_id) DO NOTHING",
-                user_id,
-            )
-            current_until = int(await conn.fetchval(
-                "SELECT investment_until FROM tasliyat_cooldowns WHERE user_id=$1 FOR UPDATE",
-                user_id,
-            ) or 0)
-            if current_until > now:
-                return "cooldown", balance, current_until - now
-            if amount <= 0 or balance < amount:
-                return "insufficient", balance, 0
-            await conn.execute(
-                "UPDATE tasliyat_cooldowns SET investment_until=$2 WHERE user_id=$1",
-                user_id, now + cooldown_seconds,
-            )
-            if profit is not None and profit > 0:
-                balance = int(await conn.fetchval(
-                    "UPDATE points SET points=points+$2 WHERE user_id=$1 RETURNING points",
-                    user_id, profit,
-                ))
-    return ("success" if profit is not None else "failed"), balance, 0
+        row = await conn.fetchrow(query, user_id, now, until, amount, profit)
+
+    return str(row["status"]), int(row["balance"] or 0), int(row["remaining"] or 0)
 
 
 async def run_luck(user_id: int, now: int, cooldown_seconds: int, amount: int, won: bool) -> tuple[str, int, int, int]:
