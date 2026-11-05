@@ -141,19 +141,36 @@ def handle_mini_app_request(handler):
 
 def handle_connect4_post(handler):
     path = handler.path.split("?", 1)[0]
-    if path not in ("/api/connect4/new", "/api/connect4/move"):
+    if path not in (
+        "/api/connect4/new", "/api/connect4/move",
+        "/api/connect4/bot-move", "/api/connect4/state",
+    ):
         return False
     try:
         length = min(int(handler.headers.get("Content-Length", "0")), 16384)
         payload = json.loads(handler.rfile.read(length) or b"{}")
-        from games.connect4 import verify_init_data, create_game, play_move
+        from games.connect4 import (
+            verify_init_data, create_game, play_move,
+            play_bot_move, get_game_state,
+        )
         if _bot is None:
             raise RuntimeError("البوت ما زال يستعد، حاول بعد قليل")
         user = verify_init_data(payload.get("initData", ""), _bot.token)
         if path.endswith("/new"):
-            state = _run(create_game(int(user["id"]), payload.get("difficulty", "متوسط")))
+            me = _run(_bot.get_me())
+            state = _run(create_game(
+                int(user["id"]), payload.get("difficulty", "متوسط"),
+                bot_name=me.first_name or me.username or "البوت",
+                bot_id=me.id,
+            ))
+        elif path.endswith("/move"):
+            state = _run(play_move(
+                int(user["id"]), payload.get("game_id", ""), payload.get("column")
+            ))
+        elif path.endswith("/bot-move"):
+            state = _run(play_bot_move(int(user["id"]), payload.get("game_id", "")))
         else:
-            state = _run(play_move(int(user["id"]), payload.get("game_id", ""), payload.get("column")))
+            state = _run(get_game_state(int(user["id"]), payload.get("game_id", "")))
         body = json.dumps({"ok": True, "game": state}, ensure_ascii=False).encode()
         handler.send_response(200)
     except ValueError as exc:
