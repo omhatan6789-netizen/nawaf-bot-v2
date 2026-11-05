@@ -15,8 +15,9 @@ from handlers.message_tracking import save_group_text_message
 from handlers.user_events import chat_member_updated
 from handlers.points import (
     add_points_command, remove_points_command, sell_points,
-    my_points, top_points, flush_pending_points,
+    my_points, flush_pending_points,
 )
+from handlers.top_menu import top_menu_command, top_menu_callback
 from handlers.roles import (
     roles_command, change_rank, dev_list_command, rank_list_command,
     clear_dev_command, clear_rank_command, clear_all_ranks_command,
@@ -520,7 +521,8 @@ def build_application() -> Application:
     application.add_handler(MessageHandler(filters.Regex(r"^اضف رد مميز$"), add_special_reply_start))
     application.add_handler(MessageHandler(filters.Regex(r"^اضف رد$"), add_reply_start))
     application.add_handler(MessageHandler(filters.Regex(r"^نقاطي$"), my_points))
-    application.add_handler(MessageHandler(filters.Regex(r"^(?:توب|توب النقاط(?:🎖️)?)$"), top_points))
+    application.add_handler(MessageHandler(filters.Regex(r"^توب$"), top_menu_command))
+    application.add_handler(CallbackQueryHandler(top_menu_callback, pattern=r"^topmenu:"))
     application.add_handler(MessageHandler(filters.Regex(r"^اضف(?:\s+\d+)?$"), add_points_command))
     application.add_handler(MessageHandler(filters.Regex(r"^خصم(?:\s+.*)?$"), remove_points_command))
     application.add_handler(MessageHandler(filters.Regex(r"^بيع نقاطي(?:\s+.*)?$"), sell_points))
