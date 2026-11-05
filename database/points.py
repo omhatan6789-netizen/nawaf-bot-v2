@@ -4,7 +4,7 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-from .pool import get_pool
+from .pool import acquire_timed, get_pool
 from .timing import timed
 
 
@@ -23,13 +23,14 @@ async def _ensure_user(conn: Any, user_id: int) -> None:
 @timed("db.points.get_points")
 async def get_points(user_id: int) -> int:
     pool = get_pool()
-    async with pool.acquire() as conn:
+    async with acquire_timed(pool, "points.get_points") as conn:
         value = await conn.fetchval(
             "SELECT points FROM points WHERE user_id = $1", user_id
         )
     return int(value or 0)
 
 
+@timed("db.points.add_points")
 async def add_points(user_id: int, amount: int) -> int:
     """Atomically add a positive amount and return the new balance."""
     _validate_amount(amount)
@@ -51,7 +52,7 @@ async def add_points(user_id: int, amount: int) -> int:
         )
         SELECT points FROM updated_points
     """
-    async with pool.acquire() as conn:
+    async with acquire_timed(pool, "points.add_points") as conn:
         balance = await conn.fetchval(query, user_id, amount)
     if balance is None:
         raise RuntimeError("Failed to update user points")
@@ -119,7 +120,7 @@ async def get_points_leaderboard(limit: int = 10) -> list[Any]:
     if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 100:
         raise ValueError("limit must be between 1 and 100")
     pool = get_pool()
-    async with pool.acquire() as conn:
+    async with acquire_timed(pool, "points.leaderboard") as conn:
         return await conn.fetch(
             """
             SELECT p.user_id, p.points, u.username, u.first_name
