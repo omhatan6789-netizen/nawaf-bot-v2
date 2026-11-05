@@ -807,6 +807,8 @@ async def broadcast_send(
     source_message,
     *,
     replied_user=None,
+    text_override=None,
+    entities_override=None,
 ):
     """
     يرسل الرسالة لكل القروبات والقنوات المسجلة
@@ -826,13 +828,15 @@ async def broadcast_send(
 
         registered_chats = []
 
-    original_content = (
-        source_message.caption or ""
-    )
-
-    original_entities = (
-        source_message.caption_entities or []
-    )
+    if text_override is not None:
+        original_content = text_override
+        original_entities = list(entities_override or [])
+    elif source_message.caption is not None:
+        original_content = source_message.caption
+        original_entities = list(source_message.caption_entities or [])
+    else:
+        original_content = source_message.text or ""
+        original_entities = list(source_message.entities or [])
 
     # =====================================================
     # إرسال لكل القروبات والقنوات
@@ -1302,6 +1306,8 @@ async def send_command(
             context,
             message,
             replied_user=replied_user,
+            text_override=original_content,
+            entities_override=original_entities,
         )
 
         return
