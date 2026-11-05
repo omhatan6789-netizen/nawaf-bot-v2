@@ -154,18 +154,20 @@ function showGames(){
  card.onclick=showConnect4Setup;pageContent.appendChild(card);
 }
 
-let c4Difficulty='متوسط',c4Game=null,c4Timer=null,c4Tick=null,c4Busy=false,c4Seconds=15,c4BotTimer=null,c4PollTimer=null;
+let c4Difficulty='متوسط',c4Game=null,c4Timer=null,c4Tick=null,c4Busy=false,c4Seconds=15,c4BotTimer=null,c4PollTimer=null,c4RpsChoice=null;
 let c4GameIdFromUrl=new URLSearchParams(window.location.search).get('game_id');
 const c4Levels=[['سهل','مناسب للتجربة'],['متوسط','تحدي متوازن'],['صعب','يفكر قبل أن يلعب'],['مستحيل','أقوى تحدي']];
 function stopC4Timer(){if(c4Timer)clearTimeout(c4Timer);if(c4Tick)clearInterval(c4Tick);if(c4BotTimer)clearTimeout(c4BotTimer);if(c4PollTimer)clearTimeout(c4PollTimer);c4Timer=null;c4Tick=null;c4BotTimer=null;c4PollTimer=null;}
 function c4Shell(){document.body.classList.add('c4-active');pageContent.innerHTML='<div class="c4-shell" id="c4-shell"></div>';return document.getElementById('c4-shell');}
 function showConnect4Setup(){
- stopC4Timer();c4Game=null;c4Busy=false;
+ stopC4Timer();c4Game=null;c4Busy=false;c4RpsChoice=null;
  const shell=c4Shell();
- shell.innerHTML='<div class="c4-heading"><h2>كونكت 4 <span style="font-size:20px">🔴🔵</span></h2><p>كوّن أربعة أقراص متصلة قبل البوت</p></div><div class="c4-panel"><div class="c4-label">اختر مستوى البوت</div><div class="c4-levels" id="c4-levels"></div><button class="c4-start" id="c4-start">ابدأ التحدي ✦</button><div class="c4-hint">يتم تحديد اللاعب الأول بحجر ورقة مقص</div></div>';
+ shell.innerHTML='<div class="c4-heading"><h2>كونكت 4 <span style="font-size:20px">🔴🔵</span></h2><p>كوّن أربعة أقراص متصلة قبل البوت</p></div><div class="c4-panel"><div class="c4-label">اختر مستوى البوت</div><div class="c4-levels" id="c4-levels"></div><div class="c4-label" style="margin-top:18px">حجر ورقة مقص — من يبدأ؟</div><div class="c4-levels" id="c4-rps"></div><button class="c4-start" id="c4-start">ابدأ التحدي ✦</button><div class="c4-hint">فرصة فوز البوت في حجر ورقة مقص 40٪</div></div>';
  const levels=shell.querySelector('#c4-levels');
  c4Levels.forEach(([name,desc])=>{const b=document.createElement('button');b.className='c4-level'+(c4Difficulty===name?' active':'');b.innerHTML=name+'<small>'+desc+'</small>';b.onclick=()=>{c4Difficulty=name;levels.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));};levels.appendChild(b);});
- shell.querySelector('#c4-start').onclick=startConnect4;
+ const rps=shell.querySelector('#c4-rps');
+ [['r','✊ حجر'],['p','✋ ورقة'],['s','✌️ مقص']].forEach(([value,label])=>{const b=document.createElement('button');b.className='c4-level';b.textContent=label;b.onclick=()=>{c4RpsChoice=value;rps.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));};rps.appendChild(b);});
+ shell.querySelector('#c4-start').onclick=()=>{if(!c4RpsChoice){shell.querySelector('.c4-hint').textContent='اختر حجر أو ورقة أو مقص أولًا';return;}startConnect4(c4RpsChoice);};
 }
 async function c4Request(path,payload){
  const initData=tg?.initData||'';
@@ -175,12 +177,12 @@ async function c4Request(path,payload){
  if(!response.ok||!data.ok)throw new Error(data.error||'تعذر الاتصال بالسيرفر');
  return data.game;
 }
-async function startConnect4(){
+async function startConnect4(rpsChoice=null){
  const btn=document.getElementById('c4-start');if(btn){btn.disabled=true;btn.textContent='جاري تجهيز اللوحة...';}
  try{
   c4Game=c4GameIdFromUrl
    ? await c4Request('/api/connect4/state',{game_id:c4GameIdFromUrl})
-   : await c4Request('/api/connect4/new',{difficulty:c4Difficulty});
+   : await c4Request('/api/connect4/new',{difficulty:c4Difficulty,rps_choice:rpsChoice||'r'});
   renderConnect4();
  }catch(e){const shell=document.getElementById('c4-shell');if(shell){const error=document.createElement('div');error.className='c4-error';error.textContent=e.message;shell.appendChild(error);if(btn){btn.disabled=false;btn.textContent='ابدأ التحدي ✦';}}}
 }
@@ -225,7 +227,7 @@ function renderConnect4(previousBoard=null){
   if(c4Game.bot_move_pending){c4BotTimer=setTimeout(runC4BotMove,1000);}
   else if(human)pollConnect4State();
  }else{
-  shell.querySelector('#c4-status').textContent=c4Game.rps_result?(c4Game.rps_result==='bot_starts'?'✊ حجر ورقة مقص: فاز '+p2+' ويبدأ أولًا':'✊ حجر ورقة مقص: فزت وتبدأ أولًا'):'دورك! اختر عمودًا';
+  shell.querySelector('#c4-status').textContent=c4Game.rps_result?(c4Game.rps_result==='bot_starts'?'✊ حجر ورقة مقص: فاز '+p2+' ('+({r:'حجر',p:'ورقة',s:'مقص'}[c4Game.rps_bot_choice]||'')+') ويبدأ أولًا':'✊ حجر ورقة مقص: فزت ('+({r:'حجر',p:'ورقة',s:'مقص'}[c4Game.rps_bot_choice]||'')+') وتبدأ أولًا'):'دورك! اختر عمودًا';
   players.forEach((el,i)=>{el.classList.toggle('active',i===(human?(myPiece===1?0:1):0));el.style.setProperty('--turn-color',i===(human?(myPiece===1?0:1):0)?'#ff3448':'#278bff');});
   shell.querySelectorAll('.c4-arrow').forEach(el=>el.style.setProperty('--turn-color',myPiece===1?'#ff3448':'#278bff'));
   startC4Timer();
