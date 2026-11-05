@@ -177,6 +177,7 @@ def public_state(row, viewer_id: int | None = None):
         "id": str(row["id"]), "board": board, "status": status,
         "difficulty": row["difficulty"], "last_move": row["last_move"],
         "winning_cells": cells or [], "turn_seconds": TURN_SECONDS,
+        "turn_started_at": int(row["turn_started_at"].timestamp() * 1000) if row.get("turn_started_at") else None,
         "game_mode": mode, "player1_name": row.get("player1_name") or "أنت",
         "player2_name": row.get("player2_name") or opponent_name or "البوت",
         "bot_name": row.get("bot_name") or "البوت",
