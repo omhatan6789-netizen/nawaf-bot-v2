@@ -89,8 +89,61 @@ async def _search_youtube(query):
     raise RuntimeError("All YouTube API keys failed") from last_error
 
 
+async def _download_from_tunelio(video_url, folder, api_key):
+    """Download the original audio stream through Tunelio (no MP3 re-encoding)."""
+    started = time.perf_counter()
+    async with httpx.AsyncClient(timeout=HTTP_TIMEOUT, follow_redirects=True) as client:
+        response = await client.get(
+            "https://tunelio.dev/create",
+            params={"url": video_url, "quality": "m4a"},
+            headers={"Authorization": f"Bearer {api_key}", "Accept": "application/json"},
+        )
+        response.raise_for_status()
+        data = response.json()
+        download_url = data.get("url")
+        if data.get("status") != "ok" or not download_url:
+            raise RuntimeError(
+                f"Tunelio لم يُرجع رابطًا صالحًا: {data.get('status') or 'unknown error'}"
+            )
+
+        file_path = Path(folder) / "audio.m4a"
+        total = 0
+        async with client.stream(
+            "GET", download_url,
+            headers={"User-Agent": "NawafTelegramBot/1.0"},
+        ) as stream:
+            stream.raise_for_status()
+            length = stream.headers.get("Content-Length")
+            if length and int(length) > MAX_AUDIO_BYTES:
+                raise RuntimeError("حجم الصوت أكبر من الحد المسموح لإرساله.")
+            with file_path.open("wb") as audio_file:
+                async for chunk in stream.aiter_bytes(64 * 1024):
+                    total += len(chunk)
+                    if total > MAX_AUDIO_BYTES:
+                        raise RuntimeError("حجم الصوت أكبر من الحد المسموح لإرساله.")
+                    audio_file.write(chunk)
+
+    if not file_path.is_file() or file_path.stat().st_size == 0:
+        raise RuntimeError("Tunelio أعاد ملفًا فارغًا أو لم يكتمل تحميله.")
+    logger.info(
+        "Tunelio audio ready in %.2fs (%s bytes)",
+        time.perf_counter() - started, file_path.stat().st_size,
+    )
+    filename = data.get("filename") or "audio.m4a"
+    title = Path(filename).stem or "صوت من يوتيوب"
+    return str(file_path), {"title": title, "duration": None}
+
+
 async def _download_audio(video_url, folder):
+    tunelio_key = os.getenv("TUNELIO_API_KEY")
+    if tunelio_key:
+        try:
+            return await _download_from_tunelio(video_url, folder, tunelio_key)
+        except Exception:
+            logger.exception("Tunelio failed; falling back to Samplecut")
+
     payload = {"url": video_url, "format": "mp3", "response": "url"}
+    started = time.perf_counter()
     async with httpx.AsyncClient(timeout=HTTP_TIMEOUT, follow_redirects=True) as client:
         response = await client.post(
             SAMPLECUT_API, json=payload,
@@ -119,6 +172,10 @@ async def _download_audio(video_url, folder):
                     audio_file.write(chunk)
     if not file_path.is_file() or file_path.stat().st_size == 0:
         raise RuntimeError("ملف الصوت فارغ أو لم يكتمل تحميله.")
+    logger.info(
+        "Samplecut audio ready in %.2fs (%s bytes)",
+        time.perf_counter() - started, file_path.stat().st_size,
+    )
     return str(file_path), {
         "title": data.get("title") or "صوت من يوتيوب",
         "duration": data.get("track_duration_sec"),
