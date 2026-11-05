@@ -12,19 +12,17 @@ WEB_APP_URL = "https://nawaf-bot-v2.onrender.com/"
 _sessions: dict[int, dict] = {}
 
 
-def register_mini_app_menu(application) -> None:
-    async def _set_menu():
-        try:
-            await application.bot.set_chat_menu_button(
-                menu_button=MenuButtonWebApp(
-                    text="بوت نواف",
-                    web_app=WebAppInfo(url=WEB_APP_URL),
-                )
+async def register_mini_app_menu(application) -> None:
+    try:
+        await application.bot.set_chat_menu_button(
+            menu_button=MenuButtonWebApp(
+                text="بوت نواف",
+                web_app=WebAppInfo(url=WEB_APP_URL),
             )
-        except Exception:
-            import logging
-            logging.getLogger(__name__).exception("Failed to set Mini App menu button")
-    application.create_task(_set_menu(), name="set-mini-app-menu")
+        )
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception("Failed to set Mini App menu button")
 
 
 def _normalize_target(value: str) -> str | None:
