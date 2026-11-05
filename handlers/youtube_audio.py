@@ -38,6 +38,15 @@ def _get_youtube_api_keys():
     return keys
 
 
+def _parse_youtube_duration(value):
+    """Convert YouTube ISO-8601 durations (for example PT4M13S) to seconds."""
+    match = re.fullmatch(r"PT(?:(\\d+)H)?(?:(\\d+)M)?(?:(\\d+)S)?", value or "")
+    if not match:
+        return None
+    hours, minutes, seconds = (int(part or 0) for part in match.groups())
+    return hours * 3600 + minutes * 60 + seconds
+
+
 async def _search_youtube(query):
     keys = _get_youtube_api_keys()
     logger.info("YouTube API keys configured: %s", len(keys))
@@ -82,6 +91,29 @@ async def _search_youtube(query):
                         "url": f"https://www.youtube.com/watch?v={video_id}",
                         "duration": None,
                     })
+                # Fetch durations in one lightweight videos.list request.
+                # Duration lookup is optional: search results should still work if it fails.
+                if results:
+                    try:
+                        details_response = await client.get(
+                            "https://www.googleapis.com/youtube/v3/videos",
+                            params={
+                                "part": "contentDetails",
+                                "id": ",".join(item["id"] for item in results),
+                                "key": api_key,
+                            },
+                        )
+                        details_response.raise_for_status()
+                        durations = {
+                            item.get("id"): _parse_youtube_duration(
+                                item.get("contentDetails", {}).get("duration")
+                            )
+                            for item in details_response.json().get("items", [])
+                        }
+                        for item in results:
+                            item["duration"] = durations.get(item["id"])
+                    except (httpx.HTTPError, ValueError, KeyError) as exc:
+                        logger.warning("YouTube duration lookup failed: %s", exc)
                 return results
             except httpx.HTTPError as exc:
                 last_error = exc
