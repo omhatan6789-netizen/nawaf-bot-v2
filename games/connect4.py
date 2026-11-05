@@ -188,12 +188,16 @@ def public_state(row, viewer_id: int | None = None):
     }
 
 
-async def create_game(user_id: int, difficulty: str, bot_name: str = "البوت", bot_id: int | None = None):
+async def create_game(user_id: int, difficulty: str, bot_name: str = "البوت", bot_id: int | None = None, rps_choice: str = "r"):
     if difficulty not in ("سهل", "متوسط", "صعب", "مستحيل"):
         raise ValueError("اختر مستوى صحيحًا")
+    if rps_choice not in ("r", "p", "s"):
+        raise ValueError("اختر حجر أو ورقة أو مقص لتحديد من يبدأ")
     game_id = uuid.uuid4()
     board = [[0 for _ in range(COLS)] for _ in range(ROWS)]
     bot_starts = random.random() < 0.40
+    bot_choices = {"r": ("p", "s"), "p": ("s", "r"), "s": ("r", "p")}
+    bot_choice = bot_choices[rps_choice][0 if bot_starts else 1]
     last_move = None
     if bot_starts:
         bot_col = choose_bot_move(board, difficulty)
@@ -209,6 +213,8 @@ async def create_game(user_id: int, difficulty: str, bot_name: str = "البوت
     )
     state = public_state(row, user_id)
     state["rps_result"] = "bot_starts" if bot_starts else "player_starts"
+    state["rps_player_choice"] = rps_choice
+    state["rps_bot_choice"] = bot_choice
     return state
 
 
