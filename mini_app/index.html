@@ -155,7 +155,7 @@ function showGames(){
 }
 
 let c4Difficulty='متوسط',c4Game=null,c4Timer=null,c4Tick=null,c4Busy=false,c4Seconds=15,c4BotTimer=null,c4PollTimer=null;
-const c4GameIdFromUrl=new URLSearchParams(window.location.search).get('game_id');
+let c4GameIdFromUrl=new URLSearchParams(window.location.search).get('game_id');
 const c4Levels=[['سهل','مناسب للتجربة'],['متوسط','تحدي متوازن'],['صعب','يفكر قبل أن يلعب'],['مستحيل','أقوى تحدي']];
 function stopC4Timer(){if(c4Timer)clearTimeout(c4Timer);if(c4Tick)clearInterval(c4Tick);if(c4BotTimer)clearTimeout(c4BotTimer);if(c4PollTimer)clearTimeout(c4PollTimer);c4Timer=null;c4Tick=null;c4BotTimer=null;c4PollTimer=null;}
 function c4Shell(){document.body.classList.add('c4-active');pageContent.innerHTML='<div class="c4-shell" id="c4-shell"></div>';return document.getElementById('c4-shell');}
@@ -205,7 +205,7 @@ function renderConnect4(previousBoard=null){
   slot.disabled=!myTurn||c4Game.status!=='playing'||c4Game.board[0][col]!==0;
   slot.onclick=()=>submitConnect4Move(col);board.appendChild(slot);
  }));
- shell.querySelector('#c4-again').onclick=()=>{if(human){showConnect4Setup();}else{c4GameIdFromUrl?showConnect4Setup():startConnect4();}};
+ shell.querySelector('#c4-again').onclick=()=>{c4GameIdFromUrl=null;showConnect4Setup();};
  shell.querySelector('#c4-level-back').onclick=showConnect4Setup;
  if(c4Game.winning_cells?.length===4){
   const first=c4Game.winning_cells[0],last=c4Game.winning_cells[3];
@@ -216,7 +216,7 @@ function renderConnect4(previousBoard=null){
  }
  if(c4Game.status!=='playing'){
   const result=shell.querySelector('#c4-result');result.classList.add('show');
-  result.textContent=c4Game.status==='draw'?'🤝 تعادل! تم إرجاع الرهانات':(c4Game.status==='won'?'🏆 فاز ':'🏆 فاز ')+(c4Game.winner_name|| (c4Game.status==='won'?'أنت':p2))+'!';
+  result.textContent=c4Game.status==='draw'?'🤝 تعادل! تم إرجاع الرهانات':(!human&&c4Game.status==='won'?'🏆 فزت! لعب ممتاز!':'🏆 فاز '+(c4Game.winner_name||p2)+'!');
   shell.querySelector('#c4-status').textContent='انتهت المباراة';shell.querySelector('#c4-clock').textContent='—';shell.querySelector('#c4-progress').style.width='0%';
  }else if(!myTurn){
   shell.querySelector('#c4-status').textContent=c4Game.bot_move_pending?'البوت يستعد للحركة...':'دور '+(human?(myPiece===1?p2:p1):p2);
@@ -225,7 +225,7 @@ function renderConnect4(previousBoard=null){
   if(c4Game.bot_move_pending){c4BotTimer=setTimeout(runC4BotMove,1000);}
   else if(human)pollConnect4State();
  }else{
-  shell.querySelector('#c4-status').textContent='دورك! اختر عمودًا';
+  shell.querySelector('#c4-status').textContent=c4Game.rps_result?(c4Game.rps_result==='bot_starts'?'✊ حجر ورقة مقص: فاز '+p2+' ويبدأ أولًا':'✊ حجر ورقة مقص: فزت وتبدأ أولًا'):'دورك! اختر عمودًا';
   players.forEach((el,i)=>{el.classList.toggle('active',i===(human?(myPiece===1?0:1):0));el.style.setProperty('--turn-color',i===(human?(myPiece===1?0:1):0)?'#ff3448':'#278bff');});
   shell.querySelectorAll('.c4-arrow').forEach(el=>el.style.setProperty('--turn-color',myPiece===1?'#ff3448':'#278bff'));
   startC4Timer();
