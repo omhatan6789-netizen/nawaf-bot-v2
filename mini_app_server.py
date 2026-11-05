@@ -24,31 +24,60 @@ def configure_mini_app(loop, bot):
 async def _payload(top=None):
     pool = get_pool()
     settings = await pool.fetchrow("SELECT banner_file_id FROM mini_app_settings WHERE id=1")
-    rows = await pool.fetch(
+    buttons = await pool.fetch(
         """SELECT id,title,target,button_type,color,image_file_id
            FROM mini_app_buttons ORDER BY button_type DESC,button_order,id"""
     )
     leaderboard = None
     if top == "points":
-        rows = await pool.fetch("SELECT u.first_name,u.username,p.points FROM points p LEFT JOIN users u ON u.user_id=p.user_id ORDER BY p.points DESC LIMIT 10")
-        leaderboard = [{"name": r["first_name"] or r["username"] or "مستخدم", "value": int(r["points"] or 0), "unit": "نقطة"} for r in rows]
+        from database.points import get_points_leaderboard
+        rows = await get_points_leaderboard(10)
+        leaderboard = [
+            {"name": r["first_name"] or r["username"] or "مستخدم",
+             "value": int(r["points"] or 0), "unit": "نقطة"}
+            for r in rows
+        ]
     elif top == "active":
-        rows = await pool.fetch("SELECT first_name,username,activity_messages FROM users WHERE activity_messages>0 AND COALESCE(is_bot,FALSE)=FALSE ORDER BY activity_messages DESC LIMIT 10")
-        leaderboard = [{"name": r["first_name"] or r["username"] or "مستخدم", "value": int(r["activity_messages"] or 0), "unit": "رسالة"} for r in rows]
+        rows = await pool.fetch(
+            """SELECT first_name,username,activity_messages
+               FROM users
+               WHERE activity_messages > 0
+                 AND COALESCE(is_bot,FALSE)=FALSE
+                 AND COALESCE(first_name,'') <> 'Deleted Account'
+               ORDER BY activity_messages DESC,user_id ASC LIMIT 10"""
+        )
+        leaderboard = [
+            {"name": r["first_name"] or r["username"] or "مستخدم",
+             "value": int(r["activity_messages"] or 0), "unit": "رسالة"}
+            for r in rows
+        ]
     elif top == "robbers":
-        rows = await pool.fetch("SELECT u.first_name,u.username,b.robbery_balance FROM bank_accounts b JOIN users u ON u.user_id=b.user_id WHERE b.robbery_balance>0 AND COALESCE(u.is_bot,FALSE)=FALSE ORDER BY b.robbery_balance DESC LIMIT 10")
-        leaderboard = [{"name": r["first_name"] or r["username"] or "مستخدم", "value": int(r["robbery_balance"] or 0), "unit": "نقطة مسروقة"} for r in rows]
+        rows = await pool.fetch(
+            """SELECT u.first_name,u.username,b.robbery_balance
+               FROM bank_accounts b
+               JOIN users u ON u.user_id=b.user_id
+               WHERE b.robbery_balance > 0
+                 AND COALESCE(u.is_bot,FALSE)=FALSE
+                 AND COALESCE(u.first_name,'') <> 'Deleted Account'
+               ORDER BY b.robbery_balance DESC,b.user_id ASC LIMIT 10"""
+        )
+        leaderboard = [
+            {"name": r["first_name"] or r["username"] or "مستخدم",
+             "value": int(r["robbery_balance"] or 0), "unit": "نقطة مسروقة"}
+            for r in rows
+        ]
+    me = await _bot.get_me() if _bot else None
     return {
         "leaderboard": leaderboard,
+        "bot_username": me.username if me else None,
         "banner": ("/tg-file/" + settings["banner_file_id"]) if settings and settings["banner_file_id"] else None,
         "buttons": [
             {"id": r["id"], "title": r["title"], "target": r["target"],
              "type": r["button_type"], "color": r["color"],
              "image": ("/tg-file/" + r["image_file_id"]) if r["image_file_id"] else None}
-            for r in rows
+            for r in buttons
         ],
     }
-
 
 def _run(coro, timeout=12):
     if _loop is None:
