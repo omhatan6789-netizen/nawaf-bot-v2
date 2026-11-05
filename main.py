@@ -170,7 +170,7 @@ logger = logging.getLogger("nawaf-bot")
 async def post_init(application: Application) -> None:
     settings = application.bot_data["settings"]
     configure_mini_app(asyncio.get_running_loop(), application.bot)
-    register_mini_app_menu(application)
+    await register_mini_app_menu(application)
     await init_pool(settings)
     await apply_all_migrations()
     await ensure_demon_tables()
