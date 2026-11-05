@@ -34,18 +34,27 @@ async def add_points(user_id: int, amount: int) -> int:
     """Atomically add a positive amount and return the new balance."""
     _validate_amount(amount)
     pool = get_pool()
+    query = """
+        WITH ensure_user AS (
+            INSERT INTO users(user_id)
+            VALUES($1)
+            ON CONFLICT(user_id) DO NOTHING
+            RETURNING user_id
+        ),
+        updated_points AS (
+            INSERT INTO points(user_id, points)
+            SELECT $1, $2
+            WHERE (SELECT COUNT(*) FROM ensure_user) >= 0
+            ON CONFLICT(user_id) DO UPDATE
+            SET points = points.points + EXCLUDED.points
+            RETURNING points
+        )
+        SELECT points FROM updated_points
+    """
     async with pool.acquire() as conn:
-        async with conn.transaction():
-            await _ensure_user(conn, user_id)
-            balance = await conn.fetchval(
-                """
-                INSERT INTO points(user_id, points) VALUES($1, $2)
-                ON CONFLICT(user_id) DO UPDATE
-                SET points = points.points + EXCLUDED.points
-                RETURNING points
-                """,
-                user_id, amount,
-            )
+        balance = await conn.fetchval(query, user_id, amount)
+    if balance is None:
+        raise RuntimeError("Failed to update user points")
     return int(balance)
 
 
