@@ -13,6 +13,15 @@ from telegram.ext import ContextTypes
 
 from database.timing import timed
 
+logger = __import__('logging').getLogger('nawaf.performance')
+
+
+async def _timed_reply(message, label: str, *args, **kwargs):
+    started = time.perf_counter()
+    result = await message.reply_text(*args, **kwargs)
+    logger.info('PERF %s duration_ms=%.1f', label, (time.perf_counter() - started) * 1000)
+    return result
+
 from database.tasliyat import (
     games_enabled, get_points, get_bank, create_bank, delete_bank,
     claim_reward, run_investment, run_luck,
@@ -212,9 +221,9 @@ async def salary(update: Update, context: ContextTypes.DEFAULT_TYPE):
     job, emoji, amount = random.choice(JOBS)
     ok, balance, remaining = await claim_reward(user.id, "salary_until", int(time.time()), 600, amount)
     if not ok:
-        await message.reply_text(f"• راتبك بينزل بعد {_format_arabic_duration(remaining)} .")
+        await _timed_reply(message, "handler.salary.telegram_reply", f"• راتبك بينزل بعد {_format_arabic_duration(remaining)} .")
         return
-    await message.reply_text(
+    await _timed_reply(message, "handler.salary.telegram_reply", 
         f"اشعار ايداع {_mention(user)}\n"
         f"المبلغ: {amount} نقطة\n"
         f"وظيفتك: {job} {emoji}\n"
@@ -237,12 +246,12 @@ async def tip(update: Update, context: ContextTypes.DEFAULT_TYPE):
     amount = random.randint(100, 2000)
     ok, _balance, remaining = await claim_reward(user.id, "tip_until", int(time.time()), 600, amount)
     if not ok:
-        await message.reply_text(
+        await _timed_reply(message, "handler.tip.telegram_reply", 
             "• بس بس مب حلاو هو !!\n"
             f"↤︎ تعال بعد {_format_arabic_duration(remaining)}"
         )
         return
-    await message.reply_text(f"• شفقت عليك وعطيتك {amount} نقطة 💵")
+    await _timed_reply(message, "handler.tip.telegram_reply", f"• شفقت عليك وعطيتك {amount} نقطة 💵")
 
 
 def _investment_percent() -> int:
@@ -289,23 +298,23 @@ async def invest(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user.id, int(time.time()), 1200, amount, profit
     )
     if status == "insufficient":
-        await message.reply_text("• نقاطك ماتكفي يا مطفر\n–")
+        await _timed_reply(message, "handler.invest.telegram_reply", "• نقاطك ماتكفي يا مطفر\n–")
         return
     if status == "cooldown":
-        await message.reply_text(
+        await _timed_reply(message, "handler.invest.telegram_reply", 
             "• مايمديك تستثمر الحين\n"
             f"• تعال بعد {_format_arabic_duration(remaining)}"
         )
         return
     if status == "failed":
-        await message.reply_text(
+        await _timed_reply(message, "handler.invest.telegram_reply", 
             "• استثمار فاشل\n"
             "• نسبة الربح ↢ 0%\n"
             "• مبلغ الربح ↢ ( 0 )\n"
             f"• نقاطك صارت ↢ ( {balance} )"
         )
         return
-    await message.reply_text(
+    await _timed_reply(message, "handler.invest.telegram_reply", 
         "• استثمار ناجح\n"
         f"• نسبة الربح ↢ {percent}%\n"
         f"• مبلغ الربح ↢ ( {profit} )\n"
