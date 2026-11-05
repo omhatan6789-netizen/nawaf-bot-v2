@@ -114,9 +114,8 @@ async def connect4_challenge_callback(update: Update, context: ContextTypes.DEFA
             "UPDATE connect4_challenges SET status='declined',updated_at=NOW() WHERE id=$1",
             challenge_id,
         )
-        await query.edit_message_reply_markup(reply_markup=None)
+        await query.edit_message_text("تم رفض تحدي كونكت 4.", reply_markup=None)
         await query.answer("تم رفض التحدي.")
-        await query.message.reply_text("تم رفض تحدي كونكت 4.")
         return
 
     if action == "c4a":
@@ -157,7 +156,10 @@ async def connect4_challenge_callback(update: Update, context: ContextTypes.DEFA
             "UPDATE connect4_challenges SET rps_message_id=$2 WHERE id=$1",
             challenge_id, rps_message.message_id,
         )
-        await query.edit_message_reply_markup(reply_markup=None)
+        await query.edit_message_text(
+            "تم قبول تحدي كونكت 4 وحُجز الرهان.\n\nبانتظار اختيار حجر ورقة مقص من اللاعبين.",
+            reply_markup=None,
+        )
         await query.answer("تم قبول التحدي وحُجز الرهان.")
         return
 
@@ -170,7 +172,9 @@ async def connect4_challenge_callback(update: Update, context: ContextTypes.DEFA
             return
         cancelled = await pool.fetchval(
             """UPDATE connect4_challenges SET status='cancelled',updated_at=NOW()
-               WHERE id=$1 AND status='choosing' RETURNING id""",
+               WHERE id=$1 AND status='choosing'
+                 AND (challenger_choice IS NULL OR opponent_choice IS NULL)
+               RETURNING id""",
             challenge_id,
         )
         if cancelled:
