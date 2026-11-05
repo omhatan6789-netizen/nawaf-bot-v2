@@ -29,7 +29,7 @@ body.chess-mode .hero,body.chess-mode .brand{display:none}
 .chess-turn{background:#101010;color:#fff;border-radius:15px;text-align:center;padding:10px 12px;margin:0 auto 12px;box-shadow:0 4px 0 #0003}
 .chess-turn small{display:block;font-size:12px;opacity:.8}
 .chess-turn strong{display:block;font-size:19px;margin-top:2px}
-.chess-board{width:min(94vw,500px);aspect-ratio:1;margin:auto;display:grid;position:relative;grid-template-columns:repeat(8,1fr);border:5px solid #573c2a;border-radius:5px;overflow:hidden;box-shadow:0 12px 28px #234b5c55;direction:ltr;touch-action:manipulation}
+.chess-board{width:min(94vw,500px);aspect-ratio:1;margin:auto;display:grid;position:relative;grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(8,minmax(0,1fr));grid-auto-rows:minmax(0,1fr);border:5px solid #573c2a;border-radius:5px;overflow:hidden;box-shadow:0 12px 28px #234b5c55;direction:ltr;touch-action:manipulation}
 .chess-square{border:0;border-radius:0;display:grid;place-items:center;padding:0;width:100%;height:100%;min-width:0;min-height:0;overflow:hidden;aspect-ratio:1/1;font-size:clamp(22px,10vw,49px);line-height:1;cursor:pointer;position:relative;isolation:isolate;transition:background-color .16s ease,box-shadow .16s ease}
 .chess-square.light{background:#f0d9b5;color:#171717}.chess-square.dark{background:#b58863;color:#171717}
 .chess-piece{display:grid;place-items:center;width:100%;height:100%;font-family:'DejaVu Sans','Segoe UI Symbol',serif;font-variant-emoji:text;line-height:1;transform:translateY(-1px);user-select:none;pointer-events:none;transition:transform .18s ease,filter .18s ease}
@@ -120,7 +120,7 @@ async function startChessGame(){
  try{chessGame=await chessRequest('/api/chess/new',{difficulty:chessDifficulty,clock:chessClock});chessSelected=null;renderChessGame();}
  catch(e){alert(e.message);if(start){start.disabled=false;start.textContent='ابدأ اللعب ♟';}}
 }
-const chessPieces={'K':'♔','Q':'♕','R':'♖','B':'♗','N':'♘','P':'♙','k':'♚','q':'♛','r':'♜','b':'♝','n':'♞','p':'♟'};
+const chessPieces={'K':'♚','Q':'♛','R':'♜','B':'♝','N':'♞','P':'♟','k':'♚','q':'♛','r':'♜','b':'♝','n':'♞','p':'♟'};
 function renderChessGame(){
  pageContent.replaceChildren();chessSquareEls={};const wrap=document.createElement('div');wrap.className='chess-wrap';wrap.appendChild(chessDecor());
  const panel=document.createElement('div');panel.className='chess-panel';
