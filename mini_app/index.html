@@ -97,6 +97,19 @@ body.c4-active #back-home{margin:10px 0 0;min-height:48px}
 .c4-actions button{margin:0;min-height:44px;font-size:13px}
 .c4-error{color:#ffd4d6;text-align:center;font-size:12px;padding:10px 0}
 @media(max-width:380px){.hero{height:175px}.c4-panel{padding:12px}.c4-board{gap:4px;padding:6px}.c4-player{padding:7px}.c4-player strong{font-size:11px}}
+
+/* Connect Four visual overrides */
+body.c4-active{padding:0}
+body.c4-active #page{padding-left:10px;padding-right:10px}
+.c4-shell{width:100%;max-width:none}
+.c4-board-wrap{width:100%;max-width:none}
+.c4-board{width:100%;aspect-ratio:7/6}
+.c4-slot .c4-disc{animation:none}
+.c4-slot .c4-disc.falling{animation:c4-real-drop .62s cubic-bezier(.18,.78,.25,1.18) both}
+.c4-disc.blue{background:radial-gradient(circle at 35% 25%,#c2e5ff,#278bff 52%,#0647a5)}
+.c4-slot .c4-disc.blue{background:radial-gradient(circle at 35% 25%,#c2e5ff,#278bff 52%,#0647a5)}
+.c4-arrow:disabled{opacity:.12;animation:none;cursor:default}
+@media(min-width:700px){.c4-board-wrap{max-width:760px}.c4-arrows{max-width:760px}}
 </style></head>
 <body><main class="wrap">
 <div class="hero"><img id="banner" alt=""></div>
@@ -171,7 +184,7 @@ function renderConnect4(previousBoard=null){
  const names={سهل:'سهل',متوسط:'متوسط',صعب:'صعب',مستحيل:'مستحيل'};
  shell.innerHTML='<div class="c4-heading"><h2>كونكت 4</h2><p>المستوى: '+names[c4Game.difficulty]+'</p></div><div class="c4-players"><div class="c4-player"><i class="c4-disc red"></i><div><strong>أنت</strong><small>الأحمر</small></div></div><span class="c4-vs">VS</span><div class="c4-player"><i class="c4-disc blue"></i><div><strong>بوت نواف</strong><small>الأزرق</small></div></div></div><div class="c4-status"><div class="c4-statusline"><span id="c4-status">دورك! اختر عمودًا</span><span class="c4-clock" id="c4-clock">15 ثانية</span></div><div class="c4-track"><div class="c4-progress" id="c4-progress"></div></div></div><div class="c4-board-wrap"><div class="c4-board" id="c4-board"></div><svg class="c4-win-svg" id="c4-win-svg" viewBox="0 0 700 600" preserveAspectRatio="none"></svg></div><div class="c4-result" id="c4-result"></div><div class="c4-actions"><button class="c4-secondary" id="c4-again">مباراة جديدة ↻</button><button class="c4-secondary" id="c4-level-back">تغيير المستوى</button></div><div class="c4-hint">اضغط على أي خانة في العمود لإسقاط القرص</div>';
  const board=shell.querySelector('#c4-board');
- const arrowRow=document.createElement('div');arrowRow.className='c4-arrows';for(let c=0;c<7;c++){const arrow=document.createElement('button');arrow.type='button';arrow.className='c4-arrow'+(c4Busy?'':' active');arrow.textContent='↓';arrow.setAttribute('aria-label','العب في العمود '+(c+1));arrow.onclick=()=>submitConnect4Move(c);arrowRow.appendChild(arrow);}board.parentElement.insertBefore(arrowRow,board);
+ const arrowRow=document.createElement('div');arrowRow.className='c4-arrows';for(let c=0;c<7;c++){const arrow=document.createElement('button');arrow.type='button';arrow.className='c4-arrow'+(c4Busy?'':' active');arrow.textContent='↓';arrow.setAttribute('aria-label','العب في العمود '+(c+1));arrow.disabled=c4Game.board[0][c]!==0||c4Game.status!=='playing';arrow.onclick=()=>submitConnect4Move(c);arrowRow.appendChild(arrow);}board.parentElement.insertBefore(arrowRow,board);
  c4Game.board.forEach((row,r)=>row.forEach((piece,c)=>{
   const slot=document.createElement('button');slot.className='c4-slot';slot.type='button';slot.setAttribute('aria-label','العمود '+(c+1));
   if(piece){const disc=document.createElement('span');const isNew=previousBoard&&previousBoard[r][c]===0;disc.className='c4-disc '+(piece===1?'red':'blue')+(isNew?' falling':'');if(isNew)disc.style.animationDelay=(r*.035)+'s';slot.appendChild(disc);}
