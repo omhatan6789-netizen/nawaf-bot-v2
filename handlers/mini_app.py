@@ -45,6 +45,29 @@ async def mini_app_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     if user.id != OWNER_ID:
         return
     text = (msg.text or "").strip()
+    if text == "تغيير صورة الميني":
+        _sessions[user.id] = {"step": "banner_image"}
+        await msg.reply_text("ارسل الصورة اللي تبيها أعلى الميني آب، وبتغطي المساحة الفاضية بالكامل.")
+        raise ApplicationHandlerStop
+
+    session = _sessions.get(user.id)
+    if session and session.get("step") == "banner_image":
+        if text in ("إلغاء", "الغاء"):
+            _sessions.pop(user.id, None)
+            await msg.reply_text("تم إلغاء تغيير الصورة.")
+            raise ApplicationHandlerStop
+        if not msg.photo:
+            await msg.reply_text("ارسل صورة، أو اكتب إلغاء.")
+            raise ApplicationHandlerStop
+        file_id = msg.photo[-1].file_id
+        await get_pool().execute(
+            "UPDATE mini_app_settings SET banner_file_id=$1, updated_at=NOW() WHERE id=1",
+            file_id,
+        )
+        _sessions.pop(user.id, None)
+        await msg.reply_text("تم تحديث صورة أعلى الميني آب بنجاح ✅")
+        raise ApplicationHandlerStop
+
     if text in ("اضف زر للميني", "اضف زر كبير للميني"):
         kind = "large" if text == "اضف زر كبير للميني" else "small"
         _sessions[user.id] = {"step": "title", "type": kind}
