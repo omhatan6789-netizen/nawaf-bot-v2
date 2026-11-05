@@ -162,6 +162,7 @@ def handle_connect4_post(handler):
                 int(user["id"]), payload.get("difficulty", "متوسط"),
                 bot_name=me.first_name or me.username or "البوت",
                 bot_id=me.id,
+                rps_choice=payload.get("rps_choice", "r"),
             ))
         elif path.endswith("/move"):
             state = _run(play_move(
