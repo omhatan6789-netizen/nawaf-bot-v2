@@ -5,6 +5,8 @@ from telegram import Update
 from telegram.ext import Application, ApplicationBuilder, CallbackQueryHandler, ChatMemberHandler, CommandHandler, ContextTypes, ConversationHandler, MessageHandler, filters
 
 from config import load_settings
+from handlers.mini_app import mini_app_message, register_mini_app_menu
+from mini_app_server import configure_mini_app
 from database.update_processor import ChatSerialUpdateProcessor
 from database import close_pool, init_pool
 from database.pool import get_pool
@@ -167,6 +169,8 @@ logger = logging.getLogger("nawaf-bot")
 
 async def post_init(application: Application) -> None:
     settings = application.bot_data["settings"]
+    configure_mini_app(asyncio.get_running_loop(), application.bot)
+    register_mini_app_menu(application)
     await init_pool(settings)
     await apply_all_migrations()
     await ensure_demon_tables()
@@ -312,6 +316,10 @@ def build_application() -> Application:
         .build()
     )
     application.bot_data["settings"] = settings
+    application.add_handler(MessageHandler(
+        filters.ChatType.PRIVATE & (filters.TEXT | filters.PHOTO) & ~filters.COMMAND,
+        mini_app_message,
+    ), group=-31)
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("health", health_command))
     application.add_handler(CommandHandler("send", send_command))
