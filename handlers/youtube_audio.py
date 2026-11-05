@@ -40,7 +40,7 @@ def _get_youtube_api_keys():
 
 def _parse_youtube_duration(value):
     """Convert YouTube ISO-8601 durations (for example PT4M13S) to seconds."""
-    match = re.fullmatch(r"PT(?:(\\d+)H)?(?:(\\d+)M)?(?:(\\d+)S)?", value or "")
+    match = re.fullmatch(r"PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?", value or "")
     if not match:
         return None
     hours, minutes, seconds = (int(part or 0) for part in match.groups())
