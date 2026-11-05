@@ -12,6 +12,7 @@ from telegram.ext import ContextTypes
 from database.pool import get_pool
 from database.roles import get_rank_level
 from database.points import add_points
+from database.timing import timed
 from games.defaults import DEFAULT_GAMES, get_default_questions
 
 
@@ -341,6 +342,7 @@ async def start_game(message, game_name, context):
 # التحقق من الإجابة
 # ==================================================
 
+@timed("handler.game_answer")
 async def check_answer(message):
     chat_id = message.chat_id
     user = message.from_user
