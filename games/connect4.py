@@ -180,11 +180,11 @@ def public_state(row, viewer_id: int | None = None):
         "game_mode": mode, "player1_name": row.get("player1_name") or "أنت",
         "player2_name": row.get("player2_name") or opponent_name or "البوت",
         "bot_name": row.get("bot_name") or "البوت",
-        "your_turn": your_turn, "turn_player_id": row.get("turn_player_id"),
+        "your_turn": your_turn, "my_piece": (1 if is_player1 else 2), "turn_player_id": row.get("turn_player_id"),
         "winner_id": row.get("winner_id"), "wager": int(row.get("wager") or 0),
         "winner_name": (row.get("player1_name") if row.get("winner_id") == row.get("user_id")
                         else row.get("player2_name") if row.get("winner_id") == row.get("player2_id")
-                        else row.get("bot_name")),
+                        else ("أنت" if mode == "bot" and stored_status == "won" else row.get("bot_name"))),
     }
 
 
