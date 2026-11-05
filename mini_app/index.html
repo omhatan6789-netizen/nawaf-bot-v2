@@ -208,7 +208,7 @@ function renderConnect4(previousBoard=null){
   slot.onclick=()=>submitConnect4Move(col);board.appendChild(slot);
  }));
  shell.querySelector('#c4-again').onclick=()=>{c4GameIdFromUrl=null;showConnect4Setup();};
- shell.querySelector('#c4-level-back').onclick=showConnect4Setup;
+ shell.querySelector('#c4-level-back').onclick=()=>{c4GameIdFromUrl=null;showConnect4Setup();};
  if(c4Game.winning_cells?.length===4){
   const first=c4Game.winning_cells[0],last=c4Game.winning_cells[3];
   const svg=shell.querySelector('#c4-win-svg'),boardEl=shell.querySelector('#c4-board');
