@@ -45,6 +45,41 @@ async def mini_app_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     if user.id != OWNER_ID:
         return
     text = (msg.text or "").strip()
+    delete_commands = {
+        "حذف زر الميني": "small",
+        "حذف زر ميني كبير": "large",
+    }
+    if text in delete_commands:
+        _sessions[user.id] = {"step": "delete_button_title", "type": delete_commands[text]}
+        label = "الصغير" if delete_commands[text] == "small" else "الكبير"
+        await msg.reply_text(f"ارسل اسم الزر {label} اللي تبي تحذفه، أو اكتب إلغاء.")
+        raise ApplicationHandlerStop
+
+    session = _sessions.get(user.id)
+    if session and session.get("step") == "delete_button_title":
+        if text in ("إلغاء", "الغاء"):
+            _sessions.pop(user.id, None)
+            await msg.reply_text("تم إلغاء حذف الزر.")
+            raise ApplicationHandlerStop
+        if not text:
+            await msg.reply_text("ارسل اسم الزر كنص، أو اكتب إلغاء.")
+            raise ApplicationHandlerStop
+        deleted = await get_pool().fetchrow(
+            """DELETE FROM mini_app_buttons
+               WHERE id = (
+                   SELECT id FROM mini_app_buttons
+                   WHERE button_type = $1 AND LOWER(BTRIM(title)) = LOWER(BTRIM($2))
+                   ORDER BY id LIMIT 1
+               )
+               RETURNING title""",
+            session["type"], text,
+        )
+        _sessions.pop(user.id, None)
+        if deleted:
+            await msg.reply_text(f"تم حذف زر «{deleted['title']}» بنجاح ✅")
+        else:
+            await msg.reply_text("ما لقيت زر بهذا الاسم ضمن النوع المحدد.")
+        raise ApplicationHandlerStop
     if text == "تغيير صورة الميني":
         _sessions[user.id] = {"step": "banner_image"}
         await msg.reply_text("ارسل الصورة اللي تبيها أعلى الميني آب، وبتغطي المساحة الفاضية بالكامل.")
