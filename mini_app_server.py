@@ -69,6 +69,7 @@ async def _payload(top=None):
     return {
         "leaderboard": leaderboard,
         "bot_username": me.username if me else None,
+        "bot_name": me.first_name if me else "البوت",
         "banner": ("/tg-file/" + settings["banner_file_id"]) if settings and settings["banner_file_id"] else None,
         "buttons": [
             {"id": r["id"], "title": r["title"], "target": r["target"],
