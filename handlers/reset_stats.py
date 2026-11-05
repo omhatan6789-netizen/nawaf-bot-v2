@@ -49,7 +49,7 @@ async def reset_active_global_command(update: Update, context: ContextTypes.DEFA
 async def reset_points_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await _ask_reset(
         update, "points",
-        "⚠️ بتصفر نقاط جميع المستخدمين، وعدد رسائلهم، وتوب النقاط والمتفاعلين. متأكد؟",
+        "⚠️ بتصفر نقاط جميع المستخدمين فقط، بدون تغيير أي بيانات ثانية. متأكد؟",
     )
 
 
@@ -114,17 +114,8 @@ async def stats_reset_callback(update: Update, context: ContextTypes.DEFAULT_TYP
             message = "✅ تم تصفير توب المتفاعلين العام في كل القروبات."
         elif action == "points":
             await flush_pending_points()
-            await flush_pending_activity()
-            async with pool.acquire() as conn:
-                async with conn.transaction():
-                    await conn.execute("UPDATE points SET points=0")
-                    await conn.execute(
-                        "UPDATE users SET messages=0, activity_messages=0, updated_at=NOW()"
-                    )
-                    await conn.execute(
-                        "UPDATE chat_activity SET message_count=0, updated_at=NOW()"
-                    )
-            message = "✅ تم تصفير نقاط جميع المستخدمين ورسائلهم، والتوبات."
+            await pool.execute("UPDATE points SET points=0")
+            message = "✅ تم تصفير نقاط جميع المستخدمين فقط."
         else:
             await query.answer("طلب غير معروف.", show_alert=True)
             return
