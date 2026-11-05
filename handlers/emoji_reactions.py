@@ -14,6 +14,8 @@ from database.roles import is_developer
 
 logger = logging.getLogger(__name__)
 
+OWNER_ACCOUNT_ID = 6496915877
+
 _RULES_CACHE = []
 _PENDING_EMOJI = {}
 
@@ -115,7 +117,7 @@ async def emoji_reactions_handler(
         )
     )
     if is_management_command:
-        if not await is_developer(user.id):
+        if user.id != OWNER_ACCOUNT_ID and not await is_developer(user.id):
             return
 
         if text == "الايموجيات المضافة":
