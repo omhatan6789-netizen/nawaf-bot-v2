@@ -40,6 +40,7 @@ def _get_youtube_api_keys():
 
 async def _search_youtube(query):
     keys = _get_youtube_api_keys()
+    logger.info("YouTube API keys configured: %s", len(keys))
     if not keys:
         raise RuntimeError("YOUTUBE_API_KEY is not configured")
     last_error = None
@@ -137,7 +138,7 @@ async def youtube_audio_search(update: Update, context: ContextTypes.DEFAULT_TYP
     message = update.effective_message
     if not message or not message.text:
         return
-    match = re.match(r"^(?:بحث|يوت)\\s+(.+?)\\s*$", message.text)
+    match = re.match(r"^(?:بحث|يوت)\s+(.+?)\s*$", message.text)
     if not match:
         return
     search_text = match.group(1).strip()
@@ -176,7 +177,7 @@ async def youtube_audio_callback(update: Update, context: ContextTypes.DEFAULT_T
     query = update.callback_query
     if not query or not query.data or not query.message:
         return
-    match = re.fullmatch(r"ytpick:([a-f0-9]+):(\\d+)", query.data)
+    match = re.fullmatch(r"ytpick:([a-f0-9]+):(\d+)", query.data)
     if not match:
         await query.answer()
         return
