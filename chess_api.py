@@ -61,7 +61,7 @@ async def new_ai(user, bot_name, difficulty, clock):
     return {"id":game_id,"fen":board.fen(),"turn":"white",
             "turn_name":(user.get("first_name") or "لاعب"),
             "white_name":(user.get("first_name") or "لاعب"),
-            "black_name":bot_name,"status":"active","moves":[]}
+            "black_name":bot_name,"status":"active","moves":[],"legal_moves":[m.uci() for m in board.legal_moves]}
 
 async def play_ai(game_id, user, uci):
     pool=get_pool()
