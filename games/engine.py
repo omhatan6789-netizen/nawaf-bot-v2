@@ -824,9 +824,15 @@ async def game_message_handler(
     if normalized.startswith("اضف "):
         game_name = text[len("اضف "):].strip()
 
+        # لا نعتبر كل أمر يبدأ بـ "اضف" أمرًا لإضافة سؤال.
+        # يدخل مسار الأسئلة فقط إذا كان الاسم يطابق لعبة موجودة فعلًا.
         if normalize_text(game_name) != "لعبة":
-            await begin_add_question(message, user.id, game_name)
+            matched_game = get_matching_game(game_name)
+            if matched_game:
+                await begin_add_question(message, user.id, matched_game)
+                return
 
+        # اترك الأوامر الأخرى لمعالجاتها المستقلة مثل "اضف ايموجي".
         return
 
     # --------------------------------------------------
