@@ -60,7 +60,7 @@ async def flush_pending_activity():
     if not (_pending_users or _pending_chat_users or _pending_chats or _pending_members):
         return
     async with _lock():
-        if not (_pending_users or _pending_chats or _pending_members):
+        if not (_pending_users or _pending_chat_users or _pending_chats or _pending_members):
             return
         users, chat_users, chats, members = dict(_pending_users), dict(_pending_chat_users), dict(_pending_chats), set(_pending_members)
         message_total = _pending_message_total
