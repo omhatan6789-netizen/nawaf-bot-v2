@@ -73,7 +73,7 @@ async def flush_pending_activity():
                     if chats:
                         await conn.executemany("""INSERT INTO chats(chat_id,chat_type,title,username) VALUES($1,$2,$3,$4) ON CONFLICT(chat_id) DO UPDATE SET chat_type=EXCLUDED.chat_type,title=COALESCE(EXCLUDED.title,chats.title),username=COALESCE(EXCLUDED.username,chats.username),is_active=TRUE,updated_at=NOW()""", [(cid, *data) for cid, data in chats.items()])
                     if users:
-                        await conn.executemany("""INSERT INTO users(user_id,username,first_name,messages,rank,joined_date) VALUES($1,$2,$3,$4,'عضو',NOW()) ON CONFLICT(user_id) DO UPDATE SET messages=COALESCE(users.messages,0)+EXCLUDED.messages,username=COALESCE(EXCLUDED.username,users.username),first_name=COALESCE(EXCLUDED.first_name,users.first_name),updated_at=NOW()""", [(uid, *data) for uid, data in users.items()])
+                        await conn.executemany("""INSERT INTO users(user_id,username,first_name,messages,activity_messages,rank,joined_date) VALUES($1,$2,$3,$4,$4,'عضو',NOW()) ON CONFLICT(user_id) DO UPDATE SET messages=COALESCE(users.messages,0)+EXCLUDED.messages,activity_messages=COALESCE(users.activity_messages,0)+EXCLUDED.activity_messages,username=COALESCE(EXCLUDED.username,users.username),first_name=COALESCE(EXCLUDED.first_name,users.first_name),updated_at=NOW()""", [(uid, *data) for uid, data in users.items()])
                     if members:
                         await conn.executemany("""INSERT INTO chat_members(chat_id,user_id,member_status) VALUES($1,$2,'member') ON CONFLICT(chat_id,user_id) DO UPDATE SET member_status='member',updated_at=NOW()""", list(members))
         except Exception:
