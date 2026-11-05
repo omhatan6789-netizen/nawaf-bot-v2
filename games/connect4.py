@@ -152,32 +152,117 @@ def choose_bot_move(board, difficulty):
     return minimax(board, depth, -float("inf"), float("inf"), True)[0]
 
 
-def public_state(row):
+def public_state(row, viewer_id: int | None = None):
     board = row["board"]
     if isinstance(board, str):
         board = json.loads(board)
     cells = row["winning_cells"]
     if isinstance(cells, str):
         cells = json.loads(cells)
+    mode = row.get("game_mode", "bot")
+    stored_status = row["status"]
+    status = stored_status
+    if mode == "human" and stored_status == "won" and viewer_id is not None:
+        status = "won" if int(row["winner_id"] or 0) == int(viewer_id) else "lost"
+    is_player1 = viewer_id is None or int(viewer_id) == int(row["user_id"])
+    opponent_name = row.get("bot_name") if mode == "bot" else (
+        row.get("player2_name") if is_player1 else row.get("player1_name")
+    )
+    your_turn = True
+    if mode == "human" and viewer_id is not None:
+        your_turn = int(row.get("turn_player_id") or 0) == int(viewer_id)
+    elif mode == "bot":
+        your_turn = not bool(row.get("bot_move_pending", False))
     return {
-        "id": str(row["id"]), "board": board, "status": row["status"],
+        "id": str(row["id"]), "board": board, "status": status,
         "difficulty": row["difficulty"], "last_move": row["last_move"],
         "winning_cells": cells or [], "turn_seconds": TURN_SECONDS,
+        "game_mode": mode, "player1_name": row.get("player1_name") or "أنت",
+        "player2_name": row.get("player2_name") or opponent_name or "البوت",
+        "bot_name": row.get("bot_name") or "البوت",
+        "your_turn": your_turn, "turn_player_id": row.get("turn_player_id"),
+        "winner_id": row.get("winner_id"), "wager": int(row.get("wager") or 0),
+        "winner_name": (row.get("player1_name") if row.get("winner_id") == row.get("user_id")
+                        else row.get("player2_name") if row.get("winner_id") == row.get("player2_id")
+                        else row.get("bot_name")),
     }
 
 
-async def create_game(user_id: int, difficulty: str):
+async def create_game(user_id: int, difficulty: str, bot_name: str = "البوت", bot_id: int | None = None):
     if difficulty not in ("سهل", "متوسط", "صعب", "مستحيل"):
         raise ValueError("اختر مستوى صحيحًا")
     game_id = uuid.uuid4()
     board = [[0 for _ in range(COLS)] for _ in range(ROWS)]
+    bot_starts = random.random() < 0.40
+    last_move = None
+    if bot_starts:
+        bot_col = choose_bot_move(board, difficulty)
+        if bot_col is not None:
+            drop_piece(board, bot_col, 2)
+            last_move = bot_col
     pool = get_pool()
     row = await pool.fetchrow(
-        """INSERT INTO connect4_games(id,user_id,difficulty,board)
-           VALUES($1,$2,$3,$4::jsonb) RETURNING *""",
-        game_id, user_id, difficulty, json.dumps(board),
+        """INSERT INTO connect4_games
+           (id,user_id,difficulty,board,game_mode,bot_id,bot_name,bot_move_pending,last_move)
+           VALUES($1,$2,$3,$4::jsonb,'bot',$5,$6,FALSE,$7) RETURNING *""",
+        game_id, user_id, difficulty, json.dumps(board), bot_id, bot_name, last_move,
     )
-    return public_state(row)
+    state = public_state(row, user_id)
+    state["rps_result"] = "bot_starts" if bot_starts else "player_starts"
+    return state
+
+
+async def create_multiplayer_game(
+    challenge_id: uuid.UUID, player1_id: int, player2_id: int,
+    player1_name: str, player2_name: str, starter_id: int,
+    wager: int, chat_id: int,
+):
+    game_id = uuid.uuid4()
+    board = [[0 for _ in range(COLS)] for _ in range(ROWS)]
+    pool = get_pool()
+    row = await pool.fetchrow(
+        """INSERT INTO connect4_games
+           (id,user_id,player2_id,difficulty,board,game_mode,chat_id,
+            player1_name,player2_name,turn_player_id,wager)
+           VALUES($1,$2,$3,'متوسط',$4::jsonb,'human',$5,$6,$7,$8,$9)
+           RETURNING *""",
+        game_id, player1_id, player2_id, json.dumps(board), chat_id,
+        player1_name, player2_name, starter_id, wager,
+    )
+    return public_state(row, starter_id)
+
+
+async def get_game_state(user_id: int, game_id: str):
+    try:
+        parsed_id = uuid.UUID(game_id)
+    except Exception:
+        raise ValueError("المباراة غير موجودة")
+    pool = get_pool()
+    row = await pool.fetchrow(
+        """SELECT * FROM connect4_games
+           WHERE id=$1 AND (user_id=$2 OR player2_id=$2)""",
+        parsed_id, user_id,
+    )
+    if not row:
+        raise ValueError("المباراة غير موجودة أو ليست لك")
+    return public_state(row, user_id)
+
+
+async def _settle_human_wager(conn, row, winner_id: int | None):
+    if int(row.get("wager") or 0) <= 0 or row.get("wager_settled"):
+        return
+    first_id, second_id = int(row["user_id"]), int(row["player2_id"])
+    wager = int(row["wager"])
+    await conn.execute(
+        "INSERT INTO points(user_id,points) VALUES($1,0),($2,0) ON CONFLICT(user_id) DO NOTHING",
+        first_id, second_id,
+    )
+    if winner_id is None:
+        await conn.execute("UPDATE points SET points=points+$2 WHERE user_id=$1", first_id, wager)
+        await conn.execute("UPDATE points SET points=points+$2 WHERE user_id=$1", second_id, wager)
+    else:
+        await conn.execute("UPDATE points SET points=points+$2 WHERE user_id=$1", winner_id, wager * 2)
+    await conn.execute("UPDATE connect4_games SET wager_settled=TRUE WHERE id=$1", row["id"])
 
 
 async def play_move(user_id: int, game_id: str, col: int):
@@ -191,11 +276,12 @@ async def play_move(user_id: int, game_id: str, col: int):
     async with pool.acquire() as conn:
         async with conn.transaction():
             row = await conn.fetchrow(
-                "SELECT * FROM connect4_games WHERE id=$1 AND user_id=$2 FOR UPDATE",
+                """SELECT * FROM connect4_games
+                   WHERE id=$1 AND (user_id=$2 OR player2_id=$2) FOR UPDATE""",
                 parsed_id, user_id,
             )
             if not row:
-                raise ValueError("المباراة غير موجودة")
+                raise ValueError("المباراة غير موجودة أو ليست لك")
             board = row["board"]
             if isinstance(board, str):
                 board = json.loads(board)
@@ -203,43 +289,106 @@ async def play_move(user_id: int, game_id: str, col: int):
             winning_cells = row["winning_cells"]
             if isinstance(winning_cells, str):
                 winning_cells = json.loads(winning_cells)
-            last_move = row["last_move"]
             if status != "playing":
-                return public_state(row)
-            if not legal_columns(board):
-                status = "draw"
-            else:
-                # A late request forfeits the player's requested move and plays randomly.
-                expired = (await conn.fetchval(
+                return public_state(row, user_id)
+            if row["game_mode"] == "human":
+                if int(row["turn_player_id"] or 0) != int(user_id):
+                    raise ValueError("انتظر دور اللاعب الآخر")
+                expired = await conn.fetchval(
                     "SELECT NOW() > $1::timestamptz + ($2 * INTERVAL '1 second')",
                     row["turn_started_at"], TURN_SECONDS,
-                ))
-                player_col = random.choice(legal_columns(board)) if expired else col
-                if player_col not in legal_columns(board):
+                )
+                valid = legal_columns(board)
+                if not valid:
+                    status = "draw"
+                else:
+                    chosen = random.choice(valid) if expired else col
+                    if chosen not in valid:
+                        raise ValueError("هذا العمود ممتلئ، اختر عمودًا آخر")
+                    piece = 1 if int(user_id) == int(row["user_id"]) else 2
+                    drop_piece(board, chosen, piece)
+                    winning_cells = winning_line(board, piece)
+                    if winning_cells:
+                        status = "won"
+                        await _settle_human_wager(conn, row, int(user_id))
+                    elif not legal_columns(board):
+                        status = "draw"
+                        await _settle_human_wager(conn, row, None)
+                    next_player = int(row["player2_id"] if user_id == row["user_id"] else row["user_id"])
+                    updated = await conn.fetchrow(
+                        """UPDATE connect4_games SET board=$2::jsonb,status=$3,
+                           last_move=$4,winning_cells=$5::jsonb,winner_id=$6,
+                           turn_player_id=$7,turn_started_at=NOW(),updated_at=NOW()
+                           WHERE id=$1 RETURNING *""",
+                        parsed_id, json.dumps(board), status, chosen,
+                        json.dumps(winning_cells or []), user_id if status == "won" else None,
+                        next_player,
+                    )
+                    return public_state(updated, user_id)
+            else:
+                if int(row["user_id"]) != int(user_id):
+                    raise ValueError("هذه المباراة ضد البوت وليست تحديًا بين لاعبين")
+                if row.get("bot_move_pending"):
+                    raise ValueError("انتظر حركة البوت")
+                valid = legal_columns(board)
+                expired = await conn.fetchval(
+                    "SELECT NOW() > $1::timestamptz + ($2 * INTERVAL '1 second')",
+                    row["turn_started_at"], TURN_SECONDS,
+                )
+                chosen = random.choice(valid) if expired and valid else col
+                if chosen not in valid:
                     raise ValueError("هذا العمود ممتلئ، اختر عمودًا آخر")
-                drop_piece(board, player_col, 1)
-                last_move = player_col
+                drop_piece(board, chosen, 1)
                 winning_cells = winning_line(board, 1)
                 if winning_cells:
                     status = "won"
                 elif not legal_columns(board):
                     status = "draw"
-                else:
-                    bot_col = choose_bot_move(board, row["difficulty"])
-                    if bot_col is not None:
-                        drop_piece(board, bot_col, 2)
-                        last_move = bot_col
-                        winning_cells = winning_line(board, 2)
-                        if winning_cells:
-                            status = "lost"
-                        elif not legal_columns(board):
-                            status = "draw"
-            updated = await conn.fetchrow(
-                """UPDATE connect4_games
-                   SET board=$2::jsonb,status=$3,last_move=$4,winning_cells=$5::jsonb,
+                updated = await conn.fetchrow(
+                    """UPDATE connect4_games SET board=$2::jsonb,status=$3,
+                       last_move=$4,winning_cells=$5::jsonb,bot_move_pending=$6,
                        turn_started_at=NOW(),updated_at=NOW()
-                   WHERE id=$1 RETURNING *""",
-                parsed_id, json.dumps(board), status, last_move,
-                json.dumps(winning_cells or []),
+                       WHERE id=$1 RETURNING *""",
+                    parsed_id, json.dumps(board), status, chosen,
+                    json.dumps(winning_cells or []), status == "playing",
+                )
+                return public_state(updated, user_id)
+
+
+async def play_bot_move(user_id: int, game_id: str):
+    try:
+        parsed_id = uuid.UUID(game_id)
+    except Exception:
+        raise ValueError("المباراة غير موجودة")
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            row = await conn.fetchrow(
+                "SELECT * FROM connect4_games WHERE id=$1 AND user_id=$2 FOR UPDATE",
+                parsed_id, user_id,
             )
-            return public_state(updated)
+            if not row or row["game_mode"] != "bot":
+                raise ValueError("المباراة غير موجودة")
+            if row["status"] != "playing" or not row["bot_move_pending"]:
+                return public_state(row, user_id)
+            board = row["board"]
+            if isinstance(board, str):
+                board = json.loads(board)
+            bot_col = choose_bot_move(board, row["difficulty"])
+            status = "playing"
+            winning_cells = []
+            if bot_col is not None:
+                drop_piece(board, bot_col, 2)
+                winning_cells = winning_line(board, 2) or []
+                if winning_cells:
+                    status = "lost"
+                elif not legal_columns(board):
+                    status = "draw"
+            updated = await conn.fetchrow(
+                """UPDATE connect4_games SET board=$2::jsonb,status=$3,last_move=$4,
+                   winning_cells=$5::jsonb,bot_move_pending=FALSE,
+                   turn_started_at=NOW(),updated_at=NOW() WHERE id=$1 RETURNING *""",
+                parsed_id, json.dumps(board), status, bot_col,
+                json.dumps(winning_cells),
+            )
+            return public_state(updated, user_id)
