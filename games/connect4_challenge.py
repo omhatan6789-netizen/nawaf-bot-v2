@@ -70,11 +70,12 @@ async def connect4_challenge_command(update: Update, context: ContextTypes.DEFAU
         target.id, target.first_name or "اللاعب الثاني", wager,
     )
     text = (
-        "اللعبة شغالة ↢ كونكت 4\n\n"
+        "## اللعبة شغالة ↢ كونكت 4\n\n"
         "اللاعبين:\n"
         f"• ↢ {user.first_name or 'اللاعب الأول'}\n"
         f"• ↢ {target.first_name or 'اللاعب الثاني'}\n\n"
-        f"جائزة الفوز: {wager:,} نقطة🎖️\n\n"
+        f"الرهان على كل لاعب: {wager:,} نقطة\n"
+        f"جائزة الفوز: {wager * 2:,} نقطة🎖️\n\n"
         "(بانتظار قبول التحدي)"
     )
     keyboard = InlineKeyboardMarkup([[
@@ -264,6 +265,7 @@ async def connect4_challenge_callback(update: Update, context: ContextTypes.DEFA
             f"اللعبة شغالة ↢ كونكت 4\n\n"
             f"اللاعبين:\n• ↢ {updated['challenger_name']}\n"
             f"• ↢ {updated['opponent_name']}\n\n"
+            f"الرهان على كل لاعب: {int(updated['wager']):,} نقطة\n"
             f"جائزة الفوز: {int(updated['wager'])*2:,} نقطة🎖️\n"
             f"يبدأ أولًا: {starter_name}",
             reply_markup=keyboard,
