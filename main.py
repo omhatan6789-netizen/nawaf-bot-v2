@@ -5,6 +5,7 @@ from telegram import Update
 from telegram.ext import Application, ApplicationBuilder, CallbackQueryHandler, ChatMemberHandler, CommandHandler, ContextTypes, ConversationHandler, MessageHandler, filters
 
 from config import load_settings
+from database.update_processor import ChatSerialUpdateProcessor
 from database import close_pool, init_pool
 from database.pool import get_pool
 from database.health import check_database
@@ -259,6 +260,7 @@ def build_application() -> Application:
         .token(settings.bot_token)
         .post_init(post_init)
         .post_shutdown(post_shutdown)
+        .concurrent_updates(ChatSerialUpdateProcessor(max_concurrent_updates=16))
         .build()
     )
     application.bot_data["settings"] = settings
