@@ -56,6 +56,7 @@ from handlers.moderation import (
 from handlers.delete_messages import delete_messages
 from ai_assistant import ai_assistant_message
 from music_call import start_music_call, shutdown_music_call
+from memory_monitor import log_memory_checkpoint
 from account_clock import start_account_clock, shutdown_account_clock
 from auto_private_reply import start_auto_private_reply, shutdown_auto_private_reply
 from name_reaction import start_name_reaction, shutdown_name_reaction
@@ -172,10 +173,12 @@ logger = logging.getLogger("nawaf-bot")
 
 
 async def post_init(application: Application) -> None:
+    log_memory_checkpoint("post_init_start")
     settings = application.bot_data["settings"]
     configure_mini_app(asyncio.get_running_loop(), application.bot)
     await register_mini_app_menu(application)
     await init_pool(settings)
+    log_memory_checkpoint("database_pool_ready")
     await apply_all_migrations()
     await ensure_demon_tables()
     await ensure_game_tables()
@@ -186,6 +189,7 @@ async def post_init(application: Application) -> None:
     patch_inline_keyboard_buttons()
     await load_custom_commands_cache()
     await load_emoji_reaction_rules()
+    log_memory_checkpoint("caches_loaded")
     if not await check_database():
         raise RuntimeError("Database health check failed")
     application.bot_data["moderation_expiry_task"] = application.create_task(
@@ -205,10 +209,16 @@ async def post_init(application: Application) -> None:
         name="temporary-message-scheduler",
     )
     try:
-        if await start_music_call():
+        log_memory_checkpoint("before_music_account_start")
+        music_started = await start_music_call()
+        log_memory_checkpoint("after_music_account_start")
+        if music_started:
             await start_account_clock()
+            log_memory_checkpoint("after_account_clock_start")
             await start_auto_private_reply()
+            log_memory_checkpoint("after_auto_reply_start")
             await start_name_reaction()
+            log_memory_checkpoint("after_name_reaction_start")
             logger.info("Music account connected; profile clock, auto-reply and name reactions started.")
     except Exception:
         logger.exception("Music account startup failed")
