@@ -85,13 +85,13 @@ async def connect4_challenge_callback(update: Update, context: ContextTypes.DEFA
     query = update.callback_query
     if not query or not query.data:
         return
-    await query.answer()
     parts = query.data.split(":")
     action = parts[0]
     raw_id = parts[1] if len(parts) > 1 else ""
     try:
         challenge_id = uuid.UUID(hex=raw_id)
     except Exception:
+        await query.answer("تعذر قراءة التحدي.", show_alert=True)
         return
     pool = get_pool()
     row = await pool.fetchrow("SELECT * FROM connect4_challenges WHERE id=$1", challenge_id)
@@ -112,6 +112,7 @@ async def connect4_challenge_callback(update: Update, context: ContextTypes.DEFA
             challenge_id,
         )
         await query.edit_message_reply_markup(reply_markup=None)
+        await query.answer("تم رفض التحدي.")
         await query.message.reply_text("تم رفض تحدي كونكت 4.")
         return
 
@@ -214,7 +215,7 @@ async def connect4_challenge_callback(update: Update, context: ContextTypes.DEFA
                WHERE id=$1 AND status='choosing'""",
             challenge_id, uuid.UUID(game["id"]),
         )
-        web_url = "https://nawaf-bot-v2.onrender.com/mini-app"
+        web_url = f"https://nawaf-bot-v2.onrender.com/mini-app?game_id={game['id']}"
         keyboard = InlineKeyboardMarkup([[
             InlineKeyboardButton("🔴 فتح لعبة كونكت 4", web_app=WebAppInfo(url=web_url))
         ]])
