@@ -180,7 +180,8 @@ def public_state(row, viewer_id: int | None = None):
         "game_mode": mode, "player1_name": row.get("player1_name") or "أنت",
         "player2_name": row.get("player2_name") or opponent_name or "البوت",
         "bot_name": row.get("bot_name") or "البوت",
-        "your_turn": your_turn, "my_piece": (1 if is_player1 else 2), "turn_player_id": row.get("turn_player_id"),
+        "your_turn": your_turn, "bot_move_pending": bool(row.get("bot_move_pending", False)),
+        "my_piece": (1 if is_player1 else 2), "turn_player_id": row.get("turn_player_id"),
         "winner_id": row.get("winner_id"), "wager": int(row.get("wager") or 0),
         "winner_name": (row.get("player1_name") if row.get("winner_id") == row.get("user_id")
                         else row.get("player2_name") if row.get("winner_id") == row.get("player2_id")
@@ -199,17 +200,12 @@ async def create_game(user_id: int, difficulty: str, bot_name: str = "البوت
     bot_choices = {"r": ("p", "s"), "p": ("s", "r"), "s": ("r", "p")}
     bot_choice = bot_choices[rps_choice][0 if bot_starts else 1]
     last_move = None
-    if bot_starts:
-        bot_col = choose_bot_move(board, difficulty)
-        if bot_col is not None:
-            drop_piece(board, bot_col, 2)
-            last_move = bot_col
     pool = get_pool()
     row = await pool.fetchrow(
         """INSERT INTO connect4_games
            (id,user_id,difficulty,board,game_mode,bot_id,bot_name,bot_move_pending,last_move)
-           VALUES($1,$2,$3,$4::jsonb,'bot',$5,$6,FALSE,$7) RETURNING *""",
-        game_id, user_id, difficulty, json.dumps(board), bot_id, bot_name, last_move,
+           VALUES($1,$2,$3,$4::jsonb,'bot',$5,$6,$7,$8) RETURNING *""",
+        game_id, user_id, difficulty, json.dumps(board), bot_id, bot_name, bot_starts, last_move,
     )
     state = public_state(row, user_id)
     state["rps_result"] = "bot_starts" if bot_starts else "player_starts"
