@@ -272,6 +272,10 @@ def build_application() -> Application:
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("health", health_command))
     application.add_handler(CommandHandler("starteditor", start_editor_command))
+    application.add_handler(MessageHandler(
+        filters.ChatType.PRIVATE & filters.Regex(r"^تعديل ستارت$"),
+        start_editor_command,
+    ))
     application.add_handler(CallbackQueryHandler(
         start_editor_callback,
         pattern=r"^startedit:(?:menu|message|buttons|add_button|order_button|delete_button|access|image)$",
