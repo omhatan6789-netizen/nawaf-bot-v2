@@ -30,11 +30,11 @@ body.chess-mode .hero,body.chess-mode .brand{display:none}
 .chess-turn small{display:block;font-size:12px;opacity:.8}
 .chess-turn strong{display:block;font-size:19px;margin-top:2px}
 .chess-board{width:min(94vw,500px);aspect-ratio:1;margin:auto;display:grid;position:relative;grid-template-columns:repeat(8,1fr);border:5px solid #573c2a;border-radius:5px;overflow:hidden;box-shadow:0 12px 28px #234b5c55;direction:ltr;touch-action:manipulation}
-.chess-square{border:0;border-radius:0;display:grid;place-items:center;padding:0;font-size:clamp(27px,8vw,53px);line-height:1;cursor:pointer;position:relative;isolation:isolate;transition:background-color .16s ease,box-shadow .16s ease}
+.chess-square{border:0;border-radius:0;display:grid;place-items:center;padding:0;width:100%;height:100%;min-width:0;min-height:0;overflow:hidden;aspect-ratio:1/1;font-size:clamp(22px,10vw,49px);line-height:1;cursor:pointer;position:relative;isolation:isolate;transition:background-color .16s ease,box-shadow .16s ease}
 .chess-square.light{background:#f0d9b5;color:#171717}.chess-square.dark{background:#b58863;color:#171717}
-.chess-piece{display:block;line-height:1;transform:translateY(-1px);user-select:none;pointer-events:none;transition:transform .18s ease,filter .18s ease}
-.chess-piece.white-piece{color:#fff!important;-webkit-text-stroke:1.15px #343434;text-shadow:0 2px 1px #0008,0 0 3px #0008;filter:drop-shadow(0 2px 1px #0006)}
-.chess-piece.black-piece{color:#171717!important;-webkit-text-stroke:.65px #f6f0e6;text-shadow:0 1px 1px #fff8;filter:drop-shadow(0 2px 1px #0005)}
+.chess-piece{display:grid;place-items:center;width:100%;height:100%;font-family:'DejaVu Sans','Segoe UI Symbol',serif;font-variant-emoji:text;line-height:1;transform:translateY(-1px);user-select:none;pointer-events:none;transition:transform .18s ease,filter .18s ease}
+.chess-piece.white-piece{color:#fff!important;-webkit-text-fill-color:#fff!important;-webkit-text-stroke:1.15px #343434;text-shadow:0 2px 1px #0008,0 0 3px #0008;filter:drop-shadow(0 2px 1px #0006)}
+.chess-piece.black-piece{color:#171717!important;-webkit-text-fill-color:#171717!important;-webkit-text-stroke:.65px #f6f0e6;text-shadow:0 1px 1px #fff8;filter:drop-shadow(0 2px 1px #0005)}
 .chess-square.selected{z-index:2;box-shadow:inset 0 0 0 4px #21a9e9, inset 0 0 18px #21a9e966}
 .chess-square.target:after{content:"";position:absolute;inset:19%;border:3px solid #087eaa;border-radius:50%;box-shadow:0 0 0 3px #fff9,0 0 12px #087eaa88;pointer-events:none}
 .chess-square.target:not(.occupied):before{content:"✦";position:absolute;font-size:clamp(15px,4vw,23px);color:#087eaa;text-shadow:0 1px 3px #fff;z-index:1}
@@ -159,7 +159,7 @@ function refreshChessBoard(){
   const isTarget=!!chessSelected&&legal.some(m=>m.startsWith(chessSelected+coord));
   sq.classList.toggle('target',isTarget);
   sq.classList.toggle('capture-target',isTarget&&!!piece);
-  if(piece){const span=document.createElement('span');span.className='chess-piece '+(piece===piece.toUpperCase()?'white-piece':'black-piece');span.textContent=chessPieces[piece]||'';sq.appendChild(span);}
+  if(piece){const span=document.createElement('span');span.className='chess-piece '+(piece===piece.toUpperCase()?'white-piece':'black-piece');span.textContent=(chessPieces[piece]||'')+'\uFE0E';sq.appendChild(span);}
  }
 }
 async function animateChessMove(from,to,piece,commitVisual=false){
@@ -169,7 +169,7 @@ async function animateChessMove(from,to,piece,commitVisual=false){
  const sourceRect=source.getBoundingClientRect(),destRect=dest.getBoundingClientRect();
  const moving=document.createElement('span');
  moving.className='chess-piece '+(piece===piece.toUpperCase()?'white-piece':'black-piece');
- moving.textContent=chessPieces[piece]||'';moving.style.cssText='position:absolute;z-index:30;display:grid;place-items:center;width:12.5%;height:12.5%;font-size:clamp(27px,8vw,53px);left:'+(sourceRect.left-boardRect.left)+'px;top:'+(sourceRect.top-boardRect.top)+'px;transition:transform .34s cubic-bezier(.2,.8,.2,1);';
+ moving.textContent=(chessPieces[piece]||'')+'\uFE0E';moving.style.cssText='position:absolute;z-index:30;display:grid;place-items:center;width:12.5%;height:12.5%;font-size:clamp(27px,8vw,53px);left:'+(sourceRect.left-boardRect.left)+'px;top:'+(sourceRect.top-boardRect.top)+'px;transition:transform .34s cubic-bezier(.2,.8,.2,1);';
  const sourcePiece=source.querySelector('.chess-piece'),destPiece=dest.querySelector('.chess-piece');
  if(sourcePiece)sourcePiece.style.visibility='hidden';if(destPiece)destPiece.style.visibility='hidden';
  chessBoardEl.appendChild(moving);
@@ -179,7 +179,7 @@ async function animateChessMove(from,to,piece,commitVisual=false){
  moving.remove();
  if(commitVisual){
   source.replaceChildren();dest.replaceChildren();
-  const landed=document.createElement('span');landed.className='chess-piece '+(piece===piece.toUpperCase()?'white-piece':'black-piece');landed.textContent=chessPieces[piece]||'';dest.appendChild(landed);
+  const landed=document.createElement('span');landed.className='chess-piece '+(piece===piece.toUpperCase()?'white-piece':'black-piece');landed.textContent=(chessPieces[piece]||'')+'\uFE0E';dest.appendChild(landed);
  }else{
   if(sourcePiece)sourcePiece.style.visibility='';if(destPiece)destPiece.style.visibility='';
  }
@@ -195,17 +195,25 @@ function selectChessSquare(square,piece){
  chessSelected=null;refreshChessBoard();
 }
 async function submitChessMove(move){
- const from=move.slice(0,2),to=move.slice(2,4),movingPiece=chessPieceAt(chessGame.fen,from),oldMoveCount=(chessGame.moves||[]).length;
+ const from=move.slice(0,2),to=move.slice(2,4),movingPiece=chessPieceAt(chessGame.fen,from);
  chessSelected=null;refreshChessBoard();
  try{
   await animateChessMove(from,to,movingPiece,true);
-  chessGame=await chessRequest('/api/chess/move',{game_id:chessGame.id,move});
-  refreshChessBoard();
-  const added=(chessGame.moves||[]).slice(oldMoveCount);
-  if(added.length>1){const reply=added[added.length-1].uci;const replyTo=reply.slice(2,4);await animateChessMove(reply.slice(0,2),replyTo,chessPieceAt(chessGame.fen,replyTo));}
-  if(chessGame.status==='active'){const status=document.getElementById('chess-status');if(status)status.textContent='دور '+(chessGame.turn_name||chessBotName)+' · اختر القطعة التالية';}
-  const turnName=document.querySelector('.chess-turn strong');if(turnName)turnName.textContent=chessGame.turn_name||chessBotName;
-  const status=document.getElementById('chess-status');if(status&&chessGame.status==='finished')status.textContent=chessGame.result==='draw'?'انتهت المباراة بالتعادل':chessGame.result==='white'?'فزت بالمباراة!':'فاز '+chessBotName;
+  const turnName=document.querySelector('.chess-turn strong');if(turnName)turnName.textContent=chessBotName;
+  const status=document.getElementById('chess-status');if(status)status.textContent='يفكر '+chessBotName+'...';
+  const response=await chessRequest('/api/chess/move',{game_id:chessGame.id,move});
+  if(response.ai_move&&response.after_player_fen){
+   const finalFen=response.fen;
+   chessGame={...response,fen:response.after_player_fen,turn_name:chessBotName,legal_moves:[]};
+   refreshChessBoard();
+   const reply=response.ai_move,replyFrom=reply.slice(0,2),replyTo=reply.slice(2,4);
+   await animateChessMove(replyFrom,replyTo,chessPieceAt(response.after_player_fen,replyFrom),true);
+   chessGame={...response,fen:finalFen};refreshChessBoard();
+  }else{chessGame=response;refreshChessBoard();}
+  const activeName=chessGame.turn_name||chessBotName;
+  const nameEl=document.querySelector('.chess-turn strong');if(nameEl)nameEl.textContent=activeName;
+  const finalStatus=document.getElementById('chess-status');
+  if(finalStatus)finalStatus.textContent=chessGame.status==='finished'?(chessGame.result==='draw'?'انتهت المباراة بالتعادل':chessGame.result==='white'?'فزت بالمباراة!':'فاز '+chessBotName):'دور '+activeName+' · اختر القطعة التالية';
  }catch(e){alert(e.message);refreshChessBoard();}
 }
 
