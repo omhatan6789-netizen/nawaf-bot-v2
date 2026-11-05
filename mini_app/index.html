@@ -146,10 +146,11 @@ function renderConnect4(){
  shell.querySelector('#c4-level-back').onclick=showConnect4Setup;
  if(c4Game.winning_cells?.length===4){
   const first=c4Game.winning_cells[0],last=c4Game.winning_cells[3];
-  const line=document.createElementNS('http://www.w3.org/2000/svg','line');
-  line.setAttribute('x1',(first[1]+.5)*100);line.setAttribute('y1',(first[0]+.5)*100);
-  line.setAttribute('x2',(last[1]+.5)*100);line.setAttribute('y2',(last[0]+.5)*100);
-  line.setAttribute('pathLength','1');shell.querySelector('#c4-win-svg').appendChild(line);
+  const svg=shell.querySelector('#c4-win-svg'),boardEl=shell.querySelector('#c4-board');
+  const center=(cell)=>{const slot=boardEl.children[cell[0]*7+cell[1]],rect=slot.getBoundingClientRect(),base=svg.getBoundingClientRect();return {x:(rect.left+rect.width/2-base.left)/base.width*700,y:(rect.top+rect.height/2-base.top)/base.height*600};};
+  const a=center(first),b=center(last),line=document.createElementNS('http://www.w3.org/2000/svg','line');
+  line.setAttribute('x1',a.x);line.setAttribute('y1',a.y);line.setAttribute('x2',b.x);line.setAttribute('y2',b.y);
+  line.setAttribute('pathLength','1');svg.appendChild(line);
  }
  if(c4Game.status!=='playing'){
   const result=shell.querySelector('#c4-result');result.classList.add('show');
