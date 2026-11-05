@@ -162,7 +162,7 @@ function refreshChessBoard(){
   if(piece){const span=document.createElement('span');span.className='chess-piece '+(piece===piece.toUpperCase()?'white-piece':'black-piece');span.textContent=chessPieces[piece]||'';sq.appendChild(span);}
  }
 }
-async function animateChessMove(from,to,piece){
+async function animateChessMove(from,to,piece,commitVisual=false){
  if(!chessBoardEl||!piece)return;
  const source=chessSquareEls[from],dest=chessSquareEls[to],boardRect=chessBoardEl.getBoundingClientRect();
  if(!source||!dest)return;
@@ -170,12 +170,19 @@ async function animateChessMove(from,to,piece){
  const moving=document.createElement('span');
  moving.className='chess-piece '+(piece===piece.toUpperCase()?'white-piece':'black-piece');
  moving.textContent=chessPieces[piece]||'';moving.style.cssText='position:absolute;z-index:30;display:grid;place-items:center;width:12.5%;height:12.5%;font-size:clamp(27px,8vw,53px);left:'+(sourceRect.left-boardRect.left)+'px;top:'+(sourceRect.top-boardRect.top)+'px;transition:transform .34s cubic-bezier(.2,.8,.2,1);';
- const hidden=dest.querySelector('.chess-piece');if(hidden)hidden.style.visibility='hidden';
+ const sourcePiece=source.querySelector('.chess-piece'),destPiece=dest.querySelector('.chess-piece');
+ if(sourcePiece)sourcePiece.style.visibility='hidden';if(destPiece)destPiece.style.visibility='hidden';
  chessBoardEl.appendChild(moving);
  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
  moving.style.transform='translate('+(destRect.left-sourceRect.left)+'px,'+(destRect.top-sourceRect.top)+'px)';
  await new Promise(resolve=>setTimeout(resolve,370));
- moving.remove();if(hidden)hidden.style.visibility='';
+ moving.remove();
+ if(commitVisual){
+  source.replaceChildren();dest.replaceChildren();
+  const landed=document.createElement('span');landed.className='chess-piece '+(piece===piece.toUpperCase()?'white-piece':'black-piece');landed.textContent=chessPieces[piece]||'';dest.appendChild(landed);
+ }else{
+  if(sourcePiece)sourcePiece.style.visibility='';if(destPiece)destPiece.style.visibility='';
+ }
 }
 function selectChessSquare(square,piece){
  if(!chessGame||chessGame.status!=='active')return;
@@ -191,7 +198,7 @@ async function submitChessMove(move){
  const from=move.slice(0,2),to=move.slice(2,4),movingPiece=chessPieceAt(chessGame.fen,from),oldMoveCount=(chessGame.moves||[]).length;
  chessSelected=null;refreshChessBoard();
  try{
-  await animateChessMove(from,to,movingPiece);
+  await animateChessMove(from,to,movingPiece,true);
   chessGame=await chessRequest('/api/chess/move',{game_id:chessGame.id,move});
   refreshChessBoard();
   const added=(chessGame.moves||[]).slice(oldMoveCount);
