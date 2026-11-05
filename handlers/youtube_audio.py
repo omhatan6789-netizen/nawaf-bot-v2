@@ -9,7 +9,7 @@ import tempfile
 import time
 import uuid
 from pathlib import Path
-from urllib.parse import urlencode
+from urllib.parse import unquote
 
 import httpx
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
@@ -89,98 +89,63 @@ async def _search_youtube(query):
     raise RuntimeError("All YouTube API keys failed") from last_error
 
 
-async def _download_from_rapidapi(video_url, folder, api_key):
-    """Resolve and stream an MP3 through the RapidAPI YouTube MP3 endpoint."""
-    started = time.perf_counter()
-    host = "youtube-mp310.p.rapidapi.com"
-    async with httpx.AsyncClient(timeout=HTTP_TIMEOUT, follow_redirects=True) as client:
-        response = await client.get(
-            f"https://{host}/download/mp3",
-            params={"url": video_url},
-            headers={
-                "x-rapidapi-key": api_key,
-                "x-rapidapi-host": host,
-                "Accept": "application/json",
-            },
-        )
-        response.raise_for_status()
-        data = response.json()
-        download_url = data.get("downloadUrl") or data.get("download_url")
-        if not download_url:
-            raise RuntimeError("RapidAPI لم يُرجع رابط تحميل صالحًا.")
-
-        file_path = Path(folder) / "audio.mp3"
-        total = 0
-        async with client.stream(
-            "GET", download_url,
-            headers={"User-Agent": "NawafTelegramBot/1.0"},
-        ) as stream:
-            stream.raise_for_status()
-            length = stream.headers.get("Content-Length")
-            if length and int(length) > MAX_AUDIO_BYTES:
-                raise RuntimeError("حجم الصوت أكبر من الحد المسموح لإرساله.")
-            with file_path.open("wb") as audio_file:
-                async for chunk in stream.aiter_bytes(64 * 1024):
-                    total += len(chunk)
-                    if total > MAX_AUDIO_BYTES:
-                        raise RuntimeError("حجم الصوت أكبر من الحد المسموح لإرساله.")
-                    audio_file.write(chunk)
-
-    if not file_path.is_file() or file_path.stat().st_size == 0:
-        raise RuntimeError("RapidAPI أعاد ملفًا فارغًا أو لم يكتمل تحميله.")
-    logger.info(
-        "RapidAPI YouTube audio ready in %.2fs (%s bytes)",
-        time.perf_counter() - started, file_path.stat().st_size,
-    )
-    return str(file_path), {"title": "صوت من يوتيوب", "duration": None}
-
-
 async def _download_audio(video_url, folder):
-    rapidapi_key = os.getenv("RAPIDAPI_KEY")
-    if rapidapi_key:
-        try:
-            return await _download_from_rapidapi(video_url, folder, rapidapi_key)
-        except Exception:
-            logger.exception("RapidAPI YouTube download failed; falling back to Samplecut")
-
-    payload = {"url": video_url, "format": "mp3", "response": "url"}
+    """Download MP3 bytes directly from Samplecut in one API request."""
     started = time.perf_counter()
+    payload = {"url": video_url, "format": "mp3", "response": "file"}
+    file_path = Path(folder) / "audio.mp3"
+    total = 0
+
     async with httpx.AsyncClient(timeout=HTTP_TIMEOUT, follow_redirects=True) as client:
-        response = await client.post(
-            SAMPLECUT_API, json=payload,
-            headers={"X-Client-Name": "NawafTelegramBot", "Accept": "application/json"},
-        )
-        response.raise_for_status()
-        data = response.json()
-        download_url = data.get("download_url")
-        if not download_url:
-            raise RuntimeError("Samplecut API لم تُرجع رابط تحميل الصوت.")
-        file_path = Path(folder) / "audio.mp3"
-        total = 0
         async with client.stream(
-            "GET", download_url,
-            headers={"User-Agent": "NawafTelegramBot/1.0"},
-        ) as stream:
-            stream.raise_for_status()
-            length = stream.headers.get("Content-Length")
+            "POST",
+            SAMPLECUT_API,
+            json=payload,
+            headers={
+                "X-Client-Name": "NawafTelegramBot",
+                "Accept": "audio/mpeg, application/json",
+            },
+        ) as response:
+            if response.is_error:
+                try:
+                    error_data = await response.aread()
+                    details = json.loads(error_data.decode("utf-8"))
+                    api_error = details.get("error", {})
+                    message = api_error.get("message") or api_error.get("code") or response.text
+                except Exception:
+                    message = f"HTTP {response.status_code}"
+                raise RuntimeError(f"Samplecut {response.status_code}: {message}")
+
+            content_type = response.headers.get("Content-Type", "").lower()
+            if "audio/" not in content_type:
+                preview = (await response.aread())[:300].decode("utf-8", errors="replace")
+                raise RuntimeError(
+                    f"Samplecut لم يُرجع ملفًا صوتيًا (Content-Type: {content_type}; {preview})"
+                )
+
+            length = response.headers.get("Content-Length")
             if length and int(length) > MAX_AUDIO_BYTES:
                 raise RuntimeError("حجم الصوت أكبر من الحد المسموح لإرساله.")
+
             with file_path.open("wb") as audio_file:
-                async for chunk in stream.aiter_bytes(64 * 1024):
+                async for chunk in response.aiter_bytes(64 * 1024):
                     total += len(chunk)
                     if total > MAX_AUDIO_BYTES:
                         raise RuntimeError("حجم الصوت أكبر من الحد المسموح لإرساله.")
                     audio_file.write(chunk)
+
+            encoded_title = response.headers.get("X-Samplecut-Title")
+            title = unquote(encoded_title) if encoded_title else "صوت من يوتيوب"
+
     if not file_path.is_file() or file_path.stat().st_size == 0:
-        raise RuntimeError("ملف الصوت فارغ أو لم يكتمل تحميله.")
+        raise RuntimeError("Samplecut أعاد ملفًا فارغًا أو لم يكتمل تحميله.")
+
     logger.info(
-        "Samplecut audio ready in %.2fs (%s bytes)",
-        time.perf_counter() - started, file_path.stat().st_size,
+        "Samplecut direct audio ready in %.2fs (%s bytes)",
+        time.perf_counter() - started,
+        file_path.stat().st_size,
     )
-    return str(file_path), {
-        "title": data.get("title") or "صوت من يوتيوب",
-        "duration": data.get("track_duration_sec"),
-    }
+    return str(file_path), {"title": title, "duration": None}
 
 
 def _format_duration(seconds):
