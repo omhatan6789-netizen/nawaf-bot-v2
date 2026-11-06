@@ -61,6 +61,11 @@ def _public_word(row,user_id):
     me=next((p for p in players if int(p["id"])==int(user_id)),None)
     answers=_decode(row["answers"])
     word_list=_decode(row["words"])
+    winner=None
+    if players and row["status"]=="finished":
+        high=max(int(p.get("score",0)) for p in players)
+        leaders=[p for p in players if int(p.get("score",0))==high]
+        winner=leaders[0]["name"] if len(leaders)==1 else "تعادل"
     return {"id":str(row["id"]),"mode":row["mode"],"status":row["status"],
       "word_limit":row["word_limit"],"win_target":row["win_target"],
       "current_index":row["current_index"],"total":row["word_limit"],
@@ -71,7 +76,7 @@ def _public_word(row,user_id):
       "round_winner":answers.get("last_winner"),"last_word":answers.get("last_word"),
       "last_feedback":answers.get("last_feedback"),"last_guess":answers.get("last_guess"),"answers":answers,
       "words":word_list if row["status"]=="finished" else [],
-      "winner":max(players,key=lambda p:p.get("score",0))["name"] if players and row["status"]=="finished" else None,
+      "winner":winner,
       "started_at":int(row["started_at"].timestamp()*1000) if row["started_at"] else None}
 async def word_create(user_id,name,mode="online",word_count=5,win_target=None):
     if not 1<=int(word_count)<=15: raise ValueError("اختر من 1 إلى 15 كلمة")
