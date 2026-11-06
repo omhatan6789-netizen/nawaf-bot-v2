@@ -354,8 +354,9 @@ async function submitMiniGameChoice(choice){document.querySelectorAll('#mg-rps b
 function renderMiniGame(){
  clearOnlineEndOverlay();stopMiniGameTimers();const shell=c4Shell(),game=miniGame,state=game.state,humanTurn=!!game.your_turn;
  const p1=game.player1_name||'اللاعب الأول',p2=game.player2_name||'اللاعب الثاني';
+ const playerLabel=(game.player_names||[p1,p2]).join(' • ');
  const heading=game.game_type==='dots'?'المربعات':'اختبر ذاكرتك';
- shell.innerHTML='<div class="c4-heading"><h2>'+heading+'</h2><p>'+p1+' × '+p2+'</p></div><div class="mg-score" id="mg-score"></div><div class="mg-status"><span id="mg-status"></span><b id="mg-clock"></b></div><div class="mg-progress"><div id="mg-progress-bar"></div></div><div id="mg-board"></div><div class="c4-result" id="mg-result"></div><div class="c4-hint">'+(onlineMode?'وضع أونلاين — بدون نقاط':'الرهان لكل لاعب: '+game.wager.toLocaleString('en-US')+' نقطة')+'</div><button class="c4-secondary" id="mg-back">رجوع للألعاب</button>';
+ shell.innerHTML='<div class="c4-heading"><h2>'+heading+'</h2><p>'+playerLabel+'</p></div><div class="mg-score" id="mg-score"></div><div class="mg-status"><span id="mg-status"></span><b id="mg-clock"></b></div><div class="mg-progress"><div id="mg-progress-bar"></div></div><div id="mg-board"></div><div class="c4-result" id="mg-result"></div><div class="c4-hint">'+(onlineMode?'وضع أونلاين — بدون نقاط':'الرهان لكل لاعب: '+game.wager.toLocaleString('en-US')+' نقطة')+'</div><button class="c4-secondary" id="mg-back">رجوع للألعاب</button>';
  shell.querySelector('#mg-back').onclick=showGames;
  if(game.status!=='playing'){
   shell.querySelector('#mg-result').classList.add('show');
@@ -364,7 +365,7 @@ function renderMiniGame(){
  }
  if(game.game_type==='dots'){
   renderDotsBoard(shell,game);
-  shell.querySelector('#mg-status').textContent=game.spectator?'👁 مشاهدة مباشرة — دور اللاعبين':humanTurn?'دورك!':'دور '+(game.my_player===1?p2:p1);
+  shell.querySelector('#mg-status').textContent=game.spectator?'👁 مشاهدة مباشرة — دور اللاعبين':humanTurn?'دورك!':'دور '+((game.player_names||[p1,p2])[(Number(game.turn_index)||1)-1]||p2);
  }else{
   shell.querySelector('#mg-status').textContent=game.spectator?'👁 وضع المشاهدة — تابع حركة اللاعبين':humanTurn?'احفظ التسلسل...':'دور '+(game.my_player===1?p2:p1);
   renderMemoryBoard(shell,game);
