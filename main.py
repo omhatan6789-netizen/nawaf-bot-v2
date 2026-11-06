@@ -385,7 +385,7 @@ def build_application() -> Application:
         delete_slash_command_message,
     ), group=-100)
     application.add_handler(MessageHandler(
-        filters.ChatType.PRIVATE & (filters.TEXT | filters.PHOTO) & ~filters.COMMAND,
+        filters.ChatType.PRIVATE & (filters.TEXT | filters.PHOTO | filters.AUDIO | filters.VOICE | filters.VIDEO | filters.Document.ALL) & ~filters.COMMAND,
         mini_app_message,
     ), group=-31)
     application.add_handler(CommandHandler("start", start_command))
