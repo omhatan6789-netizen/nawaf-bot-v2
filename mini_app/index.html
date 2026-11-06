@@ -356,12 +356,7 @@ function renderMemoryBoard(shell,game){
  else shell.querySelector('#mg-status').textContent='اللاعب الآخر يلعب الآن';
 }
 function playMemorySequence(sequence){
- miniGameInputLocked=true;document.querySelectorAll('.mg-memory-tile').forEach(b=>b.disabled=true);const status=document.getElementById('mg-status');if(status)status.textContent='احفظ التسلسل...';
- sequence.forEach((color,i)=>{
-  const on=setTimeout(()=>{const tile=document.querySelector('.mg-memory-tile[data-color="'+color+'"]');if(tile)tile.classList.add('flash');},i*720+350);
-  const off=setTimeout(()=>{document.querySelectorAll('.mg-memory-tile').forEach(x=>x.classList.remove('flash'));if(i===sequence.length-1){miniGameInputLocked=false;document.querySelectorAll('.mg-memory-tile').forEach(b=>b.disabled=false);const s=document.getElementById('mg-status');if(s)s.textContent='دورك! كرر التسلسل';}},i*720+700);
-  memoryPlaybackTimers.push(on,off);
- });
+ presentMemorySequence(sequence,'legacy:'+sequence.join(','),null);
 }
 function playMemoryTone(frequency=660,duration=0.11){
   try{const Ctx=window.AudioContext||window.webkitAudioContext;if(!Ctx)return;const ctx=window.__mgAudio||(window.__mgAudio=new Ctx());if(ctx.state==='suspended')ctx.resume();const osc=ctx.createOscillator(),gain=ctx.createGain();osc.type='sine';osc.frequency.value=frequency;gain.gain.setValueAtTime(.0001,ctx.currentTime);gain.gain.exponentialRampToValueAtTime(.13,ctx.currentTime+.015);gain.gain.exponentialRampToValueAtTime(.0001,ctx.currentTime+duration);osc.connect(gain);gain.connect(ctx.destination);osc.start();osc.stop(ctx.currentTime+duration+.02);}catch(e){}
