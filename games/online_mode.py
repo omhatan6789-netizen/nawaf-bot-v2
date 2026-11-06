@@ -105,9 +105,7 @@ async def online_lobby_callback(update: Update, context: ContextTypes.DEFAULT_TY
             return
         keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton("👥 لاعبان", callback_data=f"online_config:{lobby_id.hex}:2:individual"),
-             InlineKeyboardButton("👥👥 أربعة لاعبين", callback_data=f"online_config:{lobby_id.hex}:4:individual")],
-            [InlineKeyboardButton("👤 كل لاعب لحاله", callback_data=f"online_config:{lobby_id.hex}:4:individual"),
-             InlineKeyboardButton("🤝 فريقين 2 ضد 2", callback_data=f"online_config:{lobby_id.hex}:4:teams")],
+             InlineKeyboardButton("👥👥 أربعة لاعبين", callback_data=f"online_config:{lobby_id.hex}:4:choose")],
         ])
         await _edit_lobby_message(query, context, "⚙️ إعدادات لعبة المربعات\\nاختر عدد اللاعبين ونظام اللعب:", keyboard)
         await query.answer()
@@ -119,8 +117,16 @@ async def online_lobby_callback(update: Update, context: ContextTypes.DEFAULT_TY
         if owner is None or int(owner) != int(user.id):
             await query.answer("إعدادات الغرفة لصاحبها فقط.", show_alert=True)
             return
-        if count not in (2, 4) or mode not in ("individual", "teams") or (count == 2 and mode == "teams"):
+        if count not in (2, 4) or mode not in ("individual", "teams", "choose") or (count == 2 and mode != "individual"):
             await query.answer("الإعداد غير صالح.", show_alert=True)
+            return
+        if count == 4 and mode == "choose":
+            keyboard = InlineKeyboardMarkup([[
+                InlineKeyboardButton("👤 كل لاعب لحاله", callback_data=f"online_config:{lobby_id.hex}:4:individual"),
+                InlineKeyboardButton("🤝 فريقين 2 ضد 2", callback_data=f"online_config:{lobby_id.hex}:4:teams"),
+            ]])
+            await _edit_lobby_message(query, context, "اختر نظام اللعب لأربعة لاعبين:", keyboard)
+            await query.answer()
             return
         await pool.execute("UPDATE online_game_lobbies SET player_count=$2,team_mode=$3,updated_at=NOW() WHERE id=$1", lobby_id, count, mode)
         keyboard = InlineKeyboardMarkup([
