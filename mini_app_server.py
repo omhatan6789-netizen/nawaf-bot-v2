@@ -177,7 +177,6 @@ def handle_mini_app_request(handler):
         return True
     if path == "/api/mini-app":
         try:
-            from urllib.parse import parse_qs, urlparse
             top = parse_qs(urlparse(handler.path).query).get("top", [None])[0]
             body = json.dumps(_run(_payload(top)), ensure_ascii=False).encode()
             handler.send_response(200)
