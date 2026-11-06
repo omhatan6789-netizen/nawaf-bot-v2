@@ -716,7 +716,7 @@ function renderWordGame(){
   }
   return;
  }
- if(training&&g.current_word_length)input.placeholder='الكلمة من '+g.current_word_length+' أحرف';
+ if(g.current_word_length)input.placeholder='الكلمة من '+g.current_word_length+' أحرف';
  submit.onclick=async()=>{if(extraBusy)return;const guessed=input.value.trim();extraBusy=true;submit.disabled=true;try{const res=await extraGameRequest('guess','word',{guess:guessed});if(res.correct){shell.querySelector('#word-message').textContent='🏆 '+res.round_winner+' عرف الكلمة: '+res.word;extraLastRevealKey=String(g.current_index)+':'+res.round_winner;if(g.mode==='online'){showWordReveal(res.round_winner,res.word,()=>{},guessed,res.feedback);}else{renderWordTiles(shell.querySelector('#word-feedback'),guessed,res.feedback);setTimeout(()=>advanceWord(),650);}}else{const fb=shell.querySelector('#word-feedback');fb.replaceChildren();(res.feedback||[]).forEach((c,i)=>{const tile=document.createElement('span');tile.textContent=Array.from(guessed)[i]||'';tile.style.cssText='display:flex;align-items:center;justify-content:center;width:38px;height:42px;border-radius:8px;font-size:21px;font-weight:900;color:#111;background:'+({green:'#22c55e',orange:'#f97316',white:'#fff',green_purple:'#22c55e',yellow_purple:'#eab308'}[c]||'#fff')+';border:2px solid '+(c.includes('purple')?'#a855f7':'#ffffff55')+';';fb.appendChild(tile);});shell.querySelector('#word-message').textContent='مو هي الكلمة، حاول مرة ثانية';}}catch(e){showExtraError(e);}finally{extraBusy=false;submit.disabled=false;input.value='';input.focus();}};
  shell.querySelector('#word-back').onclick=()=>{stopExtraGame();showGames();};
  if(g.mode==='online'&&g.round_winner&&g.round_until&&Date.now()<g.round_until){
