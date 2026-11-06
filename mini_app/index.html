@@ -137,6 +137,8 @@ const page=document.getElementById('page');
 const pageTitle=document.getElementById('page-title');
 const pageContent=document.getElementById('page-content');
 function showHome(){stopC4Timer();stopMiniGameTimers();document.body.classList.remove('c4-active');page.hidden=true;home.hidden=false;}
+function telegramDisplayName(){const u=tg?.initDataUnsafe?.user||{};return [u.first_name,u.last_name].filter(Boolean).join(' ').trim()||u.username||'أنت';}
+function winnerDisplayName(game){const name=String(game?.winner_name||'').trim();return (!name||name==='أحد اللاعبين'||name==='أنت')?telegramDisplayName():name;}
 function openBot(startParam=''){if(!botUsername)return;const link='https://t.me/'+botUsername+(startParam?'?start='+encodeURIComponent(startParam):'');if(tg?.openTelegramLink)tg.openTelegramLink(link);else location.href=link;}
 function showTop(kind,title){
  home.hidden=true;page.hidden=false;pageTitle.textContent=title;pageContent.replaceChildren();
@@ -361,7 +363,7 @@ function renderMiniGameSolo(){
  shell.querySelector('#mg-back').onclick=showGames;shell.querySelector('#mg-again').onclick=()=>showMiniGameDifficulty(game.game_type);
  if(game.status!=='playing'){
   const result=shell.querySelector('#mg-result');result.classList.add('show');
-  result.textContent=game.status==='won'?'🏆 فزت على البوت! أحسنت':game.status==='lost'?'🤖 فاز البوت! حاول مرة ثانية':'🤝 تعادل';
+  result.textContent=game.status==='won'?'🏆 فاز '+telegramDisplayName()+'! أحسنت':game.status==='lost'?'🤖 فاز '+(game.bot_name||'البوت')+'! حاول مرة ثانية':'🤝 انتهت المباراة بالتعادل';
   shell.querySelector('#mg-status').textContent='انتهت اللعبة';shell.querySelector('#mg-clock').textContent='—';if(onlineMode){showOnlineEndOverlay(game.game_type,game.id);scheduleMiniGamePoll();}return;
  }
  if(isDots){
@@ -431,7 +433,7 @@ function renderMiniGame(){
  else{const mainBack=document.getElementById('back-home');if(mainBack)mainBack.textContent='رجوع للقائمة الرئيسية';const withdraw=shell.querySelector('#mg-withdraw');if(withdraw)withdraw.onclick=()=>withdrawOnlineGame(game.game_type,game.id,withdraw);}
  if(game.status!=='playing'){
   shell.querySelector('#mg-result').classList.add('show');
-  shell.querySelector('#mg-result').textContent=game.status==='draw'?'🤝 تعادل!':'🏆 فاز '+(game.winner_name||'أحد اللاعبين')+'!';
+  shell.querySelector('#mg-result').textContent=game.status==='draw'?'🤝 انتهت المباراة بالتعادل':'🏆 فاز '+winnerDisplayName(game)+'!';
   shell.querySelector('#mg-status').textContent='';shell.querySelector('#mg-clock').textContent='—';if(onlineMode){showOnlineEndOverlay(game.game_type,game.id,game.status==='draw'?'🤝 انتهت المباراة بالتعادل':'🏆 فاز '+(game.winner_name||'أحد اللاعبين')+'!');scheduleMiniGamePoll();}return;
  }
  if(game.game_type==='dots'){
@@ -608,7 +610,7 @@ function renderConnect4(previousBoard=null){
  }
  if(c4Game.status!=='playing'){
   const result=shell.querySelector('#c4-result');result.classList.add('show');
-  result.textContent=c4Game.status==='draw'?'🤝 تعادل!':'🏆 فاز '+(c4Game.winner_name||'أحد اللاعبين')+'!';
+  result.textContent=c4Game.status==='draw'?'🤝 انتهت المباراة بالتعادل':'🏆 فاز '+winnerDisplayName(c4Game)+'!';
   shell.querySelector('#c4-status').textContent='';shell.querySelector('#c4-clock').textContent='—';shell.querySelector('#c4-progress').style.width='0%';if(onlineMode){showOnlineEndOverlay('connect',c4Game.id,c4Game.status==='draw'?'🤝 انتهت المباراة بالتعادل':'🏆 فاز '+(c4Game.winner_name||'أحد اللاعبين')+'!');pollConnect4State();}
  }else if(!myTurn){
   if(c4Game.spectator){shell.querySelector('#c4-status').textContent='👁 وضع المشاهدة — تابع اللعب مباشرة';shell.querySelector('#c4-clock').textContent='مباشر';pollConnect4State();}
