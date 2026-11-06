@@ -157,7 +157,13 @@ def _public_state(row, user_id: int):
     winner = row["winner_id"]
     status = row["status"]
     if status == "won":
-        status = "won" if int(winner or 0) == int(user_id) else "lost"
+        if state.get("team_mode") == "teams" and len(ids) == 4 and winner is not None:
+            winning_team = 0 if int(winner) == ids[0] else 1
+            state["winner_team"] = winning_team
+            user_index = ids.index(int(user_id)) if int(user_id) in ids else -1
+            status = "won" if user_index in (0, 2) and winning_team == 0 or user_index in (1, 3) and winning_team == 1 else "lost"
+        else:
+            status = "won" if int(winner or 0) == int(user_id) else "lost"
     try:
         my_index = ids.index(int(user_id)) + 1
     except ValueError:
@@ -177,7 +183,7 @@ def _public_state(row, user_id: int):
         "turn_started_at": int(row["turn_started_at"].timestamp() * 1000) if row["turn_started_at"] else None,
         "turn_seconds": TURN_SECONDS[game_type],
         "wager": int(row["wager"]), "winner_id": winner,
-        "winner_name": names[ids.index(int(winner))] if winner is not None and int(winner) in ids else None,
+        "winner_name": ("الفريق الأول" if int(winner or 0) == ids[0] else "الفريق الثاني") if state.get("team_mode") == "teams" and winner is not None else (names[ids.index(int(winner))] if winner is not None and int(winner) in ids else None),
         "my_player": my_index, "state": state,
     }
 
@@ -309,6 +315,7 @@ async def get_mini_game_challenge_state(user_id: int, raw_id: str):
                                     team_scores = [state["scores"][0] + state["scores"][2], state["scores"][1] + state["scores"][3]]
                                     winner_id = ids[0] if team_scores[0] > team_scores[1] else ids[1] if team_scores[1] > team_scores[0] else None
                                     state["team_scores"] = team_scores
+                                    state["winner_team"] = 0 if team_scores[0] > team_scores[1] else 1 if team_scores[1] > team_scores[0] else None
                                 else:
                                     high = max(state["scores"])
                                     winners = [i for i, score in enumerate(state["scores"]) if score == high]
@@ -422,6 +429,7 @@ async def play_mini_game_action(user_id: int, raw_id: str, action: dict):
                         team_scores = [state["scores"][0] + state["scores"][2], state["scores"][1] + state["scores"][3]]
                         winner_id = ids[0] if team_scores[0] > team_scores[1] else ids[1] if team_scores[1] > team_scores[0] else None
                         state["team_scores"] = team_scores
+                        state["winner_team"] = 0 if team_scores[0] > team_scores[1] else 1 if team_scores[1] > team_scores[0] else None
                     else:
                         high = max(state["scores"])
                         winners = [i for i, score in enumerate(state["scores"]) if score == high]
