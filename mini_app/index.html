@@ -369,17 +369,21 @@ function renderMiniGame(){
  scheduleMiniGamePoll();
 }
 function renderDotsBoard(shell,game,onMove=submitMiniGameAction){
- const state=game.state,root=shell.querySelector('#mg-board');root.className='mg-board';
- shell.querySelector('#mg-score').innerHTML='<span>🔴 '+game.player1_name+': '+state.scores[0]+'</span><span>🔵 '+game.player2_name+': '+state.scores[1]+'</span>';
- for(let r=0;r<9;r++)for(let c=0;c<9;c++){
+ const state=game.state,root=shell.querySelector('#mg-board'),size=Number(state.board_size||state.boxes.length||4),grid=size*2+1;
+ root.className='mg-board';root.style.gridTemplateColumns='repeat('+grid+',minmax(0,1fr))';root.style.gridTemplateRows='repeat('+grid+',minmax(0,1fr))';
+ const names=game.player_names||[game.player1_name,game.player2_name],scores=state.scores||[],colors=['🔴','🔵','🟢','🟡'],score=shell.querySelector('#mg-score');
+ if(game.team_mode==='teams'&&names.length===4){const a=(scores[0]||0)+(scores[2]||0),b=(scores[1]||0)+(scores[3]||0);score.textContent='🔴 فريق 1: '+a+'  |  🔵 فريق 2: '+b;}
+ else{score.textContent=names.map((name,i)=>colors[i]+' '+name+': '+(scores[i]||0)).join('  •  ');}
+ for(let r=0;r<grid;r++)for(let c=0;c<grid;c++){
   const cell=document.createElement('div');
   if(r%2===0&&c%2===0){cell.className='mg-dot';}
-  else if(r%2===0&&c%2===1){const rr=r/2,cc=(c-1)/2,on=state.h[rr][cc];const b=document.createElement('button');b.className='mg-edge horizontal'+(on?' on p'+on:'');b.disabled=!game.your_turn||on;b.onclick=()=>onMove({kind:'h',r:rr,c:cc});cell.appendChild(b);}
-  else if(r%2===1&&c%2===0){const rr=(r-1)/2,cc=c/2,on=state.v[rr][cc];const b=document.createElement('button');b.className='mg-edge vertical'+(on?' on p'+on:'');b.disabled=!game.your_turn||on;b.onclick=()=>onMove({kind:'v',r:rr,c:cc});cell.appendChild(b);}
+  else if(r%2===0&&c%2===1){const rr=r/2,cc=(c-1)/2,on=state.h[rr][cc],b=document.createElement('button');b.className='mg-edge horizontal'+(on?' on p'+on:'');b.disabled=!!game.spectator||!game.your_turn||!!on;b.onclick=()=>onMove({kind:'h',r:rr,c:cc});cell.appendChild(b);}
+  else if(r%2===1&&c%2===0){const rr=(r-1)/2,cc=c/2,on=state.v[rr][cc],b=document.createElement('button');b.className='mg-edge vertical'+(on?' on p'+on:'');b.disabled=!!game.spectator||!game.your_turn||!!on;b.onclick=()=>onMove({kind:'v',r:rr,c:cc});cell.appendChild(b);}
   else{const rr=(r-1)/2,cc=(c-1)/2,owner=state.boxes[rr][cc];cell.className='mg-box'+(owner?' p'+owner:'');}
   root.appendChild(cell);
  }
 }
+
 function renderMemoryBoard(shell,game){
  const state=game.state,root=shell.querySelector('#mg-board');root.className='mg-memory';
  shell.querySelector('#mg-score').innerHTML='<span>المستوى: '+state.level+'</span><span>التقدم: '+state.progress+'/'+state.level+'</span>';
