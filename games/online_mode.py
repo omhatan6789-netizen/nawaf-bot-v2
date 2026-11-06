@@ -143,7 +143,7 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
             InlineKeyboardButton("فتح غرفة اللعبة", url=room_url)
         ]])
         lobby_text = (
-            f"🎮 غرفة أونلاين — {title}\\n\\n"
+            f"🎮 غرفة أونلاين — {title}\n\n"
             "افتحوا الغرفة من الزر بالأسفل للانضمام وضبط الإعدادات وبدء اللعبة داخل الميني آب."
         )
         photo_file_id = await pool.fetchval(
@@ -730,7 +730,7 @@ async def withdraw_online_game(user_id: int, game_type: str, raw_game_id: str):
             )
             if not row:
                 raise ValueError("المباراة غير موجودة")
-            state = _decode_state(row["game_state"]) or {}
+            state = row["game_state"]\n            if isinstance(state, str):\n                state = json.loads(state)\n            state = state or {}
             ids = state.get("multi_player_ids") or [
                 int(row["player1_id"]), int(row["player2_id"])
             ]
