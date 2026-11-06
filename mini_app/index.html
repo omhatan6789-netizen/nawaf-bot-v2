@@ -321,14 +321,16 @@ async function withdrawOnlineGame(gameType,gameId,button){
    else{miniGame=data.result.game;renderMiniGame();}
   }catch(e){if(button){button.disabled=false;button.textContent='انسحاب';}const status=document.getElementById('c4-status');if(status)status.textContent=e.message;}
 }
-function showOnlineEndOverlay(gameType,gameId){
- clearOnlineEndOverlay();const overlay=document.createElement('div');overlay.className='online-end-overlay';
- const card=document.createElement('div');card.className='online-end-card';const heading=document.createElement('h2');heading.textContent='انتهت اللعبة 🏁';
- const message=document.createElement('p');message.textContent=gameType==='connect'?'انتهت المباراة. تقدر ترجع للقائمة الرئيسية.':'تقدر ترجع للقائمة الرئيسية.';
+function showOnlineEndOverlay(gameType,gameId,resultText){
+ clearOnlineEndOverlay();
+ const overlay=document.createElement('div');overlay.className='online-end-overlay';
+ const card=document.createElement('div');card.className='online-end-card';
+ const heading=document.createElement('h2');heading.textContent=resultText||'🏁 انتهت المباراة';
+ const message=document.createElement('p');message.textContent='انتهت اللعبة. وش ودك تسوي؟';
  const actions=document.createElement('div');actions.className='online-end-actions';
- const again=document.createElement('button');again.dataset.onlineRestart='1';again.textContent='↻ إعادة اللعب';again.onclick=()=>restartOnlineGame(gameType,gameId);
- const exit=document.createElement('button');exit.textContent='رجوع للقائمة الرئيسية';exit.onclick=()=>{clearOnlineEndOverlay();showHome();};
- actions.appendChild(exit);card.append(heading,message,actions);overlay.appendChild(card);document.body.appendChild(overlay);
+ const close=document.createElement('button');close.textContent='قفل الصفحة';close.onclick=()=>{if(tg&&typeof tg.close==='function')tg.close();else{try{window.close();}catch(e){}showHome();}};
+ const homeButton=document.createElement('button');homeButton.textContent='رجوع للقائمة الرئيسية';homeButton.onclick=()=>{clearOnlineEndOverlay();showHome();};
+ actions.append(close,homeButton);card.append(heading,message,actions);overlay.appendChild(card);document.body.appendChild(overlay);
 }
 async function miniGameRequest(path,payload={}){
  const initData=tg?.initData||'';
@@ -430,7 +432,7 @@ function renderMiniGame(){
  if(game.status!=='playing'){
   shell.querySelector('#mg-result').classList.add('show');
   shell.querySelector('#mg-result').textContent=game.status==='draw'?'🤝 تعادل!':'🏆 فاز '+(game.winner_name||'أحد اللاعبين')+'!';
-  shell.querySelector('#mg-status').textContent=game.spectator?'👁 انتهت اللعبة — وضع المشاهدة':'انتهت اللعبة';shell.querySelector('#mg-clock').textContent='—';if(onlineMode)scheduleMiniGamePoll();return;
+  shell.querySelector('#mg-status').textContent='';shell.querySelector('#mg-clock').textContent='—';if(onlineMode){showOnlineEndOverlay(game.game_type,game.id,game.status==='draw'?'🤝 انتهت المباراة بالتعادل':'🏆 فاز '+(game.winner_name||'أحد اللاعبين')+'!');scheduleMiniGamePoll();}return;
  }
  if(game.game_type==='dots'){
   renderDotsBoard(shell,game);
@@ -607,7 +609,7 @@ function renderConnect4(previousBoard=null){
  if(c4Game.status!=='playing'){
   const result=shell.querySelector('#c4-result');result.classList.add('show');
   result.textContent=c4Game.status==='draw'?'🤝 تعادل!':'🏆 فاز '+(c4Game.winner_name||'أحد اللاعبين')+'!';
-  shell.querySelector('#c4-status').textContent='انتهت المباراة';shell.querySelector('#c4-clock').textContent='—';shell.querySelector('#c4-progress').style.width='0%';if(onlineMode){if(!c4Game.spectator)showOnlineEndOverlay('connect',c4Game.id);pollConnect4State();}
+  shell.querySelector('#c4-status').textContent='';shell.querySelector('#c4-clock').textContent='—';shell.querySelector('#c4-progress').style.width='0%';if(onlineMode){showOnlineEndOverlay('connect',c4Game.id,c4Game.status==='draw'?'🤝 انتهت المباراة بالتعادل':'🏆 فاز '+(c4Game.winner_name||'أحد اللاعبين')+'!');pollConnect4State();}
  }else if(!myTurn){
   if(c4Game.spectator){shell.querySelector('#c4-status').textContent='👁 وضع المشاهدة — تابع اللعب مباشرة';shell.querySelector('#c4-clock').textContent='مباشر';pollConnect4State();}
   else {
