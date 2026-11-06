@@ -382,7 +382,7 @@ def build_application() -> Application:
     application.bot_data["settings"] = settings
     # Delete slash commands while allowing their normal handlers to execute in later groups.
     application.add_handler(InlineQueryHandler(online_games_inline_query), group=-100)
-    application.add_handler(CallbackQueryHandler(online_lobby_callback, pattern=r"^online_join:"))
+    application.add_handler(CallbackQueryHandler(online_lobby_callback, pattern=r"^online_(join|settings|config):"))
     application.add_handler(MessageHandler(
         filters.COMMAND,
         delete_slash_command_message,
