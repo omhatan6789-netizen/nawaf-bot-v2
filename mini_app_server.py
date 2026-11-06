@@ -145,6 +145,8 @@ def handle_connect4_post(handler):
         "/api/connect4/new", "/api/connect4/move",
         "/api/connect4/bot-move", "/api/connect4/state",
         "/api/connect4/challenge/state", "/api/connect4/challenge/choice",
+        "/api/minigames/challenge/state", "/api/minigames/challenge/choice",
+        "/api/minigames/action",
     ):
         return False
     try:
@@ -157,11 +159,35 @@ def handle_connect4_post(handler):
         from games.connect4_challenge import (
             get_connect4_challenge_state, choose_connect4_challenge_rps,
         )
+        from games.mini_games import (
+            get_mini_game_challenge_state, choose_mini_game_rps,
+            play_mini_game_action,
+        )
         if _bot is None:
             raise RuntimeError("البوت ما زال يستعد، حاول بعد قليل")
         user = verify_init_data(payload.get("initData", ""), _bot.token)
-        is_challenge_api = path.startswith("/api/connect4/challenge/")
-        if path == "/api/connect4/challenge/state":
+        is_challenge_api = path.startswith("/api/connect4/challenge/") or path.startswith("/api/minigames/")
+        if path == "/api/minigames/challenge/state":
+            result = _run(get_mini_game_challenge_state(
+                int(user["id"]), payload.get("challenge_id", "")
+            ))
+            body = json.dumps({"ok": True, "result": result}, ensure_ascii=False).encode()
+            handler.send_response(200)
+        elif path == "/api/minigames/challenge/choice":
+            result = _run(choose_mini_game_rps(
+                int(user["id"]), payload.get("challenge_id", ""),
+                payload.get("choice", ""),
+            ))
+            body = json.dumps({"ok": True, "result": result}, ensure_ascii=False).encode()
+            handler.send_response(200)
+        elif path == "/api/minigames/action":
+            result = _run(play_mini_game_action(
+                int(user["id"]), payload.get("challenge_id", ""),
+                payload.get("action") or {},
+            ))
+            body = json.dumps({"ok": True, "result": result}, ensure_ascii=False).encode()
+            handler.send_response(200)
+        elif path == "/api/connect4/challenge/state":
             result = _run(get_connect4_challenge_state(
                 int(user["id"]), payload.get("challenge_id", "")
             ))
