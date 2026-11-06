@@ -17,7 +17,7 @@ body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% 0%,#a20
 .menu button:first-child{grid-column:span 2}
 .custom{display:grid;gap:12px}.custom-card{position:relative;display:flex;align-items:center;gap:12px;padding:10px 13px;border:1px solid #171010;border-radius:16px;background:#fff;color:#171010;box-shadow:0 5px 0 #160608;min-height:74px;text-decoration:none;overflow:hidden}
 .custom-card .thumb{width:48px;height:48px;border-radius:50%;object-fit:cover;background:#eee;flex:none}.custom-card .label{font-weight:750;flex:1;text-align:center;font-size:15px;overflow-wrap:anywhere}.dots{font-size:22px;color:#777;line-height:1}
-.custom-card.large{display:block;padding:0 0 13px;text-align:center}.custom-card.large .large-image{width:100%;height:185px;object-fit:cover;display:block;background:#eee}.custom-card.large .label{display:block;padding:12px 12px 0;font-size:17px}
+.custom-card.large{display:block;padding:0 0 13px;text-align:center}.custom-card.large .large-image{width:100%;height:185px;object-fit:cover;display:block;background:#eee}.custom-card.large .label{display:block;padding:12px 12px 0;font-size:17px}.game-card{display:flex;flex-direction:column;align-items:stretch;gap:0;padding:0;min-height:0;text-align:center}.game-card .game-cover{display:block;width:100%;height:clamp(155px,48vw,230px);object-fit:cover;background:#eee}.game-card .game-cover-placeholder{display:flex;align-items:center;justify-content:center;width:100%;height:clamp(155px,48vw,230px);font-size:64px;background:linear-gradient(145deg,#f3eeee,#ded6d6)}.game-card .label{display:block;width:100%;padding:13px 12px 15px;font-size:18px;line-height:1.4;white-space:normal;overflow-wrap:normal;word-break:normal;flex:none}.game-card .dots{display:none}
 .empty{color:#ffffffbb;text-align:center;font-size:13px;padding:12px}.back-button{width:100%;margin-top:14px;border:1px solid #fff;border-radius:14px;background:#fff;color:#1a1111;min-height:52px;font-size:15px;font-weight:750;box-shadow:0 4px 0 #260609;cursor:pointer}#page-content .custom-card{min-height:58px}
 button{font-family:inherit}
 body.c4-active{padding:0;min-height:100dvh;overflow-x:hidden}
@@ -160,10 +160,16 @@ function showGames(){
   ['🔤','خمن الكلمة','تحدَّ حتى 10 لاعبين أو تدرب لحالك','word'],
  ];
  games.forEach(([emoji,name,hint,type])=>{
-  const card=document.createElement('button');card.className='custom-card';card.style.width='100%';card.style.cursor='pointer';
-  const icon=document.createElement('span');icon.style.fontSize='28px';icon.textContent=emoji;card.appendChild(icon);
+  const card=document.createElement('button');card.className='custom-card game-card';card.type='button';card.style.width='100%';card.style.cursor='pointer';
+  const imageUrl=onlineGameImages[type];
+  if(imageUrl){
+   const image=document.createElement('img');image.className='game-cover';image.src=imageUrl;image.alt=name;image.loading='lazy';
+   image.onerror=()=>{image.remove();const placeholder=document.createElement('div');placeholder.className='game-cover-placeholder';placeholder.textContent=emoji;card.insertBefore(placeholder,label);};
+   card.appendChild(image);
+  }else{
+   const placeholder=document.createElement('div');placeholder.className='game-cover-placeholder';placeholder.textContent=emoji;card.appendChild(placeholder);
+  }
   const label=document.createElement('span');label.className='label';label.textContent=name;card.appendChild(label);
-  const sub=document.createElement('span');sub.className='dots';sub.textContent=hint;card.appendChild(sub);
   card.onclick=()=>{if(type==='connect'){showConnect4Setup();return;}if(type==='word'){showWordSetup();return;}showMiniGameInstructions(type);};
   pageContent.appendChild(card);
  });
