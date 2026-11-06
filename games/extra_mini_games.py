@@ -18,7 +18,7 @@ def _decode(v):
     return json.loads(v) if isinstance(v,str) else (v or {})
 def _fold(text):
     s=unicodedata.normalize("NFKC",str(text or "")).strip().replace("ـ","")
-    s=s.translate(str.maketrans({"أ":"ا","إ":"ا","آ":"ا","ٱ":"ا","ى":"ي","ؤ":"و","ئ":"ي","ة":"ه"}))
+    s=s.translate(str.maketrans({"أ":"ا","إ":"ا","آ":"ا","ٱ":"ا","ى":"ي","ؤ":"و","ئ":"ي","ة":"ه","ة":"ه"}))
     return s
 def _letter_class(target, guess, i):
     if guess[i] == target[i]:
