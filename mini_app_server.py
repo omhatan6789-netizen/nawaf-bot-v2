@@ -308,6 +308,8 @@ def handle_connect4_post(handler):
                     result = _run(extra.battleship_join(uid, profile, payload.get("game_id","")))
                 elif action == "move":
                     result = _run(extra.battleship_move(uid, payload.get("game_id",""), payload.get("row"), payload.get("col")))
+                elif action == "shuffle":
+                    result = _run(extra.battleship_shuffle(uid, payload.get("game_id","")))
                 else:
                     result = _run(extra.battleship_state(uid, payload.get("game_id","")))
             else:
