@@ -621,12 +621,14 @@ async def restart_online_game(user_id: int, game_type: str, raw_game_id: str):
                     "team_mode": old_state.get("team_mode", "individual"),
                     "board_size": size,
                     "turn_index": ids.index(starter),
+                    "online_free": True,
                 }
             else:
                 state = {
                     "sequence": [random.randrange(4) for _ in range(3)],
                     "level": 3, "progress": 0, "round_successes": [],
                     "starter_id": starter,
+                    "online_free": True,
                 }
             await conn.execute(
                 """UPDATE mini_game_challenges SET status='playing',winner_id=NULL,
