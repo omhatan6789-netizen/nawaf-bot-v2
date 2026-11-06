@@ -234,7 +234,7 @@ async def battleship_move(user_id,raw_id,r,c):
           winner=ids[player]
           await conn.execute("UPDATE battleship_games SET state=$2::jsonb,status='won',winner_id=$3,updated_at=NOW() WHERE id=$1",gid,json.dumps(s),winner)
         else:
-          s["turn"]=player if hit else 1-player
+          s["turn"]=1-player
           await conn.execute("UPDATE battleship_games SET state=$2::jsonb,turn_player_id=$3,updated_at=NOW() WHERE id=$1",gid,json.dumps(s),ids[s["turn"]])
     if row["mode"]=="bot":
       await battleship_bot_turn(gid)
@@ -265,6 +265,6 @@ async def battleship_bot_turn(gid):
         if sum(1 for x in shots if any(x in ship for ship in s["ships"][0]))>=total:
           await c.execute("UPDATE battleship_games SET state=$2::jsonb,status='lost',winner_id=player1_id,updated_at=NOW() WHERE id=$1",gid,json.dumps(s))
           return
-        s["turn"]=1 if hit else 0
-        await c.execute("UPDATE battleship_games SET state=$2::jsonb,turn_player_id=CASE WHEN $3=0 THEN player1_id ELSE -1 END,updated_at=NOW() WHERE id=$1",gid,json.dumps(s),s["turn"])
-        if not hit:return
+        s["turn"]=0
+        await c.execute("UPDATE battleship_games SET state=$2::jsonb,turn_player_id=player1_id,updated_at=NOW() WHERE id=$1",gid,json.dumps(s))
+        return
