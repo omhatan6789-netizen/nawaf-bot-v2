@@ -552,7 +552,8 @@ async def online_lobby_api(user_id: int, action: str, raw_lobby_id: str, setting
         "team_mode": lobby["team_mode"], "players": player_rows,
         "is_creator": user_id == int(lobby["creator_id"]),
         "is_joined": user_id in [p["id"] for p in player_rows],
-        "game_id": lobby["game_id"].hex if lobby["game_id"] else None,\n        "image_url": ("/tg-file/" + photo_file_id) if photo_file_id else None,
+        "game_id": lobby["game_id"].hex if lobby["game_id"] else None,
+        "image_url": ("/tg-file/" + photo_file_id) if photo_file_id else None,
     }
 
 
