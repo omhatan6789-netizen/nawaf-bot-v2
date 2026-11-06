@@ -704,7 +704,7 @@ function renderWordGame(){
  const input=shell.querySelector('#word-guess'),submit=shell.querySelector('#word-submit');
  if(training&&g.current_word){shell.querySelector('#word-round-label').textContent='الكلمة '+(g.current_index+1)+' من '+g.total+' · '+g.my_score+'/'+g.win_target+' للفوز';}
  if(finished){
-  submit.remove();input.remove();
+  if(extraPoll)clearTimeout(extraPoll);extraPoll=null;submit.remove();input.remove();
   const elapsed=Math.max(0,Math.floor((Date.now()-(g.started_at||extraStartedAt))/1000)),time=elapsed>=3600?Math.floor(elapsed/3600)+' ساعة '+Math.floor(elapsed%3600/60)+' دقيقة '+elapsed%60+' ثانية':elapsed>=60?Math.floor(elapsed/60)+' دقيقة '+elapsed%60+' ثانية':elapsed+' ثانية';
   shell.querySelector('#word-message').textContent='🏆 مبروك! '+(g.winner||'انتهت اللعبة')+' · '+g.my_score+' كلمة صحيحة';
   shell.querySelector('#word-clock').textContent=training?'أنهيت التدريب خلال '+time:'';
@@ -774,7 +774,7 @@ async function renderBattleship(){
  const ob=document.createElement('div');ob.style.cssText='aspect-ratio:1;border:1px solid #ffffff35;border-radius:4px;background:'+(own.has([r,c])?'#64748b':'#175b91');if(enemyShots.has(key))ob.style.background=enemyHits.has(key)?'#e53935':'#64748b';ownBoard.appendChild(ob);}
  shell.querySelector('#battle-status').textContent=g.status==='waiting'?'بانتظار انضمام اللاعب':g.status==='won'||g.status==='lost'?'انتهت المعركة':g.your_turn?'اختر موقعًا للهجوم':'انتظر دور الخصم';
  shell.querySelector('#battle-share').onclick=()=>shareExtraGame('battleship',g.id);shell.querySelector('#battle-back').onclick=()=>{stopExtraGame();showGames();};
- if(g.status==='won'||g.status==='lost'){showOnlineEndOverlay('battleship',g.id,'🏆 '+(g.winner_name||'انتهت المعركة'));return;}
+ if(g.status==='won'||g.status==='lost'){if(extraPoll)clearTimeout(extraPoll);extraPoll=null;showOnlineEndOverlay('battleship',g.id,'🏆 '+(g.winner_name||'انتهت المعركة'));return;}
  scheduleExtraPoll();
 }
 async function battleShot(r,c){try{extraGame=await extraGameRequest('move','battleship',{row:r,col:c});renderBattleship();}catch(e){showExtraError(e);}}
