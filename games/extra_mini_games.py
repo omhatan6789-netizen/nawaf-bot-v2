@@ -35,7 +35,23 @@ def _letter_class(target, guess, i):
 def word_feedback(target, guess):
     if len(guess) != len(target):
         return None
-    return [_letter_class(target,guess,i) for i in range(len(target))]
+    tf,gf=_fold(target),_fold(guess)
+    result=[None]*len(target)
+    remaining=list(tf)
+    for i in range(len(target)):
+        if gf[i]==tf[i]:
+            result[i]="green" if guess[i]==target[i] else "green_purple"
+            remaining[i]=None
+    for i in range(len(target)):
+        if result[i] is not None: continue
+        try:
+            pos=remaining.index(gf[i])
+        except ValueError:
+            result[i]="white"
+            continue
+        result[i]="orange" if guess[i]==target[pos] else "yellow_purple"
+        remaining[pos]=None
+    return result
 def _new_words(count):
     pool=WORDS[:]
     random.shuffle(pool)
@@ -152,11 +168,11 @@ def _battle_public(row,user_id):
     me=ids.index(int(user_id)) if int(user_id) in ids else -1
     return {"id":str(row["id"]),"mode":row["mode"],"status":row["status"],"difficulty":row["difficulty"],
       "player_names":[row["player1_name"],row["player2_name"]],"your_player":me+1 if me>=0 else 0,
-      "your_turn":me>=0 and s.get("turn")==me,"spectator":me<0,"state":s if me<0 else {
+      "your_turn":me>=0 and s.get("turn")==me,"spectator":me<0,"state":({"spectator":True,"ships":s["ships"],"shots":s["shots"],"last_shot":s.get("last_shot"),"turn":s.get("turn")} if me<0 else {
        "own_ships":s["ships"][me],"own_shots":s["shots"][me],"enemy_shots":s["shots"][1-me],
        "enemy_hits":[x for x in s["shots"][1-me] if any(x in ship for ship in s["ships"][me])],
        "your_hits":[x for x in s["shots"][me] if any(x in ship for ship in s["ships"][1-me])],
-       "last_shot":s.get("last_shot"),"turn":s.get("turn")},
+       "last_shot":s.get("last_shot"),"turn":s.get("turn")}),
       "winner_id":row["winner_id"],"winner_name":row["player1_name"] if row["winner_id"]==row["player1_id"] else row["player2_name"] if row["winner_id"] else None}
 async def battleship_create(user_id,name,mode="online",difficulty="متوسط"):
     if mode not in ("online","bot"): raise ValueError("طور اللعبة غير صالح")
