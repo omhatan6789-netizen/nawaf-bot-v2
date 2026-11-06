@@ -227,7 +227,7 @@ async def battleship_move(user_id,raw_id,r,c):
         ids=[int(row["player1_id"]),int(row["player2_id"] or 0)]
         if int(user_id) not in ids: raise ValueError("أنت متفرج")
         player=ids.index(int(user_id)); s=_decode(row["state"])
-        if int(row["player2_id"] or 0)==-1 and player==0 or s["turn"]!=player: raise ValueError("ليس دورك")
+        if s["turn"]!=player: raise ValueError("ليس دورك")
         hit,sunk=_shot(s,player,int(r),int(c))
         total=sum(len(ship) for ship in s["ships"][1-player])
         if sum(1 for cell in s["shots"][player] if any(cell in ship for ship in s["ships"][1-player]))>=total:
