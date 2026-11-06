@@ -104,7 +104,7 @@ async def word_create(user_id, name, mode="online", word_count=5, win_target=Non
          attempts_limit,word_length,round_seconds,started_at,round_deadline)
         VALUES($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9::jsonb,$10,$11,$12,
           CASE WHEN $4='playing' THEN NOW() ELSE NULL END,
-          CASE WHEN $4='playing' THEN NOW()+($12 * INTERVAL '1 second') ELSE NULL END)
+          CASE WHEN $4='playing' THEN NOW()+($12::integer * INTERVAL '1 second') ELSE NULL END)
         RETURNING *""",
         gid, int(user_id), mode, status, 1 if mode == "training" else 10,
         word_count, target, json.dumps(words, ensure_ascii=False),
