@@ -295,6 +295,10 @@ async def get_connect4_challenge_state(user_id: int, raw_challenge_id: str):
         starter_id = int(game_row["turn_player_id"] or game_row["user_id"])
         state["challenge_starter_id"] = starter_id
         state["challenge_rps_result"] = row.get("rps_result")
+        state["challenge_starter_name"] = (
+            row["challenger_name"] if row.get("rps_result") == "challenger_starts"
+            else row["opponent_name"]
+        )
         return {"phase": "playing", "game": state}
     if row["status"] != "choosing":
         raise ValueError("هذا التحدي لم يعد متاحًا")
@@ -386,4 +390,5 @@ async def choose_connect4_challenge_rps(user_id: int, raw_challenge_id: str, cho
             state = public_state(game_row, user_id)
             state["challenge_starter_id"] = starter_id
             state["challenge_rps_result"] = "challenger_starts" if winner == 1 else "opponent_starts"
+            state["challenge_starter_name"] = row["challenger_name"] if winner == 1 else row["opponent_name"]
             return {"phase": "playing", "game": state}
