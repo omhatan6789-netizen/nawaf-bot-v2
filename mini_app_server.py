@@ -250,7 +250,7 @@ def handle_connect4_post(handler):
         "/api/minigames/action", "/api/minigames/solo/new",
         "/api/minigames/solo/state", "/api/minigames/solo/action",
         "/api/minigames/solo/bot-move",
-        "/api/online/restart", "/api/online/spectate", "/api/online/lobby",
+        "/api/online/restart", "/api/online/spectate", "/api/online/lobby", "/api/online/withdraw",
     ):
         return False
     try:
@@ -269,16 +269,22 @@ def handle_connect4_post(handler):
             get_mini_game_solo_state, play_mini_game_solo_action,
             play_mini_game_solo_bot_move,
         )
-        from games.online_mode import restart_online_game, get_online_spectator_state, online_lobby_api
+        from games.online_mode import restart_online_game, get_online_spectator_state, online_lobby_api, withdraw_online_game
         if _bot is None:
             raise RuntimeError("البوت ما زال يستعد، حاول بعد قليل")
         user = verify_init_data(payload.get("initData", ""), _bot.token)
         is_challenge_api = path.startswith("/api/connect4/challenge/") or path.startswith("/api/minigames/")
-        is_online_api = path in ("/api/online/restart", "/api/online/spectate", "/api/online/lobby")
+        is_online_api = path in ("/api/online/restart", "/api/online/spectate", "/api/online/lobby", "/api/online/withdraw")
         if path == "/api/online/lobby":
             result = _run(online_lobby_api(
                 int(user["id"]), payload.get("action", "state"),
                 payload.get("lobby_id", ""), payload.get("settings") or {},
+            ))
+            body = json.dumps({"ok": True, "result": result}, ensure_ascii=False).encode()
+            handler.send_response(200)
+        elif path == "/api/online/withdraw":
+            result = _run(withdraw_online_game(
+                int(user["id"]), payload.get("game_type", ""), payload.get("game_id", "")
             ))
             body = json.dumps({"ok": True, "result": result}, ensure_ascii=False).encode()
             handler.send_response(200)
