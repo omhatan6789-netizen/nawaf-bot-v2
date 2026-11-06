@@ -738,7 +738,22 @@ function showWordReveal(name,word,done,guess='',feedback=[]){
 async function advanceWord(){if(extraAdvancing)return;extraAdvancing=true;try{extraGame=await extraGameRequest('next','word');renderWordGame();}catch(e){showExtraError(e);}finally{extraAdvancing=false;}}
 function scheduleExtraPoll(){
  if(extraPoll)clearTimeout(extraPoll);
- extraPoll=setTimeout(async()=>{try{if(extraGameType==='word'){extraGame=await extraGameRequest('state','word');if(extraGame.status==='waiting')renderWordLobby();else if(extraGame.status==='playing'&&extraGame.round_until&&Date.now()>=extraGame.round_until&&(extraGame.players||[]).some(p=>Number(p.id)===Number(tg?.initDataUnsafe?.user?.id))){await advanceWord();}else renderWordGame();}else if(extraGameType==='battleship'){extraGame=await extraGameRequest('state','battleship');renderBattleship();}}catch(e){}scheduleExtraPoll();},1800);
+ extraPoll=setTimeout(async()=>{
+  try{
+   if(extraGameType==='word'){
+    extraGame=await extraGameRequest('state','word');
+    if(extraGame.status==='finished'){renderWordGame();extraPoll=null;return;}
+    if(extraGame.status==='waiting')renderWordLobby();
+    else if(extraGame.status==='playing'&&extraGame.round_until&&Date.now()>=extraGame.round_until&&(extraGame.players||[]).some(p=>Number(p.id)===Number(tg?.initDataUnsafe?.user?.id))){await advanceWord();}
+    else renderWordGame();
+   }else if(extraGameType==='battleship'){
+    extraGame=await extraGameRequest('state','battleship');
+    if(extraGame.status==='won'||extraGame.status==='lost'){renderBattleship();extraPoll=null;return;}
+    renderBattleship();
+   }
+  }catch(e){}
+  scheduleExtraPoll();
+ },1800);
 }
 function showExtraError(error){const shell=document.getElementById('c4-shell');if(shell){let el=shell.querySelector('.c4-error');if(!el){el=document.createElement('div');el.className='c4-error';shell.appendChild(el);}el.textContent=error?.message||'حدث خطأ';}}
 function showBattleshipSetup(){
