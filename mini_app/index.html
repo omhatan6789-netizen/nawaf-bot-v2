@@ -404,7 +404,7 @@ function renderConnect4(previousBoard=null){
  }
  if(c4Game.status!=='playing'){
   const result=shell.querySelector('#c4-result');result.classList.add('show');
-  result.textContent=c4Game.status==='draw'?'🤝 تعادل! تم إرجاع الرهانات':(!human&&c4Game.status==='won'?'🏆 فزت! لعب ممتاز!':'🏆 فاز '+(c4Game.winner_name||p2)+'!');
+  result.textContent=c4Game.status==='draw'?'🤝 تعادل! تم إرجاع الرهانات':c4Game.status==='won'?'🏆 فزت! لعب ممتاز!':'🏆 فاز '+(c4Game.winner_name||p2)+'!';
   shell.querySelector('#c4-status').textContent='انتهت المباراة';shell.querySelector('#c4-clock').textContent='—';shell.querySelector('#c4-progress').style.width='0%';
  }else if(!myTurn){
   const rpsLine=human&&c4Game.challenge_starter_name
