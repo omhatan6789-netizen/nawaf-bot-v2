@@ -146,22 +146,19 @@ async def connect4_challenge_callback(update: Update, context: ContextTypes.DEFA
             )
             await query.answer("تم قبول التحدي من قبل.", show_alert=True)
             return
-        rps_message = await query.message.reply_text(
-            "✊ حجر ورقة مقص\n\n"
-            f"• {row['challenger_name']}\n"
-            f"• {row['opponent_name']}\n\n"
-            "اختاروا حركة لتحديد من يبدأ اللعب.",
-            reply_markup=_rps_keyboard(challenge_id.hex),
-        )
-        await pool.execute(
-            "UPDATE connect4_challenges SET rps_message_id=$2 WHERE id=$1",
-            challenge_id, rps_message.message_id,
-        )
+        me = await context.bot.get_me()
+        mini_app_url = f"https://t.me/{me.username}?startapp=c4c_{challenge_id.hex}"
+        keyboard = InlineKeyboardMarkup([[
+            InlineKeyboardButton("🎮 فتح الميني آب — حجر ورقة مقص", url=mini_app_url)
+        ]])
         await query.edit_message_text(
-            "تم قبول تحدي كونكت 4 وحُجز الرهان.\n\nبانتظار اختيار حجر ورقة مقص من اللاعبين.",
-            reply_markup=None,
+            "✅ تم قبول تحدي كونكت 4 وحُجز الرهان.\n\n"
+            f"اللاعبين: {row['challenger_name']} × {row['opponent_name']}\n"
+            "افتحوا الميني آب من الزر بالأسفل، واختاروا حجر ورقة مقص داخله لتحديد من يبدأ.\n\n"
+            "بعدها تبدأ مباراة كونكت 4 مباشرة.",
+            reply_markup=keyboard,
         )
-        await query.answer("تم قبول التحدي وحُجز الرهان.")
+        await query.answer("تم قبول التحدي! افتحوا الميني آب.")
         return
 
     if action == "c4x":
@@ -271,3 +268,122 @@ async def connect4_challenge_callback(update: Update, context: ContextTypes.DEFA
             reply_markup=keyboard,
         )
         return
+
+
+
+async def get_connect4_challenge_state(user_id: int, raw_challenge_id: str):
+    try:
+        challenge_id = uuid.UUID(hex=raw_challenge_id.replace("-", ""))
+    except Exception:
+        raise ValueError("رابط التحدي غير صالح")
+    pool = get_pool()
+    row = await pool.fetchrow(
+        """SELECT * FROM connect4_challenges
+           WHERE id=$1 AND (challenger_id=$2 OR opponent_id=$2)""",
+        challenge_id, user_id,
+    )
+    if not row:
+        raise ValueError("هذا التحدي ليس لك أو لم يعد موجودًا")
+    if row["status"] == "playing" and row["game_id"]:
+        game_row = await pool.fetchrow(
+            "SELECT * FROM connect4_games WHERE id=$1", row["game_id"]
+        )
+        if not game_row:
+            raise ValueError("تعذر العثور على المباراة")
+        from games.connect4 import public_state
+        state = public_state(game_row, user_id)
+        starter_id = int(game_row["turn_player_id"] or game_row["user_id"])
+        state["challenge_starter_id"] = starter_id
+        state["challenge_rps_result"] = row.get("rps_result")
+        return {"phase": "playing", "game": state}
+    if row["status"] != "choosing":
+        raise ValueError("هذا التحدي لم يعد متاحًا")
+    is_challenger = int(user_id) == int(row["challenger_id"])
+    own_choice = row["challenger_choice"] if is_challenger else row["opponent_choice"]
+    other_choice = row["opponent_choice"] if is_challenger else row["challenger_choice"]
+    return {
+        "phase": "choosing",
+        "challenger_name": row["challenger_name"],
+        "opponent_name": row["opponent_name"],
+        "my_choice": own_choice,
+        "opponent_chosen": bool(other_choice),
+        "tie": row.get("rps_result") == "tie",
+        "wager": int(row["wager"]),
+    }
+
+
+async def choose_connect4_challenge_rps(user_id: int, raw_challenge_id: str, choice: str):
+    if choice not in ("r", "p", "s"):
+        raise ValueError("اختر حجر أو ورقة أو مقص")
+    try:
+        challenge_id = uuid.UUID(hex=raw_challenge_id.replace("-", ""))
+    except Exception:
+        raise ValueError("رابط التحدي غير صالح")
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            row = await conn.fetchrow(
+                """SELECT * FROM connect4_challenges
+                   WHERE id=$1 AND (challenger_id=$2 OR opponent_id=$2)
+                   FOR UPDATE""",
+                challenge_id, user_id,
+            )
+            if not row:
+                raise ValueError("هذا التحدي ليس لك أو لم يعد موجودًا")
+            if row["status"] == "playing" and row["game_id"]:
+                game_row = await conn.fetchrow(
+                    "SELECT * FROM connect4_games WHERE id=$1", row["game_id"]
+                )
+                from games.connect4 import public_state
+                return {"phase": "playing", "game": public_state(game_row, user_id)}
+            if row["status"] != "choosing":
+                raise ValueError("هذا التحدي لم يعد متاحًا")
+
+            is_challenger = int(user_id) == int(row["challenger_id"])
+            column = "challenger_choice" if is_challenger else "opponent_choice"
+            if row[column]:
+                raise ValueError("سجلت اختيارك بالفعل، انتظر اللاعب الآخر")
+            row = await conn.fetchrow(
+                f"""UPDATE connect4_challenges SET {column}=$2,rps_result=NULL,
+                    updated_at=NOW() WHERE id=$1 RETURNING *""",
+                challenge_id, choice,
+            )
+            if not row["challenger_choice"] or not row["opponent_choice"]:
+                return {"phase": "choosing", "my_choice": choice, "opponent_chosen": False}
+
+            winner = _rps_winner(row["challenger_choice"], row["opponent_choice"])
+            if winner == 0:
+                await conn.execute(
+                    """UPDATE connect4_challenges SET challenger_choice=NULL,
+                       opponent_choice=NULL,rps_result='tie',updated_at=NOW()
+                       WHERE id=$1""",
+                    challenge_id,
+                )
+                return {"phase": "choosing", "tie": True, "my_choice": None,
+                        "opponent_chosen": False}
+
+            starter_id = int(row["challenger_id"] if winner == 1 else row["opponent_id"])
+            game_id = uuid.uuid4()
+            from games.connect4 import ROWS, COLS, public_state
+            import json
+            board = [[0 for _ in range(COLS)] for _ in range(ROWS)]
+            game_row = await conn.fetchrow(
+                """INSERT INTO connect4_games
+                   (id,user_id,player2_id,difficulty,board,game_mode,chat_id,
+                    player1_name,player2_name,turn_player_id,wager)
+                   VALUES($1,$2,$3,'متوسط',$4::jsonb,'human',$5,$6,$7,$8,$9)
+                   RETURNING *""",
+                game_id, int(row["challenger_id"]), int(row["opponent_id"]),
+                json.dumps(board), int(row["chat_id"]), row["challenger_name"],
+                row["opponent_name"], starter_id, int(row["wager"]),
+            )
+            await conn.execute(
+                """UPDATE connect4_challenges SET status='playing',game_id=$2,
+                   rps_result=$3,updated_at=NOW() WHERE id=$1""",
+                challenge_id, game_id,
+                "challenger_starts" if winner == 1 else "opponent_starts",
+            )
+            state = public_state(game_row, user_id)
+            state["challenge_starter_id"] = starter_id
+            state["challenge_rps_result"] = "challenger_starts" if winner == 1 else "opponent_starts"
+            return {"phase": "playing", "game": state}
