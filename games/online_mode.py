@@ -5,7 +5,7 @@ import random
 import uuid
 
 from telegram import (
-    InlineKeyboardButton, InlineKeyboardMarkup, InlineQueryResultArticle,
+    InlineKeyboardButton, InlineKeyboardMarkup, InlineQueryResultArticle, InlineQueryResultCachedPhoto,
     InputTextMessageContent, Update,
 )
 from telegram.ext import ContextTypes
@@ -40,6 +40,69 @@ def _lobby_text(game_type: str, count: int, mode: str, joined_players=None) -> s
         + f"\n\nالطور: {mode_label}\n"
         + "اضغطوا «انضمام» حتى يكتمل عدد اللاعبين."
     )
+
+
+
+OWNER_ID = 8453977662
+
+
+async def online_image_add_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    message = update.effective_message
+    if not user or not message:
+        return
+    if int(user.id) != OWNER_ID:
+        await message.reply_text("هذا الأمر للمالك فقط.")
+        return
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("كونكت 4 🔴", callback_data="online_image:connect")],
+        [InlineKeyboardButton("المربعات 🟦", callback_data="online_image:dots")],
+        [InlineKeyboardButton("اختبر ذاكرتك 🧠", callback_data="online_image:memory")],
+    ])
+    await message.reply_text("اختر اللعبة التي تريد إضافة صورتها، وبعدها أرسل الصورة:", reply_markup=keyboard)
+
+
+async def online_image_select(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    if not query or not query.data:
+        return
+    if int(query.from_user.id) != OWNER_ID:
+        await query.answer("هذا الخيار للمالك فقط.", show_alert=True)
+        return
+    game_type = query.data.split(":", 1)[1]
+    if game_type not in GAME_INFO:
+        await query.answer("اللعبة غير معروفة.", show_alert=True)
+        return
+    context.user_data["online_image_pending_game"] = game_type
+    await query.answer()
+    await query.edit_message_text(
+        f"أرسل الآن صورة لعبة {GAME_INFO[game_type][0]} في هذه المحادثة."
+    )
+
+
+async def online_image_receive(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    message = update.effective_message
+    game_type = context.user_data.get("online_image_pending_game")
+    if not user or not message or not game_type:
+        return
+    if int(user.id) != OWNER_ID:
+        return
+    if not message.photo:
+        await message.reply_text("أرسل صورة عادية للعبة.")
+        return
+    file_id = message.photo[-1].file_id
+    await get_pool().execute(
+        """INSERT INTO online_game_images(game_type, photo_file_id, updated_by)
+           VALUES($1,$2,$3)
+           ON CONFLICT(game_type) DO UPDATE SET
+             photo_file_id=EXCLUDED.photo_file_id,
+             updated_by=EXCLUDED.updated_by,
+             updated_at=NOW()""",
+        game_type, file_id, int(user.id),
+    )
+    context.user_data.pop("online_image_pending_game", None)
+    await message.reply_text(f"تم حفظ صورة {GAME_INFO[game_type][0]} ✅")
 
 
 def _select_games(query: str):
@@ -79,26 +142,48 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
              if game_type == "dots" else [])
             + [[InlineKeyboardButton("انضمام 👥", callback_data=f"online_join:{lobby_id.hex}")]]
         )
-        results.append(InlineQueryResultArticle(
-            id=lobby_id.hex,
-            title=title,
-            description=description,
-            input_message_content=InputTextMessageContent(
-                _lobby_text(game_type, 2, "individual")
-            ),
-            reply_markup=keyboard,
-        ))
+        lobby_text = _lobby_text(game_type, 2, "individual")
+        photo_file_id = await pool.fetchval(
+            "SELECT photo_file_id FROM online_game_images WHERE game_type=$1",
+            game_type,
+        )
+        if photo_file_id:
+            results.append(InlineQueryResultCachedPhoto(
+                id=lobby_id.hex,
+                photo_file_id=photo_file_id,
+                title=title,
+                description=description,
+                caption=lobby_text,
+                reply_markup=keyboard,
+            ))
+        else:
+            results.append(InlineQueryResultArticle(
+                id=lobby_id.hex,
+                title=title,
+                description=description,
+                input_message_content=InputTextMessageContent(lobby_text),
+                reply_markup=keyboard,
+            ))
     await inline.answer(results, cache_time=0, is_personal=True)
 
 
 async def _edit_lobby_message(query, context, text, keyboard):
     if query.inline_message_id:
-        await context.bot.edit_message_text(
-            text=text, inline_message_id=query.inline_message_id,
-            reply_markup=keyboard,
-        )
+        try:
+            await context.bot.edit_message_caption(
+                caption=text, inline_message_id=query.inline_message_id,
+                reply_markup=keyboard,
+            )
+        except Exception:
+            await context.bot.edit_message_text(
+                text=text, inline_message_id=query.inline_message_id,
+                reply_markup=keyboard,
+            )
     elif query.message:
-        await query.edit_message_text(text, reply_markup=keyboard)
+        if query.message.photo:
+            await query.edit_message_caption(caption=text, reply_markup=keyboard)
+        else:
+            await query.edit_message_text(text, reply_markup=keyboard)
 
 
 async def online_lobby_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
