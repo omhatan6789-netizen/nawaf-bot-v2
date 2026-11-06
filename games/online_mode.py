@@ -363,7 +363,7 @@ async def online_lobby_callback(update: Update, context: ContextTypes.DEFAULT_TY
                            (id,game_type,chat_id,player1_id,player1_name,player2_id,player2_name,
                             player3_id,player3_name,player4_id,player4_name,
                             wager,status,turn_player_id,game_state,wager_settled)
-                           VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,0,'playing',$4,$12::jsonb,TRUE)""",
+                           VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,1,'playing',$4,$12::jsonb,TRUE)""",
                         game_id, game_type, chat_id, int(lobby["creator_id"]),
                         player1_name, int(lobby["player2_id"]), player2_name,
                         int(lobby["player3_id"]) if lobby["player3_id"] else None, lobby["player3_name"],
@@ -522,7 +522,7 @@ async def online_lobby_api(user_id: int, action: str, raw_lobby_id: str, setting
                            (id,game_type,chat_id,player1_id,player1_name,player2_id,player2_name,
                             player3_id,player3_name,player4_id,player4_name,
                             wager,status,turn_player_id,game_state,wager_settled)
-                           VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,0,'playing',$4,$12::jsonb,TRUE)""",
+                           VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,1,'playing',$4,$12::jsonb,TRUE)""",
                         game_id, lobby["game_type"], lobby["chat_id"] or 0,
                         int(ids[0]), names[0], int(ids[1]), names[1],
                         int(ids[2]) if count >= 3 else None, names[2] if count >= 3 else None,
@@ -628,7 +628,7 @@ async def restart_online_game(user_id: int, game_type: str, raw_game_id: str):
                 """UPDATE mini_game_challenges SET status='playing',winner_id=NULL,
                    turn_player_id=$2,turn_started_at=NOW(),game_state=$3::jsonb,
                    player1_choice=NULL,player2_choice=NULL,rps_result=NULL,
-                   wager=0,wager_settled=TRUE,updated_at=NOW() WHERE id=$1""",
+                   wager=1,wager_settled=TRUE,updated_at=NOW() WHERE id=$1""",
                 game_id, starter, json.dumps(state),
             )
     from games.mini_games import get_mini_game_challenge_state
