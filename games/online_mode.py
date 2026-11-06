@@ -84,8 +84,9 @@ async def online_lobby_callback(update: Update, context: ContextTypes.DEFAULT_TY
     query = update.callback_query
     if not query or not query.data:
         return
+    action = query.data.split(":", 1)[0]
     try:
-        lobby_id = uuid.UUID(hex=query.data.split(":", 1)[1])
+        lobby_id = uuid.UUID(hex=query.data.split(":")[1])
     except (ValueError, IndexError):
         await query.answer("تعذر قراءة غرفة اللعب.", show_alert=True)
         return
@@ -141,32 +142,28 @@ async def online_lobby_callback(update: Update, context: ContextTypes.DEFAULT_TY
                 await query.answer("الغرفة لم تعد متاحة.", show_alert=True)
                 return
 
-            player1_name = lobby["creator_name"]
-            player2_name = lobby["player2_name"]
-            if int(lobby["creator_id"]) == int(user.id):
-                if lobby["creator_joined"]:
-                    await query.answer("أنت منضم بالفعل.", show_alert=True)
+            ids = [lobby["creator_id"], lobby["player2_id"], lobby["player3_id"], lobby["player4_id"]]
+            joined_ids = [int(x) for x in ids if x is not None]
+            if int(user.id) in joined_ids:
+                await query.answer("أنت منضم بالفعل.", show_alert=True)
+                return
+            if int(user.id) == int(lobby["creator_id"]):
+                slot = 0
+            else:
+                slot = next((i for i in range(1, int(lobby["player_count"])) if ids[i] is None), -1)
+                if slot < 0:
+                    await query.answer("اكتمل عدد اللاعبين.", show_alert=True)
                     return
+            if slot == 0:
                 await conn.execute(
-                    """UPDATE online_game_lobbies
-                       SET creator_joined=TRUE,chat_id=COALESCE($2,chat_id),updated_at=NOW()
-                       WHERE id=$1""",
+                    "UPDATE online_game_lobbies SET creator_joined=TRUE,chat_id=COALESCE($2,chat_id),updated_at=NOW() WHERE id=$1",
                     lobby_id, chat_id,
                 )
             else:
-                if lobby["player2_id"]:
-                    if int(lobby["player2_id"]) == int(user.id):
-                        await query.answer("أنت منضم بالفعل.", show_alert=True)
-                    else:
-                        await query.answer("اكتمل عدد اللاعبين.", show_alert=True)
-                    return
-                player2_name = user.full_name or user.first_name or "اللاعب الثاني"
+                id_col, name_col = f"player{slot+1}_id", f"player{slot+1}_name"
                 await conn.execute(
-                    """UPDATE online_game_lobbies
-                       SET player2_id=$2,player2_name=$3,
-                           chat_id=COALESCE($4,chat_id),updated_at=NOW()
-                       WHERE id=$1""",
-                    lobby_id, user.id, player2_name, chat_id,
+                    f"UPDATE online_game_lobbies SET {id_col}=$2,{name_col}=$3,chat_id=COALESCE($4,chat_id),updated_at=NOW() WHERE id=$1",
+                    lobby_id, user.id, user.full_name or user.first_name or f"اللاعب {slot+1}", chat_id,
                 )
 
             lobby = await conn.fetchrow(
@@ -175,18 +172,26 @@ async def online_lobby_callback(update: Update, context: ContextTypes.DEFAULT_TY
             )
             player1_name = lobby["creator_name"]
             player2_name = lobby["player2_name"]
-            joined_count = int(bool(lobby["creator_joined"])) + int(bool(lobby["player2_id"]))
-            if joined_count < 2:
+            players = [
+                (lobby["creator_id"], lobby["creator_name"], bool(lobby["creator_joined"])),
+                (lobby["player2_id"], lobby["player2_name"], bool(lobby["player2_id"])),
+                (lobby["player3_id"], lobby["player3_name"], bool(lobby["player3_id"])),
+                (lobby["player4_id"], lobby["player4_name"], bool(lobby["player4_id"])),
+            ][:int(lobby["player_count"])]
+            joined_count = sum(1 for pid, name, joined in players if pid is not None and joined)
+            if joined_count < int(lobby["player_count"]):
+                lines = [f"• {name if joined else 'بانتظار اللاعب ' + str(i+1)}" for i, (pid, name, joined) in enumerate(players)]
                 waiting_text = (
-                    f"🎮 غرفة أونلاين — {GAME_INFO[lobby['game_type']][0]}\n\n"
-                    f"اللاعبون: {joined_count}/2\n"
-                    f"• {player1_name if lobby['creator_joined'] else 'بانتظار اللاعب الأول'}\n"
-                    f"• {player2_name if lobby['player2_id'] else 'بانتظار اللاعب الثاني'}\n\n"
-                    "اضغطوا «انضمام» حتى يكتمل عدد اللاعبين."
+                    f"🎮 غرفة أونلاين — {GAME_INFO[lobby['game_type']][0]}\\n\\n"
+                    f"اللاعبون: {joined_count}/{lobby['player_count']}\\n"
+                    + "\\n".join(lines) + "\\n\\n"
+                    + ("الطور: فريقين (2 ضد 2)" if lobby["team_mode"] == "teams" else "الطور: كل لاعب لحاله")
+                    + "\\nاضغطوا «انضمام» حتى يكتمل عدد اللاعبين."
                 )
-                waiting_keyboard = InlineKeyboardMarkup([[
-                    InlineKeyboardButton("انضمام 👥", callback_data=f"online_join:{lobby_id.hex}")
-                ]])
+                waiting_keyboard = InlineKeyboardMarkup([
+                    [InlineKeyboardButton("انضمام 👥", callback_data=f"online_join:{lobby_id.hex}")],
+                    [InlineKeyboardButton("⚙️ إعدادات اللاعبين", callback_data=f"online_settings:{lobby_id.hex}")],
+                ])
             else:
                 game_type = lobby["game_type"]
                 chat_id = lobby["chat_id"] or 0
