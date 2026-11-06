@@ -108,8 +108,7 @@ async def online_lobby_callback(update: Update, context: ContextTypes.DEFAULT_TY
             [InlineKeyboardButton("👤 كل لاعب لحاله", callback_data=f"online_config:{lobby_id.hex}:4:individual"),
              InlineKeyboardButton("🤝 فريقين 2 ضد 2", callback_data=f"online_config:{lobby_id.hex}:4:teams")],
         ])
-        if query.message:
-            await query.message.reply_text("⚙️ إعدادات لعبة المربعات\\nاختر عدد اللاعبين ونظام اللعب:", reply_markup=keyboard)
+        await _edit_lobby_message(query, context, "⚙️ إعدادات لعبة المربعات\\nاختر عدد اللاعبين ونظام اللعب:", keyboard)
         await query.answer()
         return
     if action == "online_config":
@@ -123,6 +122,11 @@ async def online_lobby_callback(update: Update, context: ContextTypes.DEFAULT_TY
             await query.answer("الإعداد غير صالح.", show_alert=True)
             return
         await pool.execute("UPDATE online_game_lobbies SET player_count=$2,team_mode=$3,updated_at=NOW() WHERE id=$1", lobby_id, count, mode)
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("انضمام 👥", callback_data=f"online_join:{lobby_id.hex}")],
+            [InlineKeyboardButton("⚙️ إعدادات اللاعبين", callback_data=f"online_settings:{lobby_id.hex}")],
+        ])
+        await _edit_lobby_message(query, context, f"🎮 غرفة أونلاين — {GAME_INFO['dots'][0]}\\n\\nعدد اللاعبين: {count}\\nالطور: {'فريقين (2 ضد 2)' if mode == 'teams' else 'كل لاعب لحاله'}\\n\\nاضغطوا انضمام للانضمام إلى الغرفة.", keyboard)
         await query.answer("تم حفظ إعدادات اللاعبين.")
         return
     game_id = None
