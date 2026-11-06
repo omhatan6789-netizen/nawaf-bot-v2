@@ -1,0 +1,431 @@
+from __future__ import annotations
+
+import json
+import random
+import uuid
+
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.ext import ContextTypes
+
+from database.pool import get_pool
+from database.points import charge_two_players
+
+DEFAULT_WAGER = 20_000
+TURN_SECONDS = {"dots": 15, "memory": 25}
+GAME_NAMES = {"dots": "المربعات", "memory": "اختبر ذاكرتك"}
+
+
+def _rps_winner(a: str, b: str) -> int:
+    if a == b:
+        return 0
+    return 1 if (a, b) in (("r", "s"), ("p", "r"), ("s", "p")) else 2
+
+
+async def mini_game_challenge_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    message, user, chat = update.effective_message, update.effective_user, update.effective_chat
+    if not message or not user or not chat or chat.type not in ("group", "supergroup"):
+        return
+    text = (message.text or "").strip()
+    parts = text.split()
+    game_type = "dots" if parts[0] in ("مربعات", "المربعات") else "memory"
+    target_message = message.reply_to_message
+    target = target_message.from_user if target_message else None
+    if not target:
+        await message.reply_text("❌ استخدم الأمر بالرد على الشخص اللي تبي تتحداه.")
+        return
+    if target.is_bot or target.id == user.id:
+        await message.reply_text("❌ تقدر تتحدى شخصًا آخر فقط.")
+        return
+    if len(parts) > 2:
+        await message.reply_text("الاستخدام: مربعات أو مربعات 50000 — ذاكرة أو ذاكرة 50000")
+        return
+    wager = DEFAULT_WAGER
+    if len(parts) == 2:
+        try:
+            wager = int(parts[1].replace(",", ""))
+        except ValueError:
+            await message.reply_text("❌ مبلغ الرهان غير صحيح.")
+            return
+    if wager < 1 or wager > 2_000_000_000:
+        await message.reply_text("❌ اختر مبلغًا بين 1 و 2,000,000,000 نقطة.")
+        return
+    challenge_id = uuid.uuid4()
+    pool = get_pool()
+    await pool.execute(
+        """INSERT INTO mini_game_challenges
+           (id,game_type,chat_id,player1_id,player1_name,player2_id,player2_name,wager)
+           VALUES($1,$2,$3,$4,$5,$6,$7,$8)""",
+        challenge_id, game_type, chat.id, user.id, user.first_name or "اللاعب الأول",
+        target.id, target.first_name or "اللاعب الثاني", wager,
+    )
+    body = (
+        f"## تحدي ↢ {GAME_NAMES[game_type]}\n\n"
+        f"اللاعبين:\n• ↢ {user.first_name or 'اللاعب الأول'}\n"
+        f"• ↢ {target.first_name or 'اللاعب الثاني'}\n\n"
+        f"الرهان على كل لاعب: {wager:,} نقطة\n"
+        f"جائزة الفوز: {wager * 2:,} نقطة🎖️\n\n"
+        "(بانتظار قبول التحدي)"
+    )
+    keyboard = InlineKeyboardMarkup([[
+        InlineKeyboardButton("قبول التحدي", callback_data=f"mg:a:{challenge_id.hex}"),
+        InlineKeyboardButton("رفض", callback_data=f"mg:d:{challenge_id.hex}"),
+    ]])
+    await message.reply_text(body, reply_markup=keyboard)
+
+
+async def mini_game_challenge_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    if not query or not query.data:
+        return
+    _, action, raw_id = query.data.split(":", 2)
+    try:
+        challenge_id = uuid.UUID(hex=raw_id)
+    except Exception:
+        await query.answer("رابط التحدي غير صالح.", show_alert=True)
+        return
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            row = await conn.fetchrow(
+                "SELECT * FROM mini_game_challenges WHERE id=$1 FOR UPDATE", challenge_id
+            )
+            if not row:
+                await query.answer("التحدي غير موجود.", show_alert=True)
+                return
+            user_id = int(query.from_user.id)
+            if action == "d":
+                if user_id not in (int(row["player1_id"]), int(row["player2_id"])):
+                    await query.answer("هذا التحدي ليس لك.", show_alert=True)
+                    return
+                if row["status"] != "pending":
+                    await query.answer("انتهى هذا التحدي.", show_alert=True)
+                    return
+                await conn.execute(
+                    "UPDATE mini_game_challenges SET status='declined',updated_at=NOW() WHERE id=$1",
+                    challenge_id,
+                )
+                await query.edit_message_text("تم رفض التحدي.", reply_markup=None)
+                await query.answer("تم رفض التحدي.")
+                return
+            if action != "a":
+                return
+            if user_id != int(row["player2_id"]):
+                await query.answer("اللاعب المدعو فقط يقدر يقبل التحدي.", show_alert=True)
+                return
+            if row["status"] != "pending":
+                await query.answer("هذا التحدي لم يعد متاحًا.", show_alert=True)
+                return
+            await conn.execute(
+                "UPDATE mini_game_challenges SET status='choosing',updated_at=NOW() WHERE id=$1",
+                challenge_id,
+            )
+    charged = await charge_two_players(
+        int(row["player1_id"]), int(row["player2_id"]), int(row["wager"])
+    )
+    if charged != "ok":
+        await pool.execute(
+            "UPDATE mini_game_challenges SET status='pending',updated_at=NOW() WHERE id=$1 AND status='choosing'",
+            challenge_id,
+        )
+        who = "صاحب التحدي" if charged == "first_insufficient" else "أنت"
+        await query.answer(f"{who} ما عنده رصيد كافٍ للرهان.", show_alert=True)
+        return
+    me = await context.bot.get_me()
+    mini_url = f"https://t.me/{me.username}?startapp=mg_{challenge_id.hex}"
+    keyboard = InlineKeyboardMarkup([[
+        InlineKeyboardButton("🎮 فتح الميني آب — ابدأ حجر ورقة مقص", url=mini_url)
+    ]])
+    await query.edit_message_text(
+        f"✅ تم قبول تحدي {GAME_NAMES[row['game_type']]} وحُجز الرهان.\n\n"
+        "افتحوا الميني آب من الزر بالأسفل، واختاروا حجر ورقة مقص لتحديد من يبدأ.",
+        reply_markup=keyboard,
+    )
+    await query.answer("تم قبول التحدي وحُجز الرهان.")
+
+
+def _decode_state(value):
+    return json.loads(value) if isinstance(value, str) else value
+
+
+def _public_state(row, user_id: int):
+    game_type = row["game_type"]
+    state = _decode_state(row["game_state"]) or {}
+    player1 = int(row["player1_id"])
+    player2 = int(row["player2_id"])
+    winner = row["winner_id"]
+    status = row["status"]
+    if status in ("won", "draw") and status == "won":
+        status = "won" if int(winner or 0) == user_id else "lost"
+    return {
+        "id": str(row["id"]), "game_type": game_type, "status": status,
+        "player1_name": row["player1_name"], "player2_name": row["player2_name"],
+        "your_turn": int(row["turn_player_id"] or 0) == user_id,
+        "turn_player_id": row["turn_player_id"],
+        "turn_started_at": int(row["turn_started_at"].timestamp() * 1000) if row["turn_started_at"] else None,
+        "turn_seconds": TURN_SECONDS[game_type],
+        "wager": int(row["wager"]), "winner_id": winner,
+        "winner_name": row["player1_name"] if int(winner or 0) == player1 else row["player2_name"] if int(winner or 0) == player2 else None,
+        "my_player": 1 if user_id == player1 else 2,
+        "state": state,
+    }
+
+
+async def _settle_wager(conn, row, winner_id: int | None):
+    if row["wager_settled"]:
+        return
+    first, second, amount = int(row["player1_id"]), int(row["player2_id"]), int(row["wager"])
+    await conn.execute(
+        "INSERT INTO points(user_id,points) VALUES($1,0),($2,0) ON CONFLICT(user_id) DO NOTHING",
+        first, second,
+    )
+    if winner_id is None:
+        await conn.execute("UPDATE points SET points=points+$2 WHERE user_id=$1", first, amount)
+        await conn.execute("UPDATE points SET points=points+$2 WHERE user_id=$1", second, amount)
+    else:
+        await conn.execute("UPDATE points SET points=points+$2 WHERE user_id=$1", winner_id, amount * 2)
+    await conn.execute(
+        "UPDATE mini_game_challenges SET wager_settled=TRUE WHERE id=$1", row["id"]
+    )
+
+
+def _dots_edges():
+    return {
+        "h": [[False for _ in range(4)] for _ in range(5)],
+        "v": [[False for _ in range(5)] for _ in range(4)],
+        "boxes": [[0 for _ in range(4)] for _ in range(4)],
+        "scores": [0, 0],
+    }
+
+
+def _available_dot_edges(state):
+    edges = []
+    for r in range(5):
+        for c in range(4):
+            if not state["h"][r][c]:
+                edges.append({"kind": "h", "r": r, "c": c})
+    for r in range(4):
+        for c in range(5):
+            if not state["v"][r][c]:
+                edges.append({"kind": "v", "r": r, "c": c})
+    return edges
+
+
+def _draw_dot_edge(state, edge, player):
+    kind, r, c = edge["kind"], int(edge["r"]), int(edge["c"])
+    matrix = state.get(kind)
+    max_r, max_c = ((5, 4) if kind == "h" else (4, 5))
+    if kind not in ("h", "v") or not (0 <= r < max_r and 0 <= c < max_c):
+        raise ValueError("الحركة غير صالحة")
+    if matrix[r][c]:
+        raise ValueError("هذا الخط مرسوم بالفعل")
+    matrix[r][c] = True
+    completed = []
+    for br in range(4):
+        for bc in range(4):
+            if state["boxes"][br][bc]:
+                continue
+            closed = (
+                state["h"][br][bc] and state["h"][br + 1][bc]
+                and state["v"][br][bc] and state["v"][br][bc + 1]
+            )
+            if closed:
+                state["boxes"][br][bc] = player
+                state["scores"][player - 1] += 1
+                completed.append([br, bc])
+    return completed
+
+
+async def _finish_game(conn, row, winner_id):
+    status = "draw" if winner_id is None else "won"
+    await _settle_wager(conn, row, winner_id)
+    return await conn.fetchrow(
+        """UPDATE mini_game_challenges SET status=$2,winner_id=$3,
+           turn_started_at=NOW(),updated_at=NOW() WHERE id=$1 RETURNING *""",
+        row["id"], status, winner_id,
+    )
+
+
+async def get_mini_game_challenge_state(user_id: int, raw_id: str):
+    try:
+        game_id = uuid.UUID(hex=raw_id.replace("-", ""))
+    except Exception:
+        raise ValueError("رابط اللعبة غير صالح")
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            row = await conn.fetchrow(
+                """SELECT * FROM mini_game_challenges WHERE id=$1
+                   AND (player1_id=$2 OR player2_id=$2) FOR UPDATE""",
+                game_id, user_id,
+            )
+            if not row:
+                raise ValueError("هذا التحدي ليس لك أو لم يعد موجودًا")
+            if row["status"] == "choosing":
+                first = int(user_id) == int(row["player1_id"])
+                return {"phase": "choosing", "player1_name": row["player1_name"],
+                        "player2_name": row["player2_name"],
+                        "my_choice": row["player1_choice"] if first else row["player2_choice"],
+                        "opponent_chosen": bool(row["player2_choice"] if first else row["player1_choice"]),
+                        "tie": row["rps_result"] == "tie"}
+            if row["status"] not in ("playing", "won", "draw"):
+                raise ValueError("هذا التحدي لم يعد متاحًا")
+            if row["status"] == "playing":
+                seconds = TURN_SECONDS[row["game_type"]]
+                expired = await conn.fetchval(
+                    "SELECT NOW() > $1::timestamptz + ($2 * INTERVAL '1 second')",
+                    row["turn_started_at"], seconds,
+                )
+                if expired:
+                    if row["game_type"] == "memory":
+                        winner_id = int(row["player2_id"] if row["turn_player_id"] == row["player1_id"] else row["player1_id"])
+                        row = await _finish_game(conn, row, winner_id)
+                    else:
+                        state = _decode_state(row["game_state"])
+                        edges = _available_dot_edges(state)
+                        if edges:
+                            player = 1 if int(row["turn_player_id"]) == int(row["player1_id"]) else 2
+                            completed = _draw_dot_edge(state, random.choice(edges), player)
+                            next_player = int(row["turn_player_id"]) if completed else int(
+                                row["player2_id"] if row["turn_player_id"] == row["player1_id"] else row["player1_id"]
+                            )
+                            if sum(state["scores"]) == 16:
+                                winner_id = int(row["player1_id"] if state["scores"][0] > state["scores"][1] else row["player2_id"]) if state["scores"][0] != state["scores"][1] else None
+                                row = await _finish_game(conn, row, winner_id)
+                            else:
+                                row = await conn.fetchrow(
+                                    """UPDATE mini_game_challenges SET game_state=$2::jsonb,
+                                       turn_player_id=$3,turn_started_at=NOW(),updated_at=NOW()
+                                       WHERE id=$1 RETURNING *""",
+                                    game_id, json.dumps(state), next_player,
+                                )
+            return {"phase": "playing", "game": _public_state(row, user_id)}
+
+
+async def choose_mini_game_rps(user_id: int, raw_id: str, choice: str):
+    if choice not in ("r", "p", "s"):
+        raise ValueError("اختر حجر أو ورقة أو مقص")
+    try:
+        game_id = uuid.UUID(hex=raw_id.replace("-", ""))
+    except Exception:
+        raise ValueError("رابط اللعبة غير صالح")
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            row = await conn.fetchrow(
+                """SELECT * FROM mini_game_challenges WHERE id=$1
+                   AND (player1_id=$2 OR player2_id=$2) FOR UPDATE""",
+                game_id, user_id,
+            )
+            if not row or row["status"] != "choosing":
+                raise ValueError("مرحلة حجر ورقة مقص غير متاحة")
+            first = int(user_id) == int(row["player1_id"])
+            column = "player1_choice" if first else "player2_choice"
+            if row[column]:
+                raise ValueError("سجلت اختيارك بالفعل، انتظر اللاعب الآخر")
+            row = await conn.fetchrow(
+                f"""UPDATE mini_game_challenges SET {column}=$2,rps_result=NULL,
+                    updated_at=NOW() WHERE id=$1 RETURNING *""",
+                game_id, choice,
+            )
+            if not row["player1_choice"] or not row["player2_choice"]:
+                return {"phase": "choosing", "my_choice": choice, "opponent_chosen": False}
+            winner = _rps_winner(row["player1_choice"], row["player2_choice"])
+            if winner == 0:
+                await conn.execute(
+                    """UPDATE mini_game_challenges SET player1_choice=NULL,
+                       player2_choice=NULL,rps_result='tie',updated_at=NOW() WHERE id=$1""",
+                    game_id,
+                )
+                return {"phase": "choosing", "tie": True}
+            starter = int(row["player1_id"] if winner == 1 else row["player2_id"])
+            if row["game_type"] == "dots":
+                state = _dots_edges()
+            else:
+                state = {"sequence": [random.randrange(4), random.randrange(4), random.randrange(4)],
+                         "level": 3, "progress": 0, "round_successes": []}
+            row = await conn.fetchrow(
+                """UPDATE mini_game_challenges SET status='playing',turn_player_id=$2,
+                   turn_started_at=NOW(),game_state=$3::jsonb,
+                   rps_result=$4,updated_at=NOW() WHERE id=$1 RETURNING *""",
+                game_id, starter, json.dumps(state),
+                "player1_starts" if winner == 1 else "player2_starts",
+            )
+            return {"phase": "playing", "game": _public_state(row, user_id)}
+
+
+async def play_mini_game_action(user_id: int, raw_id: str, action: dict):
+    try:
+        game_id = uuid.UUID(hex=raw_id.replace("-", ""))
+    except Exception:
+        raise ValueError("رابط اللعبة غير صالح")
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            row = await conn.fetchrow(
+                """SELECT * FROM mini_game_challenges WHERE id=$1
+                   AND (player1_id=$2 OR player2_id=$2) FOR UPDATE""",
+                game_id, user_id,
+            )
+            if not row or row["status"] != "playing":
+                raise ValueError("اللعبة غير متاحة الآن")
+            if int(row["turn_player_id"]) != int(user_id):
+                raise ValueError("انتظر دورك")
+            state = _decode_state(row["game_state"])
+            first = int(user_id) == int(row["player1_id"])
+            player = 1 if first else 2
+            other_id = int(row["player2_id"] if first else row["player1_id"])
+            if row["game_type"] == "dots":
+                completed = _draw_dot_edge(state, action, player)
+                if sum(state["scores"]) == 16:
+                    winner_id = int(row["player1_id"] if state["scores"][0] > state["scores"][1] else row["player2_id"]) if state["scores"][0] != state["scores"][1] else None
+                    row = await _finish_game(conn, row, winner_id)
+                else:
+                    next_player = int(user_id) if completed else other_id
+                    row = await conn.fetchrow(
+                        """UPDATE mini_game_challenges SET game_state=$2::jsonb,
+                           turn_player_id=$3,turn_started_at=NOW(),updated_at=NOW()
+                           WHERE id=$1 RETURNING *""",
+                        game_id, json.dumps(state), next_player,
+                    )
+            else:
+                color = action.get("color")
+                if isinstance(color, bool) or not isinstance(color, int) or color not in range(4):
+                    raise ValueError("اختيار اللون غير صالح")
+                progress = int(state["progress"])
+                if color != int(state["sequence"][progress]):
+                    row = await _finish_game(conn, row, other_id)
+                else:
+                    progress += 1
+                    if progress >= int(state["level"]):
+                        passed = list(state.get("round_successes", []))
+                        passed.append(int(user_id))
+                        state["round_successes"] = passed
+                        state["progress"] = 0
+                        if len(passed) >= 2:
+                            if int(state["level"]) >= 12:
+                                row = await _finish_game(conn, row, None)
+                            else:
+                                state["level"] = int(state["level"]) + 1
+                                state["sequence"].append(random.randrange(4))
+                                state["round_successes"] = []
+                                row = await conn.fetchrow(
+                                    """UPDATE mini_game_challenges SET game_state=$2::jsonb,
+                                       turn_player_id=$3,turn_started_at=NOW(),updated_at=NOW()
+                                       WHERE id=$1 RETURNING *""",
+                                    game_id, json.dumps(state), int(row["player1_id"]),
+                                )
+                        else:
+                            row = await conn.fetchrow(
+                                """UPDATE mini_game_challenges SET game_state=$2::jsonb,
+                                   turn_player_id=$3,turn_started_at=NOW(),updated_at=NOW()
+                                   WHERE id=$1 RETURNING *""",
+                                game_id, json.dumps(state), other_id,
+                            )
+                    else:
+                        state["progress"] = progress
+                        row = await conn.fetchrow(
+                            """UPDATE mini_game_challenges SET game_state=$2::jsonb,
+                               updated_at=NOW() WHERE id=$1 RETURNING *""",
+                            game_id, json.dumps(state),
+                        )
+            return {"phase": "playing", "game": _public_state(row, user_id)}
