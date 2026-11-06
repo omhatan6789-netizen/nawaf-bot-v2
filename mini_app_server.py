@@ -311,12 +311,16 @@ def handle_connect4_post(handler):
                 int(user["id"]), payload.get("game_type", ""),
                 payload.get("difficulty", "متوسط"),
             ))
+            me = _run(_bot.get_me())
+            result["bot_name"] = me.first_name or me.username or "البوت"
             body = json.dumps({"ok": True, "result": result}, ensure_ascii=False).encode()
             handler.send_response(200)
         elif path == "/api/minigames/solo/state":
             result = _run(get_mini_game_solo_state(
                 int(user["id"]), payload.get("game_id", "")
             ))
+            me = _run(_bot.get_me())
+            result["bot_name"] = me.first_name or me.username or "البوت"
             body = json.dumps({"ok": True, "result": result}, ensure_ascii=False).encode()
             handler.send_response(200)
         elif path == "/api/minigames/solo/action":
@@ -324,12 +328,16 @@ def handle_connect4_post(handler):
                 int(user["id"]), payload.get("game_id", ""),
                 payload.get("action") or {},
             ))
+            me = _run(_bot.get_me())
+            result["bot_name"] = me.first_name or me.username or "البوت"
             body = json.dumps({"ok": True, "result": result}, ensure_ascii=False).encode()
             handler.send_response(200)
         elif path == "/api/minigames/solo/bot-move":
             result = _run(play_mini_game_solo_bot_move(
                 int(user["id"]), payload.get("game_id", "")
             ))
+            me = _run(_bot.get_me())
+            result["bot_name"] = me.first_name or me.username or "البوت"
             body = json.dumps({"ok": True, "result": result}, ensure_ascii=False).encode()
             handler.send_response(200)
         elif path == "/api/minigames/challenge/state":
