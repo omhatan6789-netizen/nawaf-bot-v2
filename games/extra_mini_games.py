@@ -271,3 +271,19 @@ async def battleship_bot_turn(gid):
         s["turn"]=0
         await c.execute("UPDATE battleship_games SET state=$2::jsonb,turn_player_id=player1_id,updated_at=NOW() WHERE id=$1",gid,json.dumps(s))
         return
+
+async def battleship_shuffle(user_id,raw_id):
+    gid=uuid.UUID(hex=str(raw_id).replace("-","")); pool=get_pool()
+    async with pool.acquire() as conn:
+      async with conn.transaction():
+        row=await conn.fetchrow("SELECT * FROM battleship_games WHERE id=$1 FOR UPDATE",gid)
+        if not row or row["status"] not in ("waiting","playing"): raise ValueError("لا يمكن تغيير توزيع السفن الآن")
+        ids=[int(row["player1_id"]),int(row["player2_id"] or 0)]
+        if int(user_id) not in ids: raise ValueError("المتفرجون لا يمكنهم تغيير السفن")
+        state=_decode(row["state"])
+        if state["shots"][0] or state["shots"][1]: raise ValueError("بدأت المعركة، لا يمكن تغيير مواقع السفن")
+        player=ids.index(int(user_id))
+        state["ships"][player]=_fleet()
+        await conn.execute("UPDATE battleship_games SET state=$2::jsonb,updated_at=NOW() WHERE id=$1",gid,json.dumps(state))
+        row=await conn.fetchrow("SELECT * FROM battleship_games WHERE id=$1",gid)
+    return _battle_public(row,user_id)
