@@ -27,6 +27,8 @@ async def mini_game_challenge_command(update: Update, context: ContextTypes.DEFA
         return
     text = (message.text or "").strip()
     parts = text.split()
+    if text.startswith("اختبر ذاكرتك"):
+        parts = ["ذاكرة"] + parts[2:]
     game_type = "dots" if parts[0] in ("مربعات", "المربعات") else "memory"
     target_message = message.reply_to_message
     target = target_message.from_user if target_message else None
