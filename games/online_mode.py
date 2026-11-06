@@ -153,7 +153,7 @@ async def online_lobby_callback(update: Update, context: ContextTypes.DEFAULT_TY
             [InlineKeyboardButton("انضمام 👥", callback_data=f"online_join:{lobby_id.hex}")],
             [InlineKeyboardButton("⚙️ إعدادات اللاعبين", callback_data=f"online_settings:{lobby_id.hex}")],
         ])
-        await _edit_lobby_message(query, context, f"🎮 غرفة أونلاين — {GAME_INFO['dots'][0]}\n\nعدد اللاعبين: {count}\nالطور: {'فريقين (2 ضد 2)' if mode == 'teams' else 'كل لاعب لحاله'}\n\nاضغطوا انضمام للانضمام إلى الغرفة.", keyboard)
+        await _edit_lobby_message(query, context, _lobby_text("dots", count, mode), keyboard)
         await query.answer("تم حفظ إعدادات اللاعبين.")
         return
     game_id = None
@@ -213,13 +213,13 @@ async def online_lobby_callback(update: Update, context: ContextTypes.DEFAULT_TY
             ][:int(lobby["player_count"])]
             joined_count = sum(1 for pid, name, joined in players if pid is not None and joined)
             if joined_count < int(lobby["player_count"]):
-                lines = [f"• {name if joined else 'بانتظار اللاعب ' + str(i+1)}" for i, (pid, name, joined) in enumerate(players)]
-                waiting_text = (
-                    f"🎮 غرفة أونلاين — {GAME_INFO[lobby['game_type']][0]}\n\n"
-                    f"اللاعبون: {joined_count}/{lobby['player_count']}\n"
-                    + "\n".join(lines) + "\n\n"
-                    + ("الطور: فريقين (2 ضد 2)" if lobby["team_mode"] == "teams" else "الطور: كل لاعب لحاله")
-                    + "\nاضغطوا «انضمام» حتى يكتمل عدد اللاعبين."
+                joined_names = {
+                    i: name for i, (pid, name, joined) in enumerate(players)
+                    if pid is not None and joined
+                }
+                waiting_text = _lobby_text(
+                    lobby["game_type"], int(lobby["player_count"]),
+                    lobby["team_mode"], joined_names,
                 )
                 waiting_keyboard = InlineKeyboardMarkup(
                     ([[InlineKeyboardButton("⚙️ إعدادات اللاعبين", callback_data=f"online_settings:{lobby_id.hex}")]]
