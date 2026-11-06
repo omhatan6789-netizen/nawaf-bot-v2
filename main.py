@@ -90,6 +90,9 @@ from games.rock_paper_scissors import (
 from games.connect4_challenge import (
     connect4_challenge_command, connect4_challenge_callback,
 )
+from games.mini_games import (
+    mini_game_challenge_command, mini_game_challenge_callback,
+)
 from games.xo import start_xo_game, xo_callback
 from games.engine import ensure_game_tables, game_message_handler
 from games.demon_nawaf import start_demon_nawaf, demon_nawaf_callback, ensure_demon_tables
@@ -612,6 +615,15 @@ def build_application() -> Application:
     ))
     application.add_handler(CallbackQueryHandler(
         connect4_challenge_callback, pattern=r"^c4(?:a|d|r|x):"
+    ))
+
+    # Multiplayer Mini App games: Dots and Boxes and memory challenge.
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.Regex(r"^(?:مربعات|المربعات|ذاكرة)(?:\s+\d+)?$"),
+        mini_game_challenge_command,
+    ))
+    application.add_handler(CallbackQueryHandler(
+        mini_game_challenge_callback, pattern=r"^mg:"
     ))
 
     # Rock-paper-scissors challenge (same legacy commands and callbacks).
