@@ -11,7 +11,7 @@ from database.pool import get_pool
 from database.points import charge_two_players
 
 DEFAULT_WAGER = 20_000
-TURN_SECONDS = {"dots": 15, "memory": 25}
+TURN_SECONDS = {"dots": 15, "memory": 60}
 GAME_NAMES = {"dots": "المربعات", "memory": "اختبر ذاكرتك"}
 
 
@@ -444,7 +444,7 @@ async def play_mini_game_action(user_id: int, raw_id: str, action: dict):
 
 # Solo mode: player versus a lightweight local AI.
 SOLO_LEVELS = ("سهل", "متوسط", "صعب", "مستحيل")
-SOLO_TURN_SECONDS = {"dots": 15, "memory": 25}
+SOLO_TURN_SECONDS = {"dots": 15, "memory": 60}
 
 
 def _solo_decode(value):
