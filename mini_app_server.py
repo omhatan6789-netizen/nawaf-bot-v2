@@ -3,8 +3,11 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 from pathlib import Path
-from urllib.parse import unquote
+from urllib.parse import unquote, parse_qs, urlparse
+
+import httpx
 
 from telegram import Bot
 from database.pool import get_pool
@@ -114,6 +117,60 @@ def handle_mini_app_request(handler):
         handler.send_response(200)
         handler.send_header("Content-Type", "application/javascript; charset=utf-8")
         handler.send_header("Cache-Control", "public, max-age=3600")
+        handler.send_header("Content-Length", str(len(body)))
+        handler.end_headers()
+        handler.wfile.write(body)
+        return True
+    if path == "/api/youtube/search":
+        try:
+            query = parse_qs(urlparse(handler.path).query).get("q", [""])[0].strip()
+            if not query or len(query) > 100:
+                raise ValueError("اكتب اسم المقطع للبحث")
+            from handlers.youtube_audio import _search_youtube
+            results = _run(_search_youtube(query), timeout=30)
+            body = json.dumps({"ok": True, "results": results}, ensure_ascii=False).encode()
+            handler.send_response(200)
+        except ValueError as exc:
+            body = json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False).encode()
+            handler.send_response(400)
+        except Exception:
+            logging.getLogger(__name__).exception("Mini App YouTube search failed")
+            body = json.dumps({"ok": False, "error": "تعذر البحث في يوتيوب الآن"}, ensure_ascii=False).encode()
+            handler.send_response(503)
+        handler.send_header("Content-Type", "application/json; charset=utf-8")
+        handler.send_header("Cache-Control", "no-store")
+        handler.send_header("Content-Length", str(len(body)))
+        handler.end_headers()
+        handler.wfile.write(body)
+        return True
+    if path == "/api/youtube/resolve":
+        try:
+            video_id = parse_qs(urlparse(handler.path).query).get("id", [""])[0].strip()
+            if not re.fullmatch(r"[A-Za-z0-9_-]{11}", video_id):
+                raise ValueError("معرّف المقطع غير صالح")
+            video_url = f"https://www.youtube.com/watch?v={video_id}"
+            with httpx.Client(timeout=httpx.Timeout(120.0, connect=20.0), follow_redirects=True) as client:
+                response = client.post(
+                    "https://api.samplecut.app/v1/downloads",
+                    json={"url": video_url, "format": "mp3", "response": "url"},
+                    headers={"X-Client-Name": "NawafMiniApp", "Accept": "application/json"},
+                )
+                response.raise_for_status()
+                data = response.json()
+            audio_url = data.get("download_url") or data.get("downloadUrl")
+            if not audio_url or not audio_url.startswith("https://"):
+                raise RuntimeError("لم يتم الحصول على رابط الصوت")
+            body = json.dumps({"ok": True, "url": audio_url}, ensure_ascii=False).encode()
+            handler.send_response(200)
+        except ValueError as exc:
+            body = json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False).encode()
+            handler.send_response(400)
+        except Exception:
+            logging.getLogger(__name__).exception("Mini App YouTube audio resolve failed")
+            body = json.dumps({"ok": False, "error": "تعذر تجهيز صوت المقطع، جرّب نتيجة ثانية"}, ensure_ascii=False).encode()
+            handler.send_response(502)
+        handler.send_header("Content-Type", "application/json; charset=utf-8")
+        handler.send_header("Cache-Control", "no-store")
         handler.send_header("Content-Length", str(len(body)))
         handler.end_headers()
         handler.wfile.write(body)
