@@ -18,7 +18,7 @@ def _decode(v):
     return json.loads(v) if isinstance(v,str) else (v or {})
 def _fold(text):
     s=unicodedata.normalize("NFKC",str(text or "")).strip().replace("ـ","")
-    s=s.translate(str.maketrans({"أ":"ا","إ":"ا","آ":"ا","ٱ":"ا","ى":"ي","ؤ":"و","ئ":"ي","ة":"ه","ة":"ه"}))
+    s=s.translate(str.maketrans({"أ":"ا","إ":"ا","آ":"ا","ٱ":"ا","ى":"ي","ؤ":"و","ئ":"ي","ة":"ه"}))
     return s
 def _letter_class(target, guess, i):
     if guess[i] == target[i]:
@@ -53,7 +53,7 @@ def word_feedback(target, guess):
         remaining[pos]=None
     return result
 def _new_words(count):
-    pool=WORDS[:]
+    pool=list(dict.fromkeys(WORDS))
     random.shuffle(pool)
     return pool[:count]
 def _public_word(row,user_id):
@@ -69,7 +69,7 @@ def _public_word(row,user_id):
       "current_word":word_list[row["current_index"]] if row["mode"]=="training" and row["status"]=="playing" and row["current_index"]<len(word_list) else None,
       "round_until":int(row["round_until"].timestamp()*1000) if row["round_until"] else None,
       "round_winner":answers.get("last_winner"),"last_word":answers.get("last_word"),
-      "last_feedback":answers.get("last_feedback"),"answers":answers,
+      "last_feedback":answers.get("last_feedback"),"last_guess":answers.get("last_guess"),"answers":answers,
       "words":word_list if row["status"]=="finished" else [],
       "winner":max(players,key=lambda p:p.get("score",0))["name"] if players and row["status"]=="finished" else None,
       "started_at":int(row["started_at"].timestamp()*1000) if row["started_at"] else None}
@@ -131,10 +131,10 @@ async def word_guess(user_id,raw_id,guess):
         if len(guess) != len(target): raise ValueError("عدد الحروف غير مطابق للكلمة")
         if _fold(guess)==_fold(target):
           me["score"]=int(me.get("score",0))+1
-          answers={"last_winner":me["name"],"last_word":target,"last_feedback":word_feedback(target,guess),"last_user_id":int(user_id)}
+          answers={"last_winner":me["name"],"last_word":target,"last_guess":guess,"last_feedback":word_feedback(target,guess),"last_user_id":int(user_id)}
           await c.execute("""UPDATE word_games SET players=$2::jsonb,answers=$3::jsonb,round_until=NOW()+INTERVAL '3 seconds',updated_at=NOW() WHERE id=$1""",
             gid,json.dumps(players,ensure_ascii=False),json.dumps(answers,ensure_ascii=False))
-          return {"correct":True,"round_winner":me["name"],"word":target,"round_until":int((datetime.now(timezone.utc).timestamp()+3)*1000)}
+          return {"correct":True,"round_winner":me["name"],"word":target,"guess":guess,"feedback":word_feedback(target,guess),"round_until":int((datetime.now(timezone.utc).timestamp()+3)*1000)}
         feedback=word_feedback(target,guess)
         return {"correct":False,"feedback":feedback}
 async def word_next(user_id,raw_id):
@@ -196,7 +196,7 @@ async def battleship_join(user_id,name,raw_id):
         if not row or row["mode"]!="online": raise ValueError("الغرفة غير متاحة")
         if row["status"]=="playing" and int(user_id) not in (int(row["player1_id"]),int(row["player2_id"] or 0)):
           return _battle_public(row,user_id)
-        if row["status"] not in ("waiting","playing"): raise ValueError("الغرفة غير متاحة")
+        if row["status"] not in ("waiting","playing","won","lost"): raise ValueError("الغرفة غير متاحة")
         if int(row["player1_id"])==int(user_id): pass
         elif row["player2_id"] is None:
           await c.execute("UPDATE battleship_games SET player2_id=$2,player2_name=$3,status='playing',turn_player_id=player1_id,updated_at=NOW() WHERE id=$1",gid,int(user_id),str(name or "لاعب")[:80])
