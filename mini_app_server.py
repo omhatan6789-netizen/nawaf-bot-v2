@@ -146,7 +146,9 @@ def handle_connect4_post(handler):
         "/api/connect4/bot-move", "/api/connect4/state",
         "/api/connect4/challenge/state", "/api/connect4/challenge/choice",
         "/api/minigames/challenge/state", "/api/minigames/challenge/choice",
-        "/api/minigames/action",
+        "/api/minigames/action", "/api/minigames/solo/new",
+        "/api/minigames/solo/state", "/api/minigames/solo/action",
+        "/api/minigames/solo/bot-move",
     ):
         return False
     try:
@@ -161,13 +163,41 @@ def handle_connect4_post(handler):
         )
         from games.mini_games import (
             get_mini_game_challenge_state, choose_mini_game_rps,
-            play_mini_game_action,
+            play_mini_game_action, create_mini_game_solo,
+            get_mini_game_solo_state, play_mini_game_solo_action,
+            play_mini_game_solo_bot_move,
         )
         if _bot is None:
             raise RuntimeError("البوت ما زال يستعد، حاول بعد قليل")
         user = verify_init_data(payload.get("initData", ""), _bot.token)
         is_challenge_api = path.startswith("/api/connect4/challenge/") or path.startswith("/api/minigames/")
-        if path == "/api/minigames/challenge/state":
+        if path == "/api/minigames/solo/new":
+            result = _run(create_mini_game_solo(
+                int(user["id"]), payload.get("game_type", ""),
+                payload.get("difficulty", "متوسط"),
+            ))
+            body = json.dumps({"ok": True, "result": result}, ensure_ascii=False).encode()
+            handler.send_response(200)
+        elif path == "/api/minigames/solo/state":
+            result = _run(get_mini_game_solo_state(
+                int(user["id"]), payload.get("game_id", "")
+            ))
+            body = json.dumps({"ok": True, "result": result}, ensure_ascii=False).encode()
+            handler.send_response(200)
+        elif path == "/api/minigames/solo/action":
+            result = _run(play_mini_game_solo_action(
+                int(user["id"]), payload.get("game_id", ""),
+                payload.get("action") or {},
+            ))
+            body = json.dumps({"ok": True, "result": result}, ensure_ascii=False).encode()
+            handler.send_response(200)
+        elif path == "/api/minigames/solo/bot-move":
+            result = _run(play_mini_game_solo_bot_move(
+                int(user["id"]), payload.get("game_id", "")
+            ))
+            body = json.dumps({"ok": True, "result": result}, ensure_ascii=False).encode()
+            handler.send_response(200)
+        elif path == "/api/minigames/challenge/state":
             result = _run(get_mini_game_challenge_state(
                 int(user["id"]), payload.get("challenge_id", "")
             ))
