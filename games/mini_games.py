@@ -440,3 +440,217 @@ async def play_mini_game_action(user_id: int, raw_id: str, action: dict):
                             game_id, json.dumps(state),
                         )
             return {"phase": "playing", "game": _public_state(row, user_id)}
+
+
+# Solo mode: player versus a lightweight local AI.
+SOLO_LEVELS = ("سهل", "متوسط", "صعب", "مستحيل")
+SOLO_TURN_SECONDS = {"dots": 15, "memory": 25}
+
+
+def _solo_decode(value):
+    return json.loads(value) if isinstance(value, str) else value
+
+
+def _solo_public(row):
+    state = _solo_decode(row["game_state"]) or {}
+    return {
+        "id": str(row["id"]), "game_type": row["game_type"],
+        "difficulty": row["difficulty"], "status": row["status"],
+        "your_turn": int(row["turn_player_id"]) == int(row["user_id"]),
+        "turn_player_id": int(row["turn_player_id"]),
+        "turn_started_at": int(row["turn_started_at"].timestamp() * 1000) if row["turn_started_at"] else None,
+        "turn_seconds": SOLO_TURN_SECONDS[row["game_type"]],
+        "player_name": "أنت", "bot_name": "البوت",
+        "state": state,
+    }
+
+
+def _solo_winner(state):
+    a, b = state["scores"]
+    return "won" if a > b else "lost" if b > a else "draw"
+
+
+def _solo_edge_score(state, edge, player):
+    trial = json.loads(json.dumps(state))
+    completed = _draw_dot_edge(trial, edge, player)
+    score = len(completed) * 100
+    if not completed:
+        # Avoid handing the opponent a box with three surrounding edges.
+        kind, r, c = edge["kind"], edge["r"], edge["c"]
+        for br in range(4):
+            for bc in range(4):
+                if trial["boxes"][br][bc]:
+                    continue
+                count = int(bool(trial["h"][br][bc])) + int(bool(trial["h"][br+1][bc])) + int(bool(trial["v"][br][bc])) + int(bool(trial["v"][br][bc+1]))
+                if count == 3:
+                    score -= 30
+                elif count == 2:
+                    score -= 2
+    return score, trial, completed
+
+
+def _choose_solo_dot_edge(state, difficulty):
+    edges = _available_dot_edges(state)
+    if not edges:
+        return None
+    if difficulty == "سهل":
+        return random.choice(edges)
+    scored = [(_solo_edge_score(state, edge, 2)[0], edge) for edge in edges]
+    best = max(score for score, _ in scored)
+    if difficulty == "متوسط":
+        pool = [edge for score, edge in scored if score >= best - 20]
+        return random.choice(pool)
+    # Hard/impossible prefer immediate boxes and avoid creating easy gifts.
+    best_edges = [edge for score, edge in scored if score == best]
+    if difficulty == "صعب":
+        return random.choice(best_edges)
+    # One-ply lookahead: choose the move with the best worst reply for the human.
+    candidates = []
+    for edge in best_edges:
+        _, trial, completed = _solo_edge_score(state, edge, 2)
+        if completed:
+            candidates.append((100 + len(completed) * 10, edge))
+            continue
+        replies = _available_dot_edges(trial)
+        worst = min((_solo_edge_score(trial, reply, 1)[0] for reply in replies), default=0)
+        candidates.append((-worst, edge))
+    return max(candidates, key=lambda item: item[0])[1]
+
+
+async def create_mini_game_solo(user_id: int, game_type: str, difficulty: str):
+    if game_type not in ("dots", "memory"):
+        raise ValueError("اللعبة غير معروفة")
+    if difficulty not in SOLO_LEVELS:
+        raise ValueError("اختر مستوى صعوبة صحيحًا")
+    game_id = uuid.uuid4()
+    if game_type == "dots":
+        state = _dots_edges()
+        turn = int(user_id)
+    else:
+        state = {"sequence": [random.randrange(4) for _ in range(3)],
+                 "level": 3, "progress": 0, "rounds_won": 0}
+        turn = int(user_id)
+    pool = get_pool()
+    row = await pool.fetchrow(
+        """INSERT INTO mini_game_solo
+           (id,user_id,game_type,difficulty,turn_player_id,game_state)
+           VALUES($1,$2,$3,$4,$5,$6::jsonb) RETURNING *""",
+        game_id, int(user_id), game_type, difficulty, turn, json.dumps(state),
+    )
+    return _solo_public(row)
+
+
+async def get_mini_game_solo_state(user_id: int, raw_id: str):
+    try:
+        game_id = uuid.UUID(hex=raw_id.replace("-", ""))
+    except Exception:
+        raise ValueError("رابط اللعبة غير صالح")
+    pool = get_pool()
+    row = await pool.fetchrow(
+        "SELECT * FROM mini_game_solo WHERE id=$1 AND user_id=$2",
+        game_id, int(user_id),
+    )
+    if not row:
+        raise ValueError("اللعبة غير موجودة")
+    return _solo_public(row)
+
+
+async def _solo_update(conn, row, state, turn, status=None):
+    return await conn.fetchrow(
+        """UPDATE mini_game_solo SET game_state=$2::jsonb,turn_player_id=$3,
+           status=COALESCE($4,status),turn_started_at=NOW(),updated_at=NOW()
+           WHERE id=$1 RETURNING *""",
+        row["id"], json.dumps(state), int(turn), status,
+    )
+
+
+async def play_mini_game_solo_action(user_id: int, raw_id: str, action: dict):
+    try:
+        game_id = uuid.UUID(hex=raw_id.replace("-", ""))
+    except Exception:
+        raise ValueError("رابط اللعبة غير صالح")
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            row = await conn.fetchrow(
+                "SELECT * FROM mini_game_solo WHERE id=$1 AND user_id=$2 FOR UPDATE",
+                game_id, int(user_id),
+            )
+            if not row or row["status"] != "playing":
+                raise ValueError("اللعبة انتهت أو غير موجودة")
+            if int(row["turn_player_id"]) != int(user_id):
+                raise ValueError("انتظر دورك")
+            state = _solo_decode(row["game_state"])
+            expired = await conn.fetchval(
+                "SELECT NOW() > $1::timestamptz + ($2 * INTERVAL '1 second')",
+                row["turn_started_at"], SOLO_TURN_SECONDS[row["game_type"]],
+            )
+            if row["game_type"] == "dots":
+                edge = random.choice(_available_dot_edges(state)) if expired or action.get("automatic") else action
+                completed = _draw_dot_edge(state, edge, 1)
+                if sum(state["scores"]) >= 16:
+                    status = _solo_winner(state)
+                    row = await _solo_update(conn, row, state, int(user_id), status)
+                else:
+                    row = await _solo_update(conn, row, state, -1 if not completed else int(user_id))
+            else:
+                if expired:
+                    row = await _solo_update(conn, row, state, int(user_id), "lost")
+                else:
+                    color = action.get("color")
+                    if isinstance(color, bool) or not isinstance(color, int) or color not in range(4):
+                        raise ValueError("اختيار اللون غير صالح")
+                    progress = int(state["progress"])
+                    if color != int(state["sequence"][progress]):
+                        row = await _solo_update(conn, row, state, int(user_id), "lost")
+                    else:
+                        progress += 1
+                        if progress < int(state["level"]):
+                            state["progress"] = progress
+                            row = await conn.fetchrow(
+                                "UPDATE mini_game_solo SET game_state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",
+                                game_id, json.dumps(state),
+                            )
+                        else:
+                            state["progress"] = 0
+                            state["rounds_won"] = int(state.get("rounds_won", 0)) + 1
+                            chances = {"سهل": 0.38, "متوسط": 0.62, "صعب": 0.82, "مستحيل": 0.96}
+                            bot_passes = random.random() < chances[row["difficulty"]]
+                            if not bot_passes:
+                                row = await _solo_update(conn, row, state, int(user_id), "won")
+                            elif int(state["level"]) >= 12:
+                                row = await _solo_update(conn, row, state, int(user_id), "won")
+                            else:
+                                state["level"] = int(state["level"]) + 1
+                                state["sequence"].append(random.randrange(4))
+                                row = await _solo_update(conn, row, state, int(user_id))
+            return _solo_public(row)
+
+
+async def play_mini_game_solo_bot_move(user_id: int, raw_id: str):
+    try:
+        game_id = uuid.UUID(hex=raw_id.replace("-", ""))
+    except Exception:
+        raise ValueError("رابط اللعبة غير صالح")
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            row = await conn.fetchrow(
+                "SELECT * FROM mini_game_solo WHERE id=$1 AND user_id=$2 FOR UPDATE",
+                game_id, int(user_id),
+            )
+            if not row or row["status"] != "playing":
+                raise ValueError("اللعبة انتهت أو غير موجودة")
+            if int(row["turn_player_id"]) != -1:
+                return _solo_public(row)
+            state = _solo_decode(row["game_state"])
+            if row["game_type"] == "dots":
+                edge = _choose_solo_dot_edge(state, row["difficulty"])
+                if edge:
+                    completed = _draw_dot_edge(state, edge, 2)
+                    if sum(state["scores"]) >= 16:
+                        status = _solo_winner(state)
+                        row = await _solo_update(conn, row, state, -1, status)
+                    else:
+                        row = await _solo_update(conn, row, state, -1 if completed else int(user_id))
+            return _solo_public(row)
