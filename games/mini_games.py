@@ -190,8 +190,8 @@ async def _settle_wager(conn, row, winner_id: int | None):
 
 def _dots_edges():
     return {
-        "h": [[False for _ in range(4)] for _ in range(5)],
-        "v": [[False for _ in range(5)] for _ in range(4)],
+        "h": [[0 for _ in range(4)] for _ in range(5)],
+        "v": [[0 for _ in range(5)] for _ in range(4)],
         "boxes": [[0 for _ in range(4)] for _ in range(4)],
         "scores": [0, 0],
     }
@@ -342,7 +342,8 @@ async def choose_mini_game_rps(user_id: int, raw_id: str, choice: str):
                 state = _dots_edges()
             else:
                 state = {"sequence": [random.randrange(4), random.randrange(4), random.randrange(4)],
-                         "level": 3, "progress": 0, "round_successes": []}
+                         "level": 3, "progress": 0, "round_successes": [],
+                         "starter_id": starter}
             row = await conn.fetchrow(
                 """UPDATE mini_game_challenges SET status='playing',turn_player_id=$2,
                    turn_started_at=NOW(),game_state=$3::jsonb,
@@ -374,8 +375,16 @@ async def play_mini_game_action(user_id: int, raw_id: str, action: dict):
             first = int(user_id) == int(row["player1_id"])
             player = 1 if first else 2
             other_id = int(row["player2_id"] if first else row["player1_id"])
+            expired = await conn.fetchval(
+                "SELECT NOW() > $1::timestamptz + ($2 * INTERVAL '1 second')",
+                row["turn_started_at"], TURN_SECONDS[row["game_type"]],
+            )
+            if expired and row["game_type"] == "memory":
+                row = await _finish_game(conn, row, other_id)
+                return {"phase": "playing", "game": _public_state(row, user_id)}
             if row["game_type"] == "dots":
-                completed = _draw_dot_edge(state, action, player)
+                edge = random.choice(_available_dot_edges(state)) if expired else action
+                completed = _draw_dot_edge(state, edge, player)
                 if sum(state["scores"]) == 16:
                     winner_id = int(row["player1_id"] if state["scores"][0] > state["scores"][1] else row["player2_id"]) if state["scores"][0] != state["scores"][1] else None
                     row = await _finish_game(conn, row, winner_id)
@@ -412,7 +421,7 @@ async def play_mini_game_action(user_id: int, raw_id: str, action: dict):
                                     """UPDATE mini_game_challenges SET game_state=$2::jsonb,
                                        turn_player_id=$3,turn_started_at=NOW(),updated_at=NOW()
                                        WHERE id=$1 RETURNING *""",
-                                    game_id, json.dumps(state), int(row["player1_id"]),
+                                    game_id, json.dumps(state), int(state.get("starter_id") or row["player1_id"]),
                                 )
                         else:
                             row = await conn.fetchrow(
