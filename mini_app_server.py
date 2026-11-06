@@ -311,17 +311,6 @@ def handle_connect4_post(handler):
                     result = _run(extra.word_next(uid, payload.get("game_id","")))
                 else:
                     result = _run(extra.word_state(uid, payload.get("game_id","")))
-            elif game_type == "battleship":
-                if action == "create":
-                    result = _run(extra.battleship_create(uid, profile, payload.get("mode","online"), payload.get("difficulty","متوسط")))
-                elif action == "join":
-                    result = _run(extra.battleship_join(uid, profile, payload.get("game_id","")))
-                elif action == "move":
-                    result = _run(extra.battleship_move(uid, payload.get("game_id",""), payload.get("row"), payload.get("col")))
-                elif action == "shuffle":
-                    result = _run(extra.battleship_shuffle(uid, payload.get("game_id","")))
-                else:
-                    result = _run(extra.battleship_state(uid, payload.get("game_id","")))
             else:
                 raise ValueError("نوع اللعبة غير معروف")
             body = json.dumps({"ok": True, "result": result}, ensure_ascii=False).encode()
