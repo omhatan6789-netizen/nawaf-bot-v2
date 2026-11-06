@@ -103,6 +103,25 @@ async def mini_app_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         await msg.reply_text("تم تحديث صورة أعلى الميني آب بنجاح ✅")
         raise ApplicationHandlerStop
 
+    if text == "اضف صوت للميني":
+        _sessions[user.id] = {"step": "sound_media"}
+        await msg.reply_text("ارسل ملف صوتي أو مقطع فيديو (حتى 20 ميجابايت)، أو اكتب إلغاء.")
+        raise ApplicationHandlerStop
+
+    if text == "أصوات الميني":
+        rows = await get_pool().fetch("SELECT id,title,media_kind FROM mini_app_sounds ORDER BY id")
+        if not rows:
+            await msg.reply_text("ما أضفت أي صوت للميني آب حتى الآن.")
+        else:
+            lines = [f"{i}. {r['title']} ({'فيديو' if r['media_kind'] == 'video' else 'صوت'})" for i, r in enumerate(rows, 1)]
+            await msg.reply_text("أصوات الميني آب:\n" + "\n".join(lines))
+        raise ApplicationHandlerStop
+
+    if text == "حذف صوت من الميني":
+        _sessions[user.id] = {"step": "delete_sound_title"}
+        await msg.reply_text("ارسل اسم الصوت اللي تبي تحذفه، أو اكتب إلغاء.")
+        raise ApplicationHandlerStop
+
     if text in ("اضف زر للميني", "اضف زر كبير للميني"):
         kind = "large" if text == "اضف زر كبير للميني" else "small"
         _sessions[user.id] = {"step": "title", "type": kind}
@@ -114,6 +133,59 @@ async def mini_app_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         return
 
     step = session["step"]
+    if step == "delete_sound_title":
+        if text in ("إلغاء", "الغاء"):
+            _sessions.pop(user.id, None)
+            await msg.reply_text("تم إلغاء حذف الصوت.")
+        elif not text:
+            await msg.reply_text("ارسل اسم الصوت أو اكتب إلغاء.")
+        else:
+            deleted = await get_pool().fetchrow(
+                """DELETE FROM mini_app_sounds
+                   WHERE id = (SELECT id FROM mini_app_sounds
+                               WHERE LOWER(BTRIM(title))=LOWER(BTRIM($1))
+                               ORDER BY id LIMIT 1)
+                   RETURNING title""", text
+            )
+            _sessions.pop(user.id, None)
+            await msg.reply_text(f"تم حذف صوت «{deleted['title']}» من الميني آب ✅" if deleted else "ما لقيت صوت بهذا الاسم.")
+        raise ApplicationHandlerStop
+    if step == "sound_media":
+        if text in ("إلغاء", "الغاء"):
+            _sessions.pop(user.id, None)
+            await msg.reply_text("تم إلغاء إضافة الصوت.")
+            raise ApplicationHandlerStop
+        media = msg.audio or msg.voice or msg.video
+        if msg.document and (msg.document.mime_type or "").startswith(("audio/", "video/")):
+            media = msg.document
+        if not media:
+            await msg.reply_text("ارسل ملف صوتي أو فيديو، أو اكتب إلغاء.")
+            raise ApplicationHandlerStop
+        size = getattr(media, "file_size", 0) or 0
+        if size > 20 * 1024 * 1024:
+            await msg.reply_text("حجم الملف أكبر من 20 ميجابايت. أرسل ملفًا أصغر.")
+            raise ApplicationHandlerStop
+        mime = getattr(media, "mime_type", None) or ("video/mp4" if msg.video else "audio/ogg" if msg.voice else "audio/mpeg")
+        kind = "video" if mime.startswith("video/") or msg.video else "audio"
+        session.update({"step": "sound_title", "file_id": media.file_id, "mime_type": mime, "media_kind": kind, "file_size": size})
+        await msg.reply_text("وش الاسم اللي تبي يظهر في قائمة الأصوات؟")
+        raise ApplicationHandlerStop
+    if step == "sound_title":
+        if text in ("إلغاء", "الغاء"):
+            _sessions.pop(user.id, None)
+            await msg.reply_text("تم إلغاء إضافة الصوت.")
+        elif not text:
+            await msg.reply_text("ارسل اسمًا للصوت.")
+        else:
+            await get_pool().execute(
+                """INSERT INTO mini_app_sounds(title,file_id,mime_type,media_kind,file_size,created_by)
+                   VALUES($1,$2,$3,$4,$5,$6)""",
+                text[:80], session["file_id"], session["mime_type"],
+                session["media_kind"], session["file_size"], user.id
+            )
+            _sessions.pop(user.id, None)
+            await msg.reply_text(f"تمت إضافة «{text[:80]}» لقائمة أصوات الميني آب ✅")
+        raise ApplicationHandlerStop
     if step == "title":
         if not text:
             await msg.reply_text("ارسل اسم الزر كنص.")
