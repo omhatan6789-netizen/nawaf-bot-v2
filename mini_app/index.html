@@ -158,14 +158,13 @@ function showGames(){
   ['🟦','المربعات','ارسم الخطوط واجمع المربعات','dots'],
   ['🧠','اختبر ذاكرتك','احفظ التسلسل وتحدَّ لاعبًا آخر','memory'],
   ['🔤','خمن الكلمة','تحدَّ حتى 10 لاعبين أو تدرب لحالك','word'],
-  ['🚢','معركة السفن','واجه لاعبًا أو اختبر قوتك ضد البوت','battleship']
  ];
  games.forEach(([emoji,name,hint,type])=>{
   const card=document.createElement('button');card.className='custom-card';card.style.width='100%';card.style.cursor='pointer';
   const icon=document.createElement('span');icon.style.fontSize='28px';icon.textContent=emoji;card.appendChild(icon);
   const label=document.createElement('span');label.className='label';label.textContent=name;card.appendChild(label);
   const sub=document.createElement('span');sub.className='dots';sub.textContent=hint;card.appendChild(sub);
-  card.onclick=()=>{if(type==='connect'){showConnect4Setup();return;}if(type==='word'){showWordSetup();return;}if(type==='battleship'){showBattleshipSetup();return;}showMiniGameInstructions(type);};
+  card.onclick=()=>{if(type==='connect'){showConnect4Setup();return;}if(type==='word'){showWordSetup();return;}showMiniGameInstructions(type);};
   pageContent.appendChild(card);
  });
 }
@@ -665,8 +664,8 @@ async function pollConnect4State(){
  },1300);
 }
 let extraStartParam=tg?.initDataUnsafe?.start_param||'';
-let extraGameId=(extraStartParam.startsWith('word_')?extraStartParam.slice(5):extraStartParam.startsWith('battle_')?extraStartParam.slice(7):'');
-let extraGameType=extraStartParam.startsWith('word_')?'word':extraStartParam.startsWith('battle_')?'battleship':'';
+let extraGameId=extraStartParam.startsWith('word_')?extraStartParam.slice(5):'';
+let extraGameType=extraStartParam.startsWith('word_')?'word':'';
 let extraGame=null,extraPoll=null,extraBusy=false,extraStartedAt=0,extraElapsedTimer=null,extraLastRevealKey='',extraAdvancing=false;
 async function extraGameRequest(action,game_type,extra={}){
  const initData=tg?.initData||'';
@@ -694,13 +693,13 @@ async function createWordGame(mode){
 function renderWordLobby(){
  const g=extraGame,shell=c4Shell(),players=g.players||[];
  shell.innerHTML='<div class="c4-heading"><h2>غرفة خمن الكلمة 🔤</h2><p>شارك الرابط مع أصدقائك</p></div><div class="c4-panel"><div class="mg-score">'+players.map(p=>'<span>'+escapeLobbyText(p.name)+'</span>').join('')+'</div><div class="c4-result show">اللاعبون: '+players.length+'/10</div><button class="c4-start" id="word-share">مشاركة رابط الغرفة</button><button class="c4-secondary" id="word-start">ابدأ اللعبة</button><button class="c4-secondary" id="word-back">رجوع</button></div>';
- shell.querySelector('#word-share').onclick=()=>shareExtraGame('word',g.id);
+ shell.querySelector('#word-share').onclick=()=>shareExtraGame(g.id);
  shell.querySelector('#word-start').onclick=async()=>{try{extraGame=await extraGameRequest('start','word');renderWordGame();}catch(e){showExtraError(e);}};
  shell.querySelector('#word-back').onclick=showGames;
  scheduleExtraPoll();
 }
-function shareExtraGame(type,id){
- const deep='https://t.me/Lewadbot?startapp='+(type==='word'?'word_':'battle_')+id;
+function shareExtraGame(id){
+ const deep='https://t.me/Lewadbot?startapp=word_'+id;
  const url='https://t.me/share/url?url='+encodeURIComponent(deep);
  if(tg?.openTelegramLink)tg.openTelegramLink(url);else if(navigator.clipboard)navigator.clipboard.writeText(deep).then(()=>alert('تم نسخ رابط الغرفة'));
 }
@@ -758,43 +757,12 @@ function scheduleExtraPoll(){
     if(next.status==='waiting'){if(changed)renderWordLobby();}
     else if(next.status==='playing'&&next.round_until&&Date.now()>=next.round_until&&(next.players||[]).some(p=>Number(p.id)===Number(tg?.initDataUnsafe?.user?.id))){await advanceWord();}
     else if(changed)renderWordGame();
-   }else if(extraGameType==='battleship'){
-    const before=JSON.stringify(extraGame),next=await extraGameRequest('state','battleship'),changed=JSON.stringify(next)!==before;
-    extraGame=next;
-    if(next.status==='won'||next.status==='lost'){if(changed)renderBattleship();extraPoll=null;return;}
-    if(changed)renderBattleship();
    }
   }catch(e){}
   scheduleExtraPoll();
  },1800);
 }
 function showExtraError(error){const shell=document.getElementById('c4-shell');if(shell){let el=shell.querySelector('.c4-error');if(!el){el=document.createElement('div');el.className='c4-error';shell.appendChild(el);}el.textContent=error?.message||'حدث خطأ';}}
-function showBattleshipSetup(){
- stopExtraGame();const shell=c4Shell();
- shell.innerHTML='<div class="c4-heading"><h2>معركة السفن 🚢</h2><p>أغرق أسطول خصمك قبل أن يغرق أسطولك</p></div><div class="c4-panel"><button class="c4-start" id="battle-online">العب أونلاين مع لاعب</button><div class="c4-label" style="margin-top:18px">مستوى البوت</div><div class="c4-levels" id="battle-levels"></div><button class="c4-secondary" id="battle-back">رجوع للألعاب</button></div>';
- [['سهل','تدريب'],['متوسط','متوازن'],['صعب','ذكي'],['مستحيل','أقوى تحدي']].forEach(([v,d])=>{const b=document.createElement('button');b.className='c4-level';b.innerHTML='<b>'+v+'</b><small>'+d+'</small>';b.onclick=()=>createBattleship('bot',v);shell.querySelector('#battle-levels').appendChild(b);});
- shell.querySelector('#battle-online').onclick=()=>createBattleship('online','متوسط');shell.querySelector('#battle-back').onclick=showGames;
-}
-async function createBattleship(mode,difficulty){
- try{extraGameType='battleship';extraGame=await extraGameRequest('create','battleship',{mode,difficulty});extraGameId=extraGame.id;renderBattleship();if(mode==='online')shareExtraGame('battleship',extraGame.id);}catch(e){showExtraError(e);}
-}
-async function renderBattleship(){
- const g=extraGame;if(!g)return;const shell=c4Shell(),s=g.state||{},spectator=g.spectator;
- shell.innerHTML='<div class="c4-heading"><h2>معركة السفن 🚢</h2><p>'+(g.player_names||[]).join(' × ')+'</p></div><div class="mg-status"><span id="battle-status"></span><b>'+(g.your_turn?'دورك':'دور الخصم')+'</b></div><div class="c4-panel"><div class="c4-label">شبكة الخصم — اضغط لتطلق</div><div id="battle-board" style="display:grid;grid-template-columns:repeat(10,1fr);gap:3px;max-width:440px;margin:auto"></div><div class="c4-label" style="margin-top:15px">أسطولك</div><div id="battle-own" style="display:grid;grid-template-columns:repeat(10,1fr);gap:3px;max-width:440px;margin:auto"></div><button class="c4-secondary" id="battle-shuffle">🔀 إعادة توزيع سفنك</button><button class="c4-secondary" id="battle-share">مشاركة الغرفة</button><button class="c4-secondary" id="battle-back">رجوع للألعاب</button></div>';
- const own=new Set((spectator?(s.ships?.[0]?.flat()||[]):(s.own_ships?.flat()||[])).map(x=>x.join(','))),ownShots=new Set(spectator?(s.shots?.[0]?.map(x=>x.join(','))||[]):(s.own_shots?.map(x=>x.join(','))||[])),enemyShots=new Set(spectator?(s.shots?.[1]?.map(x=>x.join(','))||[]):(s.enemy_shots?.map(x=>x.join(','))||[])),hits=new Set(spectator?(s.shots?.[0]||[]).filter(x=>(s.ships?.[1]||[]).some(ship=>ship.some(cell=>cell[0]===x[0]&&cell[1]===x[1]))).map(x=>x.join(',')):(s.your_hits?.map(x=>x.join(','))||[])),enemyHits=new Set(spectator?(s.shots?.[1]||[]).filter(x=>(s.ships?.[0]||[]).some(ship=>ship.some(cell=>cell[0]===x[0]&&cell[1]===x[1]))).map(x=>x.join(',')):(s.enemy_hits?.map(x=>x.join(','))||[]));
- const board=shell.querySelector('#battle-board'),ownBoard=shell.querySelector('#battle-own');
- for(let r=0;r<10;r++)for(let c=0;c<10;c++){const key=r+','+c,b=document.createElement('button');b.style.cssText='aspect-ratio:1;border:1px solid #ffffff35;border-radius:4px;background:'+(ownShots.has(key)?(hits.has(key)?'#e53935':'#64748b'):'#175b91')+';padding:0;min-width:0';b.disabled=!g.your_turn||spectator||g.status!=='playing'||ownShots.has(key);b.textContent=ownShots.has(key)?(hits.has(key)?'✕':'•'):'';b.onclick=()=>battleShot(r,c);board.appendChild(b);
- const ob=document.createElement('div');ob.style.cssText='aspect-ratio:1;border:1px solid #ffffff35;border-radius:4px;background:'+(own.has(key)?'#64748b':'#175b91');if(enemyShots.has(key))ob.style.background=enemyHits.has(key)?'#e53935':'#64748b';ownBoard.appendChild(ob);}
- shell.querySelector('#battle-status').textContent=g.status==='waiting'?'بانتظار انضمام اللاعب':g.status==='won'||g.status==='lost'?'انتهت المعركة':g.your_turn?'اختر موقعًا للهجوم':'انتظر دور الخصم';
- const shuffle=shell.querySelector('#battle-shuffle');shuffle.hidden=!!spectator||!!(s.own_shots?.length||s.enemy_shots?.length);shuffle.onclick=async()=>{try{extraGame=await extraGameRequest('shuffle','battleship');renderBattleship();}catch(e){showExtraError(e);}};
- shell.querySelector('#battle-share').onclick=()=>shareExtraGame('battleship',g.id);shell.querySelector('#battle-back').onclick=()=>{stopExtraGame();showGames();};
- if(g.status==='won'||g.status==='lost'){if(extraPoll)clearTimeout(extraPoll);extraPoll=null;showOnlineEndOverlay('battleship',g.id,'🏆 '+(g.winner_name||'انتهت المعركة'));return;}
- scheduleExtraPoll();
-}
-async function battleShot(r,c){try{extraGame=await extraGameRequest('move','battleship',{row:r,col:c});renderBattleship();}catch(e){showExtraError(e);}}
-
-
-
 function startC4Timer(){
  stopC4Timer();if(!c4Game||c4Game.status!=='playing')return;
  c4Seconds=15;const started=Number(c4Game.turn_started_at)||Date.now();
@@ -837,9 +805,8 @@ document.getElementById('back-home').onclick=showHome;
    root.appendChild(a);
   }
   if(extraGameType&&extraGameId){
-    home.hidden=true;page.hidden=false;pageTitle.textContent=extraGameType==='word'?'خمن الكلمة':'معركة السفن';
-    if(extraGameType==='word'){extraGame=await extraGameRequest('join','word');if(extraGame.status==='waiting')renderWordLobby();else renderWordGame();}
-    else{extraGame=await extraGameRequest('join','battleship');renderBattleship();}
+    home.hidden=true;page.hidden=false;pageTitle.textContent='خمن الكلمة';
+    extraGame=await extraGameRequest('join','word');if(extraGame.status==='waiting')renderWordLobby();else renderWordGame();
   }
   else if(onlineLobbyId){startOnlineLobby();}
   else if(miniGameChallengeIdFromStart){home.hidden=true;page.hidden=false;pageTitle.textContent='الألعاب';startMiniGameChallenge();}
