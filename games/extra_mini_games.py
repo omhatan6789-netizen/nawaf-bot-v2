@@ -66,7 +66,7 @@ def _public_word(row,user_id):
       "current_index":row["current_index"],"total":row["word_limit"],
       "players":[{"id":p["id"],"name":p["name"],"score":p.get("score",0)} for p in players],
       "my_score":me.get("score",0) if me else 0,"is_player":bool(me),
-      "current_word":word_list[row["current_index"]] if row["mode"]=="training" and row["status"]=="playing" and row["current_index"]<len(word_list) else None,
+      "current_word_length":len(word_list[row["current_index"]]) if row["mode"]=="training" and row["status"]=="playing" and row["current_index"]<len(word_list) else None,
       "round_until":int(row["round_until"].timestamp()*1000) if row["round_until"] else None,
       "round_winner":answers.get("last_winner"),"last_word":answers.get("last_word"),
       "last_feedback":answers.get("last_feedback"),"last_guess":answers.get("last_guess"),"answers":answers,
