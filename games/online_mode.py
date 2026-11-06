@@ -278,10 +278,9 @@ async def online_lobby_callback(update: Update, context: ContextTypes.DEFAULT_TY
     )
     launch_url = f"https://t.me/{me.username}?startapp={start_param}"
     text = (
-        f"✅ اكتمل عدد اللاعبين — {GAME_INFO[game_type][0]}\n\n"
-        f"👤 اللاعب الأول: {player1_name}\n"
-        f"👤 اللاعب الثاني: {player2_name}\n\n"
-        "اضغطوا على الزر لفتح اللعبة والبدء مباشرة."
+        f"✅ اكتمل عدد اللاعبين — {GAME_INFO[game_type][0]}\\n\\n"
+        + "\\n".join(f"👤 {name}" for _, name, _ in players)
+        + "\\n\\nاضغطوا على الزر لفتح اللعبة والبدء مباشرة."
     )
     keyboard = InlineKeyboardMarkup([[
         InlineKeyboardButton("🎮 فتح اللعبة", url=launch_url)
