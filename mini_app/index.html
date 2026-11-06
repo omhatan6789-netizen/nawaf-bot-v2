@@ -565,4 +565,20 @@ document.getElementById('back-home').onclick=showHome;
   else if(c4GameIdFromUrl){home.hidden=true;page.hidden=false;pageTitle.textContent='كونكت 4';startConnect4();}
  }catch(e){document.getElementById('custom').innerHTML='<div class="empty">تعذر تحميل الإضافات حاليًا</div>';}
 })();
-</script></body></html>
+</script></body></html function playMemoryTone(frequency=660,duration=0.11){
+  try{const Ctx=window.AudioContext||window.webkitAudioContext;if(!Ctx)return;const ctx=window.__mgAudio||(window.__mgAudio=new Ctx());if(ctx.state==='suspended')ctx.resume();const osc=ctx.createOscillator(),gain=ctx.createGain();osc.type='sine';osc.frequency.value=frequency;gain.gain.setValueAtTime(.0001,ctx.currentTime);gain.gain.exponentialRampToValueAtTime(.13,ctx.currentTime+.015);gain.gain.exponentialRampToValueAtTime(.0001,ctx.currentTime+duration);osc.connect(gain);gain.connect(ctx.destination);osc.start();osc.stop(ctx.currentTime+duration+.02);}catch(e){}
+ }
+ function presentMemorySequence(sequence,key,onDone){
+  if(memoryPresentationKey===key)return;
+  memoryPresentationKey=key;memoryPlaybackTimers.forEach(clearTimeout);memoryPlaybackTimers=[];
+  miniGameInputLocked=true;document.querySelectorAll('.mg-memory-tile').forEach(b=>b.disabled=true);
+  const status=document.getElementById('mg-status');let count=3;
+  const countdown=()=>{if(memoryPresentationKey!==key)return;if(count>0){if(status)status.textContent=String(count);playMemoryTone(520,0.16);count--;memoryPlaybackTimers.push(setTimeout(countdown,850));return;}
+   if(status)status.textContent='GO!';playMemoryTone(880,0.24);
+   memoryPlaybackTimers.push(setTimeout(()=>{if(memoryPresentationKey!==key)return;if(status)status.textContent='احفظ التسلسل...';sequence.forEach((color,i)=>{
+    memoryPlaybackTimers.push(setTimeout(()=>{const tile=document.querySelector('.mg-memory-tile[data-color="'+color+'"]');if(tile)tile.classList.add('flash');playMemoryTone([392,494,587,784][color],.2);},i*720+250));
+    memoryPlaybackTimers.push(setTimeout(()=>{document.querySelectorAll('.mg-memory-tile').forEach(x=>x.classList.remove('flash'));if(i===sequence.length-1){miniGameInputLocked=false;document.querySelectorAll('.mg-memory-tile').forEach(b=>b.disabled=false);const s=document.getElementById('mg-status');if(s)s.textContent='دورك! كرر التسلسل';if(onDone)onDone();}},i*720+580));
+   });},650));
+  };countdown();
+ }
+>
