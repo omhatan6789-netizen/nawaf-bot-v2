@@ -619,7 +619,7 @@ def build_application() -> Application:
 
     # Multiplayer Mini App games: Dots and Boxes and memory challenge.
     application.add_handler(MessageHandler(
-        filters.ChatType.GROUPS & filters.Regex(r"^(?:مربعات|المربعات|ذاكرة)(?:\s+\d+)?$"),
+        filters.ChatType.GROUPS & filters.Regex(r"^(?:مربعات|المربعات|ذاكرة|اختبر ذاكرتك)(?:\s+\d+)?$"),
         mini_game_challenge_command,
     ))
     application.add_handler(CallbackQueryHandler(
