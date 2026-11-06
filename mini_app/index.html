@@ -725,7 +725,7 @@ function renderWordGame(){
    if(extraLastRevealKey!==revealKey){extraLastRevealKey=revealKey;showWordReveal(g.round_winner,g.last_word,()=>{},g.last_guess,g.last_feedback);}
  }
  if(training&&g.current_word){const start=extraStartedAt||Date.now();extraElapsedTimer=setInterval(()=>{const sec=Math.floor((Date.now()-start)/1000),el=document.getElementById('word-clock');if(el)el.textContent='الوقت: '+(sec>=3600?Math.floor(sec/3600)+'س '+Math.floor(sec%3600/60)+'د':sec>=60?Math.floor(sec/60)+'د '+sec%60+'ث':sec+'ث');},1000);}
- scheduleExtraPoll();
+ if(!training)scheduleExtraPoll();
 }
 function renderWordTiles(root,guess,feedback){
  if(!root)return;root.replaceChildren();const colors={green:'#22c55e',orange:'#f97316',white:'#fff',green_purple:'#22c55e',yellow_purple:'#eab308'};
@@ -737,20 +737,25 @@ function showWordReveal(name,word,done,guess='',feedback=[]){
  overlay.appendChild(card);renderWordTiles(card.querySelector('#word-reveal-tiles'),guess,feedback);document.body.appendChild(overlay);let n=3;const timer=setInterval(()=>{n--;const el=card.querySelector('#word-countdown');if(el)el.textContent=n;if(n<=0){clearInterval(timer);overlay.remove();done();}},1000);
 }
 async function advanceWord(){if(extraAdvancing)return;extraAdvancing=true;try{extraGame=await extraGameRequest('next','word');renderWordGame();}catch(e){showExtraError(e);}finally{extraAdvancing=false;}}
+function wordStateKey(g){
+ return [g?.status,g?.current_index,g?.round_winner,g?.round_until,(g?.players||[]).map(p=>p.id+':'+p.score).join(',')].join('|');
+}
 function scheduleExtraPoll(){
  if(extraPoll)clearTimeout(extraPoll);
  extraPoll=setTimeout(async()=>{
   try{
    if(extraGameType==='word'){
-    extraGame=await extraGameRequest('state','word');
-    if(extraGame.status==='finished'){renderWordGame();extraPoll=null;return;}
-    if(extraGame.status==='waiting')renderWordLobby();
-    else if(extraGame.status==='playing'&&extraGame.round_until&&Date.now()>=extraGame.round_until&&(extraGame.players||[]).some(p=>Number(p.id)===Number(tg?.initDataUnsafe?.user?.id))){await advanceWord();}
-    else renderWordGame();
+    const before=wordStateKey(extraGame),next=await extraGameRequest('state','word'),changed=wordStateKey(next)!==before;
+    extraGame=next;
+    if(next.status==='finished'){if(changed)renderWordGame();extraPoll=null;return;}
+    if(next.status==='waiting'){if(changed)renderWordLobby();}
+    else if(next.status==='playing'&&next.round_until&&Date.now()>=next.round_until&&(next.players||[]).some(p=>Number(p.id)===Number(tg?.initDataUnsafe?.user?.id))){await advanceWord();}
+    else if(changed)renderWordGame();
    }else if(extraGameType==='battleship'){
-    extraGame=await extraGameRequest('state','battleship');
-    if(extraGame.status==='won'||extraGame.status==='lost'){renderBattleship();extraPoll=null;return;}
-    renderBattleship();
+    const before=JSON.stringify(extraGame),next=await extraGameRequest('state','battleship'),changed=JSON.stringify(next)!==before;
+    extraGame=next;
+    if(next.status==='won'||next.status==='lost'){if(changed)renderBattleship();extraPoll=null;return;}
+    if(changed)renderBattleship();
    }
   }catch(e){}
   scheduleExtraPoll();
