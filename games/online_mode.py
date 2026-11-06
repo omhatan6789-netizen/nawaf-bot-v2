@@ -150,11 +150,11 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
             "SELECT photo_file_id FROM online_game_images WHERE game_type=$1",
             game_type,
         )
-        thumb_url = None
+        thumbnail_url = None
         if photo_file_id:
             try:
                 photo_file = await context.bot.get_file(photo_file_id)
-                thumb_url = photo_file.file_path
+                thumbnail_url = photo_file.file_path
             except Exception:
                 import logging
                 logging.getLogger(__name__).exception(
@@ -166,9 +166,9 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
             description=description,
             input_message_content=InputTextMessageContent(lobby_text),
             reply_markup=keyboard,
-            thumb_url=thumb_url,
-            thumb_width=320 if thumb_url else None,
-            thumb_height=320 if thumb_url else None,
+            thumbnail_url=thumbnail_url,
+            thumbnail_width=320 if thumbnail_url else None,
+            thumbnail_height=320 if thumbnail_url else None,
         ))
     await inline.answer(results, cache_time=0, is_personal=True)
 
