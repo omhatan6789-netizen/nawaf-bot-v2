@@ -154,10 +154,12 @@ function showGames(){
  card.onclick=showConnect4Setup;pageContent.appendChild(card);
 }
 
-let c4Difficulty='متوسط',c4Game=null,c4Timer=null,c4Tick=null,c4Busy=false,c4Seconds=15,c4BotTimer=null,c4PollTimer=null,c4RpsChoice=null;
+let c4Difficulty='متوسط',c4Game=null,c4Timer=null,c4Tick=null,c4Busy=false,c4Seconds=15,c4BotTimer=null,c4PollTimer=null,c4RpsChoice=null,c4ChallengePollTimer=null;
 let c4GameIdFromUrl=new URLSearchParams(window.location.search).get('game_id');
+const c4StartParam=tg?.initDataUnsafe?.start_param||'';
+const c4ChallengeIdFromStart=c4StartParam.startsWith('c4c_')?c4StartParam.slice(4):new URLSearchParams(window.location.search).get('challenge_id');
 const c4Levels=[['سهل','مناسب للتجربة'],['متوسط','تحدي متوازن'],['صعب','يفكر قبل أن يلعب'],['مستحيل','أقوى تحدي']];
-function stopC4Timer(){if(c4Timer)clearTimeout(c4Timer);if(c4Tick)clearInterval(c4Tick);if(c4BotTimer)clearTimeout(c4BotTimer);if(c4PollTimer)clearTimeout(c4PollTimer);c4Timer=null;c4Tick=null;c4BotTimer=null;c4PollTimer=null;}
+function stopC4Timer(){if(c4Timer)clearTimeout(c4Timer);if(c4Tick)clearInterval(c4Tick);if(c4BotTimer)clearTimeout(c4BotTimer);if(c4PollTimer)clearTimeout(c4PollTimer);if(c4ChallengePollTimer)clearTimeout(c4ChallengePollTimer);c4Timer=null;c4Tick=null;c4BotTimer=null;c4PollTimer=null;c4ChallengePollTimer=null;}
 function c4Shell(){document.body.classList.add('c4-active');pageContent.innerHTML='<div class="c4-shell" id="c4-shell"></div>';return document.getElementById('c4-shell');}
 function showConnect4Setup(){
  stopC4Timer();c4Game=null;c4Busy=false;c4RpsChoice=null;
@@ -176,6 +178,53 @@ async function c4Request(path,payload){
  const data=await response.json().catch(()=>({}));
  if(!response.ok||!data.ok)throw new Error(data.error||'تعذر الاتصال بالسيرفر');
  return data.game;
+}
+async function c4ChallengeRequest(path,payload={}){
+ const initData=tg?.initData||'';
+ if(!initData)throw new Error('افتح الميني آب من داخل تيليجرام حتى نتحقق من حسابك');
+ const response=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...payload,initData})});
+ const data=await response.json().catch(()=>({}));
+ if(!response.ok||!data.ok)throw new Error(data.error||'تعذر الاتصال بالسيرفر');
+ return data.result;
+}
+function renderC4ChallengeRps(state){
+ stopC4Timer();const shell=c4Shell();
+ const names=[state.challenger_name||'اللاعب الأول',state.opponent_name||'اللاعب الثاني'];
+ const choiceNames={r:'حجر ✊',p:'ورقة ✋',s:'مقص ✌️'};
+ shell.innerHTML='<div class="c4-heading"><h2>حجر ورقة مقص ✊</h2><p>اختاروا من يبدأ مباراة كونكت 4</p></div><div class="c4-panel"><div class="c4-players"><div class="c4-player"><strong></strong><small>اللاعب الأول</small></div><span class="c4-vs">VS</span><div class="c4-player"><strong></strong><small>اللاعب الثاني</small></div></div><div class="c4-label" style="margin:18px 0 10px">اختر حركتك</div><div class="c4-levels" id="c4-challenge-rps"></div><div class="c4-result show" id="c4-rps-status"></div><div class="c4-hint">لا تظهر حركة أي لاعب للآخر حتى يختار الاثنان</div></div>';
+ const players=shell.querySelectorAll('.c4-player');players[0].querySelector('strong').textContent=names[0];players[1].querySelector('strong').textContent=names[1];
+ const controls=shell.querySelector('#c4-challenge-rps');
+ [['r','✊ حجر'],['p','✋ ورقة'],['s','✌️ مقص']].forEach(([value,label])=>{
+  const b=document.createElement('button');b.className='c4-level';b.textContent=label;b.disabled=!!state.my_choice;
+  if(state.my_choice===value)b.classList.add('active');
+  b.onclick=()=>submitC4ChallengeChoice(value);controls.appendChild(b);
+ });
+ const status=shell.querySelector('#c4-rps-status');
+ status.textContent=state.tie?'تعادل! اختاروا من جديد.':state.my_choice
+  ?'تم تسجيل اختيارك ('+choiceNames[state.my_choice]+')، ننتظر اختيار اللاعب الآخر...'
+  :state.opponent_chosen?'اللاعب الآخر اختار، اختر حركتك الآن.':'بانتظار اختيار اللاعبين...';
+ if(state.my_choice)controls.querySelectorAll('button').forEach(b=>b.disabled=true);
+}
+async function startConnect4Challenge(){
+ const shell=c4Shell();shell.innerHTML='<div class="c4-heading"><h2>جاري فتح التحدي...</h2></div>';
+ try{const state=await c4ChallengeRequest('/api/connect4/challenge/state',{challenge_id:c4ChallengeIdFromStart});handleC4ChallengeResult(state);}
+ catch(e){shell.innerHTML='<div class="c4-error"></div>';shell.querySelector('.c4-error').textContent=e.message;}
+}
+function handleC4ChallengeResult(result){
+ if(result.phase==='playing'){c4Game=result.game;renderConnect4();return;}
+ renderC4ChallengeRps(result);
+ if(c4ChallengePollTimer)clearTimeout(c4ChallengePollTimer);
+ c4ChallengePollTimer=setTimeout(pollC4ChallengeState,1200);
+}
+async function pollC4ChallengeState(){
+ c4ChallengePollTimer=null;
+ try{const state=await c4ChallengeRequest('/api/connect4/challenge/state',{challenge_id:c4ChallengeIdFromStart});handleC4ChallengeResult(state);}
+ catch(e){c4ChallengePollTimer=setTimeout(pollC4ChallengeState,1800);}
+}
+async function submitC4ChallengeChoice(choice){
+ document.querySelectorAll('#c4-challenge-rps button').forEach(b=>b.disabled=true);
+ try{const result=await c4ChallengeRequest('/api/connect4/challenge/choice',{challenge_id:c4ChallengeIdFromStart,choice});handleC4ChallengeResult(result);}
+ catch(e){const status=document.getElementById('c4-rps-status');if(status)status.textContent=e.message;document.querySelectorAll('#c4-challenge-rps button').forEach(b=>b.disabled=false);}
 }
 async function startConnect4(rpsChoice=null){
  const btn=document.getElementById('c4-start');if(btn){btn.disabled=true;btn.textContent='جاري تجهيز اللوحة...';}
@@ -234,7 +283,7 @@ function renderConnect4(previousBoard=null){
    if(previousBoard){for(let r=0;r<6;r++){for(let col=0;col<7;col++){if(previousBoard[r][col]===0&&c4Game.board[r][col]!==0)fallDelay=Math.max(fallDelay,r*35);}}}
    c4BotTimer=setTimeout(runC4BotMove,1620+fallDelay);
   }
-  else if(human)pollConnect4State();
+  else if(human){startC4Timer();pollConnect4State();}
  }else{
   shell.querySelector('#c4-status').textContent=c4Game.rps_result?(c4Game.rps_result==='bot_starts'?'✊ حجر ورقة مقص: فاز '+p2+' ('+({r:'حجر',p:'ورقة',s:'مقص'}[c4Game.rps_bot_choice]||'')+') ويبدأ أولًا':'✊ حجر ورقة مقص: فزت ('+({r:'حجر',p:'ورقة',s:'مقص'}[c4Game.rps_bot_choice]||'')+') وتبدأ أولًا'):'دورك! اختر عمودًا';
   players.forEach((el,i)=>{el.classList.toggle('active',i===(human?(myPiece===1?0:1):0));el.style.setProperty('--turn-color',i===(human?(myPiece===1?0:1):0)?'#ff3448':'#278bff');});
@@ -264,9 +313,9 @@ async function pollConnect4State(){
  },1300);
 }
 function startC4Timer(){
- stopC4Timer();if(!c4Game?.your_turn)return;
+ stopC4Timer();if(!c4Game||c4Game.status!=='playing')return;
  c4Seconds=15;const started=Number(c4Game.turn_started_at)||Date.now();
- const update=()=>{const left=Math.max(0,15-(Date.now()-started)/1000);const clock=document.getElementById('c4-clock'),bar=document.getElementById('c4-progress');if(clock)clock.textContent=Math.ceil(left)+' ثانية';if(bar)bar.style.width=(left/15*100)+'%';if(left<=0){stopC4Timer();const legal=c4Game.board[0].map((v,i)=>v===0?i:null).filter(v=>v!==null);if(legal.length)submitConnect4Move(legal[Math.floor(Math.random()*legal.length)],true);}};
+ const update=()=>{const left=Math.max(0,15-(Date.now()-started)/1000);const clock=document.getElementById('c4-clock'),bar=document.getElementById('c4-progress');if(clock)clock.textContent=Math.ceil(left)+' ثانية';if(bar)bar.style.width=(left/15*100)+'%';if(left<=0){stopC4Timer();if(c4Game.your_turn){const legal=c4Game.board[0].map((v,i)=>v===0?i:null).filter(v=>v!==null);if(legal.length)submitConnect4Move(legal[Math.floor(Math.random()*legal.length)],true);}else if(c4Game.game_mode==='human'){pollConnect4State();}}};
  update();c4Tick=setInterval(update,200);c4Timer=setTimeout(update,15100);
 }
 async function submitConnect4Move(col,automatic=false){
@@ -297,7 +346,8 @@ document.getElementById('back-home').onclick=showHome;
    else{if(b.image){const im=document.createElement('img');im.className='thumb';im.src=b.image;a.appendChild(im);}const name=document.createElement('span');name.className='label';name.textContent=b.title;a.appendChild(name);const dots=document.createElement('span');dots.className='dots';dots.textContent='⋮';a.appendChild(dots);}
    root.appendChild(a);
   }
-  if(c4GameIdFromUrl){home.hidden=true;page.hidden=false;pageTitle.textContent='كونكت 4';startConnect4();}
+  if(c4ChallengeIdFromStart){home.hidden=true;page.hidden=false;pageTitle.textContent='كونكت 4';startConnect4Challenge();}
+  else if(c4GameIdFromUrl){home.hidden=true;page.hidden=false;pageTitle.textContent='كونكت 4';startConnect4();}
  }catch(e){document.getElementById('custom').innerHTML='<div class="empty">تعذر تحميل الإضافات حاليًا</div>';}
 })();
 </script></body></html>
