@@ -27,6 +27,9 @@ async def _payload(top=None):
         """SELECT id,title,target,button_type,color,image_file_id
            FROM mini_app_buttons ORDER BY button_type DESC,button_order,id"""
     )
+    sounds = await pool.fetch(
+        "SELECT id,title,media_kind,mime_type FROM mini_app_sounds ORDER BY id"
+    )
     leaderboard = None
     if top == "points":
         from database.points import get_points_leaderboard
@@ -77,6 +80,11 @@ async def _payload(top=None):
              "image": ("/tg-file/" + r["image_file_id"]) if r["image_file_id"] else None}
             for r in buttons
         ],
+        "sounds": [
+            {"id": r["id"], "title": r["title"], "type": r["media_kind"],
+             "mime_type": r["mime_type"], "url": f"/mini-app/sound/{r['id']}"}
+            for r in sounds
+        ],
     }
 
 def _run(coro, timeout=20):
@@ -123,6 +131,29 @@ def handle_mini_app_request(handler):
             handler.wfile.write(body)
         except Exception:
             handler.send_error(503, "Mini App is starting")
+        return True
+    if path.startswith("/mini-app/sound/"):
+        try:
+            sound_id = int(path.rsplit("/", 1)[-1])
+            sound = _run(get_pool().fetchrow(
+                "SELECT file_id,mime_type,media_kind FROM mini_app_sounds WHERE id=$1",
+                sound_id,
+            ))
+            if not sound:
+                handler.send_error(404, "Sound not found")
+                return True
+            telegram_file = _run(_bot.get_file(sound["file_id"]))
+            body = bytes(_run(telegram_file.download_as_bytearray()))
+            handler.send_response(200)
+            handler.send_header("Content-Type", sound["mime_type"] or ("video/mp4" if sound["media_kind"] == "video" else "audio/mpeg"))
+            handler.send_header("Content-Length", str(len(body)))
+            handler.send_header("Accept-Ranges", "none")
+            handler.send_header("Cache-Control", "public, max-age=3600")
+            handler.end_headers()
+            handler.wfile.write(body)
+        except Exception:
+            logging.getLogger(__name__).exception("Failed to serve Mini App sound")
+            handler.send_error(404, "Sound not found")
         return True
     if path.startswith("/tg-file/"):
         file_id = unquote(path[len("/tg-file/"):])
