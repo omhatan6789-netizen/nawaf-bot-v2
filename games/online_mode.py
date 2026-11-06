@@ -144,8 +144,8 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
             game_id = uuid.UUID(hex=game["id"])
             room_url = f"https://t.me/{me.username}?startapp=word_{game_id.hex}"
             lobby_text = (
-                f"🔤 غرفة أونلاين — {title}\\n\\n"
-                f"أنشأ {inline.from_user.full_name or inline.from_user.first_name or 'لاعب'} غرفة خمن الكلمة.\\n"
+                f"🔤 غرفة أونلاين — {title}\n\n"
+                f"أنشأ {inline.from_user.full_name or inline.from_user.first_name or 'لاعب'} غرفة خمن الكلمة.\n"
                 "انضموا من الزر بالأسفل، ويمكن لصاحب الغرفة بدء اللعبة بعد انضمام اللاعبين."
             )
             result_id = game_id.hex
@@ -160,7 +160,7 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
             )
             room_url = f"https://t.me/{me.username}?startapp=online_lobby_{lobby_id.hex}"
             lobby_text = (
-                f"🎮 غرفة أونلاين — {title}\\n\\n"
+                f"🎮 غرفة أونلاين — {title}\n\n"
                 "افتحوا الغرفة من الزر بالأسفل للانضمام وضبط الإعدادات وبدء اللعبة داخل الميني آب."
             )
             result_id = lobby_id.hex
