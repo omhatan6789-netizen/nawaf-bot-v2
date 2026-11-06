@@ -257,6 +257,7 @@ def handle_connect4_post(handler):
         "/api/minigames/solo/state", "/api/minigames/solo/action",
         "/api/minigames/solo/bot-move",
         "/api/online/restart", "/api/online/spectate", "/api/online/lobby", "/api/online/withdraw",
+        "/api/extra-games",
     ):
         return False
     try:
@@ -281,7 +282,39 @@ def handle_connect4_post(handler):
         user = verify_init_data(payload.get("initData", ""), _bot.token)
         is_challenge_api = path.startswith("/api/connect4/challenge/") or path.startswith("/api/minigames/")
         is_online_api = path in ("/api/online/restart", "/api/online/spectate", "/api/online/lobby", "/api/online/withdraw")
-        if path == "/api/online/lobby":
+        if path == "/api/extra-games":
+            from games import extra_mini_games as extra
+            action = str(payload.get("action") or "")
+            game_type = str(payload.get("game_type") or "")
+            uid = int(user["id"])
+            profile = user.get("first_name") or user.get("username") or "لاعب"
+            if game_type == "word":
+                if action == "create":
+                    result = _run(extra.word_create(uid, profile, payload.get("mode","online"), payload.get("word_count",5), payload.get("win_target")))
+                elif action == "join":
+                    result = _run(extra.word_join(uid, profile, payload.get("game_id","")))
+                elif action == "start":
+                    result = _run(extra.word_start(uid, payload.get("game_id","")))
+                elif action == "guess":
+                    result = _run(extra.word_guess(uid, payload.get("game_id",""), payload.get("guess","")))
+                elif action == "next":
+                    result = _run(extra.word_next(uid, payload.get("game_id","")))
+                else:
+                    result = _run(extra.word_state(uid, payload.get("game_id","")))
+            elif game_type == "battleship":
+                if action == "create":
+                    result = _run(extra.battleship_create(uid, profile, payload.get("mode","online"), payload.get("difficulty","متوسط")))
+                elif action == "join":
+                    result = _run(extra.battleship_join(uid, profile, payload.get("game_id","")))
+                elif action == "move":
+                    result = _run(extra.battleship_move(uid, payload.get("game_id",""), payload.get("row"), payload.get("col")))
+                else:
+                    result = _run(extra.battleship_state(uid, payload.get("game_id","")))
+            else:
+                raise ValueError("نوع اللعبة غير معروف")
+            body = json.dumps({"ok": True, "result": result}, ensure_ascii=False).encode()
+            handler.send_response(200)
+        elif path == "/api/online/lobby":
             result = _run(online_lobby_api(
                 int(user["id"]), payload.get("action", "state"),
                 payload.get("lobby_id", ""), payload.get("settings") or {},
