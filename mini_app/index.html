@@ -434,7 +434,7 @@ function renderMiniGame(){
  if(game.status!=='playing'){
   shell.querySelector('#mg-result').classList.add('show');
   shell.querySelector('#mg-result').textContent=game.status==='draw'?'🤝 انتهت المباراة بالتعادل':'🏆 فاز '+winnerDisplayName(game)+'!';
-  shell.querySelector('#mg-status').textContent='';shell.querySelector('#mg-clock').textContent='—';if(onlineMode){showOnlineEndOverlay(game.game_type,game.id,game.status==='draw'?'🤝 انتهت المباراة بالتعادل':'🏆 فاز '+(game.winner_name||'أحد اللاعبين')+'!');scheduleMiniGamePoll();}return;
+  shell.querySelector('#mg-status').textContent='';shell.querySelector('#mg-clock').textContent='—';if(onlineMode){showOnlineEndOverlay(game.game_type,game.id,game.status==='draw'?'🤝 انتهت المباراة بالتعادل':'🏆 فاز '+winnerDisplayName(game)+'!');scheduleMiniGamePoll();}return;
  }
  if(game.game_type==='dots'){
   renderDotsBoard(shell,game);
@@ -611,7 +611,7 @@ function renderConnect4(previousBoard=null){
  if(c4Game.status!=='playing'){
   const result=shell.querySelector('#c4-result');result.classList.add('show');
   result.textContent=c4Game.status==='draw'?'🤝 انتهت المباراة بالتعادل':'🏆 فاز '+winnerDisplayName(c4Game)+'!';
-  shell.querySelector('#c4-status').textContent='';shell.querySelector('#c4-clock').textContent='—';shell.querySelector('#c4-progress').style.width='0%';if(onlineMode){showOnlineEndOverlay('connect',c4Game.id,c4Game.status==='draw'?'🤝 انتهت المباراة بالتعادل':'🏆 فاز '+(c4Game.winner_name||'أحد اللاعبين')+'!');pollConnect4State();}
+  shell.querySelector('#c4-status').textContent='';shell.querySelector('#c4-clock').textContent='—';shell.querySelector('#c4-progress').style.width='0%';if(onlineMode){showOnlineEndOverlay('connect',c4Game.id,c4Game.status==='draw'?'🤝 انتهت المباراة بالتعادل':'🏆 فاز '+winnerDisplayName(c4Game)+'!');pollConnect4State();}
  }else if(!myTurn){
   if(c4Game.spectator){shell.querySelector('#c4-status').textContent='👁 وضع المشاهدة — تابع اللعب مباشرة';shell.querySelector('#c4-clock').textContent='مباشر';pollConnect4State();}
   else {
