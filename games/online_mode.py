@@ -5,7 +5,7 @@ import random
 import uuid
 
 from telegram import (
-    InlineKeyboardButton, InlineKeyboardMarkup, InlineQueryResultArticle, InlineQueryResultPhoto,
+    InlineKeyboardButton, InlineKeyboardMarkup, InlineQueryResultArticle, InlineQueryResultCachedPhoto,
     InputTextMessageContent, Update,
 )
 from telegram.ext import ContextTypes
@@ -150,22 +150,10 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
             "SELECT photo_file_id FROM online_game_images WHERE game_type=$1",
             game_type,
         )
-        thumbnail_url = None
         if photo_file_id:
-            try:
-                photo_file = await context.bot.get_file(photo_file_id)
-                thumbnail_url = photo_file.file_path
-            except Exception:
-                import logging
-                logging.getLogger(__name__).exception(
-                    "Could not prepare inline thumbnail for %s", game_type
-                )
-        if thumbnail_url:
-            # Photo results render the saved cover in the inline chooser AND in the sent message.
-            results.append(InlineQueryResultPhoto(
+            results.append(InlineQueryResultCachedPhoto(
                 id=lobby_id.hex,
-                photo_url=thumbnail_url,
-                thumbnail_url=thumbnail_url,
+                photo_file_id=photo_file_id,
                 title=title,
                 description=description,
                 caption=lobby_text,
