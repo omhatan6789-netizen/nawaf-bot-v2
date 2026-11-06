@@ -725,6 +725,7 @@ async def withdraw_online_game(user_id: int, game_type: str, raw_game_id: str):
                 return {"game": public_state(updated, user_id), "withdrawn": True}
             if game_type not in ("dots", "memory"):
                 raise ValueError("نوع اللعبة غير معروف")
+            from games.mini_games import _finish_game, _public_state
             row = await conn.fetchrow(
                 "SELECT * FROM mini_game_challenges WHERE id=$1 FOR UPDATE", game_id
             )
