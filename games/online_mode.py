@@ -657,14 +657,17 @@ async def get_online_spectator_state(user_id: int, game_type: str, raw_game_id: 
     if game_type in ("dots", "memory", "mini"):
         from games.mini_games import get_mini_game_challenge_state
         row = await pool.fetchrow(
-            "SELECT player1_id,player2_id FROM mini_game_challenges WHERE id=$1 AND ($2='mini' OR game_type=$2)",
+            """SELECT player1_id,player2_id,player3_id,player4_id
+               FROM mini_game_challenges WHERE id=$1 AND ($2='mini' OR game_type=$2)""",
             game_id, game_type
         )
         if not row:
             raise ValueError("اللعبة غير موجودة")
-        viewer_id = int(user_id) if int(user_id) in (int(row["player1_id"]), int(row["player2_id"])) else int(row["player1_id"])
+        player_ids = [int(row[f"player{i}_id"]) for i in range(1, 5) if row[f"player{i}_id"] is not None]
+        is_player = int(user_id) in player_ids
+        viewer_id = int(user_id) if is_player else int(row["player1_id"])
         result = await get_mini_game_challenge_state(viewer_id, game_id.hex)
-        if int(user_id) in (int(row["player1_id"]), int(row["player2_id"])):
+        if is_player:
             return result
         latest_status = await pool.fetchval("SELECT status FROM mini_game_challenges WHERE id=$1", game_id)
         if result.get("phase") == "playing":
