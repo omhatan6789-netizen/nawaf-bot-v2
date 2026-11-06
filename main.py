@@ -87,7 +87,10 @@ from handlers.temporary_messages import (
 from games.rock_paper_scissors import (
     start_rock_paper_scissors, rock_paper_scissors_callback,
 )
-from games.online_mode import (\n    online_games_inline_query, online_lobby_callback,\n    online_image_add_start, online_image_select, online_image_receive,\n)
+from games.online_mode import (
+    online_games_inline_query, online_lobby_callback,
+    online_image_add_start, online_image_select, online_image_receive,
+)
 from games.connect4_challenge import (
     connect4_challenge_command, connect4_challenge_callback,
 )
