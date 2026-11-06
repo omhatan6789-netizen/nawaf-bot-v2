@@ -250,7 +250,7 @@ def handle_connect4_post(handler):
         "/api/minigames/action", "/api/minigames/solo/new",
         "/api/minigames/solo/state", "/api/minigames/solo/action",
         "/api/minigames/solo/bot-move",
-        "/api/online/restart",
+        "/api/online/restart", "/api/online/spectate",
     ):
         return False
     try:
@@ -269,13 +269,19 @@ def handle_connect4_post(handler):
             get_mini_game_solo_state, play_mini_game_solo_action,
             play_mini_game_solo_bot_move,
         )
-        from games.online_mode import restart_online_game
+        from games.online_mode import restart_online_game, get_online_spectator_state
         if _bot is None:
             raise RuntimeError("البوت ما زال يستعد، حاول بعد قليل")
         user = verify_init_data(payload.get("initData", ""), _bot.token)
         is_challenge_api = path.startswith("/api/connect4/challenge/") or path.startswith("/api/minigames/")
-        is_online_api = path == "/api/online/restart"
-        if is_online_api:
+        is_online_api = path in ("/api/online/restart", "/api/online/spectate")
+        if path == "/api/online/spectate":
+            result = _run(get_online_spectator_state(
+                int(user["id"]), payload.get("game_type", ""), payload.get("game_id", "")
+            ))
+            body = json.dumps({"ok": True, "result": result}, ensure_ascii=False).encode()
+            handler.send_response(200)
+        elif path == "/api/online/restart":
             result = _run(restart_online_game(
                 int(user["id"]), payload.get("game_type", ""), payload.get("game_id", "")
             ))
