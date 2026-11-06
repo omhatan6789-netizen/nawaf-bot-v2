@@ -355,7 +355,7 @@ function renderMiniGame(){
  shell.querySelector('#mg-back').onclick=showGames;
  if(game.status!=='playing'){
   shell.querySelector('#mg-result').classList.add('show');
-  shell.querySelector('#mg-result').textContent=game.status==='draw'?(onlineMode?'🤝 تعادل!':'🤝 تعادل! تم إرجاع الرهان'):game.status==='won'?'🏆 فزت!':'🏆 فاز '+(game.winner_name||'اللاعب الآخر');
+  shell.querySelector('#mg-result').textContent=game.status==='draw'?(onlineMode?'🤝 تعادل!':'🤝 تعادل! تم إرجاع الرهان'):game.status==='won'?(game.spectator?'🏆 فاز '+(game.winner_name||'أحد اللاعبين'):'🏆 فزت!'):'🏆 فاز '+(game.winner_name||'اللاعب الآخر');
   shell.querySelector('#mg-status').textContent=game.spectator?'👁 انتهت اللعبة — وضع المشاهدة':'انتهت اللعبة';shell.querySelector('#mg-clock').textContent='—';if(onlineMode)scheduleMiniGamePoll();return;
  }
  if(game.game_type==='dots'){
@@ -525,7 +525,7 @@ function renderConnect4(previousBoard=null){
  }
  if(c4Game.status!=='playing'){
   const result=shell.querySelector('#c4-result');result.classList.add('show');
-  result.textContent=c4Game.status==='draw'?(onlineMode?'🤝 تعادل!':'🤝 تعادل! تم إرجاع الرهانات'):c4Game.status==='won'?'🏆 فزت! لعب ممتاز!':'🏆 فاز '+(c4Game.winner_name||p2)+'!';
+  result.textContent=c4Game.status==='draw'?(onlineMode?'🤝 تعادل!':'🤝 تعادل! تم إرجاع الرهانات'):c4Game.status==='won'?(c4Game.spectator?'🏆 فاز '+(c4Game.winner_name||'أحد اللاعبين'):'🏆 فزت! لعب ممتاز!'):'🏆 فاز '+(c4Game.winner_name||p2)+'!';
   shell.querySelector('#c4-status').textContent='انتهت المباراة';shell.querySelector('#c4-clock').textContent='—';shell.querySelector('#c4-progress').style.width='0%';if(onlineMode){if(!c4Game.spectator)showOnlineEndOverlay('connect',c4Game.id);pollConnect4State();}
  }else if(!myTurn){
   if(c4Game.spectator){shell.querySelector('#c4-status').textContent='👁 وضع المشاهدة — تابع اللعب مباشرة';shell.querySelector('#c4-clock').textContent='مباشر';pollConnect4State();}
