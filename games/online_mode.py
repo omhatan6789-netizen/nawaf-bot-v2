@@ -407,6 +407,151 @@ async def online_lobby_callback(update: Update, context: ContextTypes.DEFAULT_TY
     await query.answer("اكتمل انضمام اللاعبين وبدأت الغرفة!")
 
 
+async def online_lobby_api(user_id: int, action: str, raw_lobby_id: str, settings=None):
+    """Mini App lobby operations; all membership and start transitions are row-locked."""
+    try:
+        lobby_id = uuid.UUID(hex=str(raw_lobby_id).replace("-", ""))
+    except Exception:
+        raise ValueError("رابط الغرفة غير صالح")
+    pool = get_pool()
+    user_id = int(user_id)
+    settings = settings or {}
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            lobby = await conn.fetchrow(
+                "SELECT * FROM online_game_lobbies WHERE id=$1 FOR UPDATE", lobby_id
+            )
+            if not lobby:
+                raise ValueError("الغرفة غير موجودة")
+            if action == "join":
+                if lobby["status"] != "pending":
+                    raise ValueError("الغرفة لم تعد تستقبل لاعبين")
+                ids = [lobby["creator_id"], lobby["player2_id"], lobby["player3_id"], lobby["player4_id"]]
+                if user_id not in [int(x) for x in ids if x is not None]:
+                    slot = next((i for i in range(1, int(lobby["player_count"])) if ids[i] is None), -1)
+                    if slot < 0:
+                        raise ValueError("اكتمل عدد اللاعبين")
+                    name = str(settings.get("name") or f"لاعب {slot+1}")[:80]
+                    await conn.execute(
+                        f"UPDATE online_game_lobbies SET player{slot+1}_id=$2,player{slot+1}_name=$3,updated_at=NOW() WHERE id=$1",
+                        lobby_id, user_id, name,
+                    )
+            elif action == "configure":
+                if user_id != int(lobby["creator_id"]):
+                    raise ValueError("الإعدادات لصاحب الغرفة فقط")
+                if lobby["status"] != "pending":
+                    raise ValueError("لا يمكن تغيير الإعدادات بعد بدء اللعبة")
+                count = int(settings.get("player_count", 2))
+                mode = str(settings.get("team_mode", "individual"))
+                if lobby["game_type"] == "dots":
+                    if count not in (2, 3, 4):
+                        raise ValueError("اختر لاعبين أو ثلاثة أو أربعة")
+                    if mode not in ("individual", "teams") or (count != 4 and mode != "individual"):
+                        raise ValueError("نظام الفرق متاح لأربعة لاعبين فقط")
+                else:
+                    if count != 2 or mode != "individual":
+                        raise ValueError("هذه اللعبة تدعم لاعبين فقط")
+                await conn.execute(
+                    """UPDATE online_game_lobbies SET player_count=$2,team_mode=$3,
+                       player2_id=NULL,player2_name=NULL,player3_id=NULL,player3_name=NULL,
+                       player4_id=NULL,player4_name=NULL,creator_joined=FALSE,updated_at=NOW()
+                       WHERE id=$1""",
+                    lobby_id, count, mode,
+                )
+            elif action == "leave":
+                if lobby["status"] != "pending":
+                    raise ValueError("لا يمكن مغادرة الغرفة بعد بدء اللعبة")
+                if user_id == int(lobby["creator_id"]):
+                    await conn.execute("UPDATE online_game_lobbies SET status='cancelled',updated_at=NOW() WHERE id=$1", lobby_id)
+                else:
+                    for i in range(2, 5):
+                        if lobby[f"player{i}_id"] is not None and int(lobby[f"player{i}_id"]) == user_id:
+                            await conn.execute(
+                                f"UPDATE online_game_lobbies SET player{i}_id=NULL,player{i}_name=NULL,updated_at=NOW() WHERE id=$1",
+                                lobby_id,
+                            )
+                            break
+            elif action == "start":
+                if user_id != int(lobby["creator_id"]):
+                    raise ValueError("بدء اللعبة لصاحب الغرفة فقط")
+                if lobby["status"] != "pending":
+                    raise ValueError("الغرفة بدأت أو انتهت")
+                count = int(lobby["player_count"])
+                ids = [lobby["creator_id"], lobby["player2_id"], lobby["player3_id"], lobby["player4_id"]][:count]
+                if any(x is None for x in ids):
+                    raise ValueError("لا يمكن البدء قبل اكتمال عدد اللاعبين")
+                names = [
+                    _safe_player_name(lobby["creator_name"], "اللاعب الأول"),
+                    *[_safe_player_name(lobby[f"player{i}_name"], f"اللاعب {i}") for i in range(2, count+1)]
+                ]
+                game_id = uuid.uuid4()
+                if lobby["game_type"] == "connect":
+                    from games.connect4 import ROWS, COLS
+                    board = [[0 for _ in range(COLS)] for _ in range(ROWS)]
+                    await conn.execute(
+                        """INSERT INTO connect4_games
+                           (id,user_id,player2_id,difficulty,board,game_mode,chat_id,
+                            player1_name,player2_name,turn_player_id,wager,wager_settled)
+                           VALUES($1,$2,$3,'متوسط',$4::jsonb,'human',$5,$6,$7,$2,0,TRUE)""",
+                        game_id, int(ids[0]), int(ids[1]), json.dumps(board),
+                        lobby["chat_id"] or 0, names[0], names[1],
+                    )
+                else:
+                    if lobby["game_type"] == "dots":
+                        size = 4 if count == 2 else (5 if count == 3 else 6)
+                        state = {
+                            "h": [[0 for _ in range(size)] for _ in range(size + 1)],
+                            "v": [[0 for _ in range(size + 1)] for _ in range(size)],
+                            "boxes": [[0 for _ in range(size)] for _ in range(size)],
+                            "scores": [0 for _ in ids],
+                            "multi_player_ids": [int(x) for x in ids],
+                            "multi_player_names": names,
+                            "player_count": count,
+                            "team_mode": lobby["team_mode"] if count == 4 else "individual",
+                            "board_size": size,
+                            "turn_index": 0,
+                        }
+                    else:
+                        state = {
+                            "sequence": [random.randrange(4) for _ in range(3)],
+                            "level": 3, "progress": 0, "round_successes": [],
+                            "starter_id": int(ids[0]),
+                        }
+                    await conn.execute(
+                        """INSERT INTO mini_game_challenges
+                           (id,game_type,chat_id,player1_id,player1_name,player2_id,player2_name,
+                            player3_id,player3_name,player4_id,player4_name,
+                            wager,status,turn_player_id,game_state,wager_settled)
+                           VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,0,'playing',$4,$12::jsonb,TRUE)""",
+                        game_id, lobby["game_type"], lobby["chat_id"] or 0,
+                        int(ids[0]), names[0], int(ids[1]), names[1],
+                        int(ids[2]) if count >= 3 else None, names[2] if count >= 3 else None,
+                        int(ids[3]) if count >= 4 else None, names[3] if count >= 4 else None,
+                        json.dumps(state),
+                    )
+                await conn.execute(
+                    "UPDATE online_game_lobbies SET status='playing',game_id=$2,updated_at=NOW() WHERE id=$1",
+                    lobby_id, game_id,
+                )
+            elif action != "state":
+                raise ValueError("طلب غير معروف")
+            lobby = await conn.fetchrow("SELECT * FROM online_game_lobbies WHERE id=$1", lobby_id)
+    count = int(lobby["player_count"])
+    player_rows = [{"id": int(lobby["creator_id"]), "name": _safe_player_name(lobby["creator_name"], "صاحب الغرفة")}]
+    for i in range(2, count + 1):
+        pid = lobby[f"player{i}_id"]
+        if pid is not None:
+            player_rows.append({"id": int(pid), "name": _safe_player_name(lobby[f"player{i}_name"], f"اللاعب {i}")})
+    return {
+        "id": lobby_id.hex, "game_type": lobby["game_type"], "status": lobby["status"],
+        "creator_id": int(lobby["creator_id"]), "player_count": count,
+        "team_mode": lobby["team_mode"], "players": player_rows,
+        "is_creator": user_id == int(lobby["creator_id"]),
+        "is_joined": user_id in [p["id"] for p in player_rows],
+        "game_id": lobby["game_id"].hex if lobby["game_id"] else None,
+    }
+
+
 async def restart_online_game(user_id: int, game_type: str, raw_game_id: str):
     try:
         game_id = uuid.UUID(hex=str(raw_game_id).replace("-", ""))
