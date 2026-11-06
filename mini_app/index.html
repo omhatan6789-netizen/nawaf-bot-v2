@@ -91,7 +91,7 @@ body.c4-active #back-home{margin:10px 0 0;min-height:48px}
 .c4-win-svg line{stroke:#fff;stroke-width:9;stroke-linecap:round;filter:drop-shadow(0 0 5px #fff) drop-shadow(0 0 9px #ffdf5a);stroke-dasharray:1;animation:c4-line .45s ease-out}
 @keyframes c4-line{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
 .c4-result{display:none;text-align:center;font-weight:900;font-size:19px;margin:14px 0 0;padding:12px;border-radius:14px;background:#ffffff13;border:1px solid #ffffff2a}
-.c4-result.show{display:block}
+.c4-result.show{display:block}.online-game-cover{display:block;width:min(100%,420px);max-height:190px;object-fit:cover;margin:0 auto 14px;border-radius:18px;border:1px solid #ffffff35;box-shadow:0 8px 22px #0005}.c4-withdraw{display:block;width:min(78%,260px);margin:20px auto 4px;min-height:52px;border:1px solid #ff8a91;border-radius:15px;background:linear-gradient(135deg,#f04452,#a80818);color:#fff;font-size:18px;font-weight:950;box-shadow:0 5px 0 #650711,0 0 18px #ed253b55;cursor:pointer}.c4-withdraw:disabled{opacity:.55;cursor:wait}
 .c4-hint{text-align:center;color:#ffffff7d;font-size:11px;margin:10px 0 0}
 .c4-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
 .c4-actions button{margin:0;min-height:44px;font-size:13px}
@@ -243,7 +243,7 @@ function stopMiniGameTimers(){
  miniGamePollTimer=miniGameChallengePollTimer=miniGameTimer=miniGameTick=null;memoryPresentationKey=null;miniGameInputLocked=true;
 }
 
-let onlineLobbyPoll=null, onlineLobbyState=null;
+let onlineLobbyPoll=null, onlineLobbyState=null, onlineGameImages={};
 async function onlineLobbyRequest(action,settings={}){
  const initData=tg?.initData||'';
  if(!initData)throw new Error('افتح الغرفة من داخل تيليجرام');
@@ -310,14 +310,24 @@ async function restartOnlineGame(gameType,gameId){
   else{miniGame=data.result.game;renderMiniGame();}
  }catch(e){if(button){button.disabled=false;button.textContent='↻ إعادة اللعب';}const msg=overlay?.querySelector('p');if(msg)msg.textContent=e.message;}
 }
+async function withdrawOnlineGame(gameType,gameId,button){
+  if(button){button.disabled=true;button.textContent='جاري الانسحاب...';}
+  try{
+   const initData=tg?.initData||'';if(!initData)throw new Error('افتح اللعبة من تيليجرام أولًا');
+   const response=await fetch('/api/online/withdraw',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData,game_type:gameType,game_id:gameId})});
+   const data=await response.json().catch(()=>({}));if(!response.ok||!data.ok)throw new Error(data.error||'تعذر الانسحاب');
+   if(gameType==='connect'){c4Game=data.result.game;renderConnect4();}
+  }catch(e){if(button){button.disabled=false;button.textContent='انسحاب';}const status=document.getElementById('c4-status');if(status)status.textContent=e.message;}
+}
 function showOnlineEndOverlay(gameType,gameId){
  clearOnlineEndOverlay();const overlay=document.createElement('div');overlay.className='online-end-overlay';
  const card=document.createElement('div');card.className='online-end-card';const heading=document.createElement('h2');heading.textContent='انتهت اللعبة 🏁';
  const message=document.createElement('p');message.textContent='تقدرون تعيدون اللعب أو تطلعون من الصفحة.';
  const actions=document.createElement('div');actions.className='online-end-actions';
  const again=document.createElement('button');again.dataset.onlineRestart='1';again.textContent='↻ إعادة اللعب';again.onclick=()=>restartOnlineGame(gameType,gameId);
- const exit=document.createElement('button');exit.textContent='✕ الخروج من الصفحة';exit.onclick=()=>{clearOnlineEndOverlay();if(tg?.close)tg.close();else showHome();};
- actions.append(again,exit);card.append(heading,message,actions);overlay.appendChild(card);document.body.appendChild(overlay);
+ const exit=document.createElement('button');exit.textContent='رجوع للقائمة الرئيسية';exit.onclick=()=>{clearOnlineEndOverlay();showHome();};
+ if(gameType!=='connect')actions.appendChild(again);
+ actions.appendChild(exit);card.append(heading,message,actions);overlay.appendChild(card);document.body.appendChild(overlay);
 }
 async function miniGameRequest(path,payload={}){
  const initData=tg?.initData||'';
@@ -564,7 +574,7 @@ function renderConnect4(previousBoard=null){
  const p1=human?(c4Game.player1_name||'اللاعب الأول'):'أنت';
  const p2=human?(c4Game.player2_name||'اللاعب الثاني'):(c4Game.bot_name||'البوت');
  const myPiece=c4Game.my_piece||1;
- shell.innerHTML='<div class="c4-heading"><h2>كونكت 4</h2><p>'+(human?'مباراة بين لاعبين':'المستوى: '+c4Game.difficulty)+'</p></div><div class="c4-players"><div class="c4-player"><i class="c4-disc red"></i><div><strong></strong><small>الأحمر</small></div></div><span class="c4-vs">VS</span><div class="c4-player"><i class="c4-disc blue"></i><div><strong></strong><small>الأزرق</small></div></div></div><div class="c4-status"><div class="c4-statusline"><span id="c4-status">...</span><span class="c4-clock" id="c4-clock">15 ثانية</span></div><div class="c4-track"><div class="c4-progress" id="c4-progress"></div></div></div><div class="c4-board-wrap"><div class="c4-board" id="c4-board"></div><svg class="c4-win-svg" id="c4-win-svg" viewBox="0 0 700 600" preserveAspectRatio="none"></svg></div><div class="c4-result" id="c4-result"></div><div class="c4-actions"><button class="c4-secondary" id="c4-again">مباراة جديدة ↻</button><button class="c4-secondary" id="c4-level-back">رجوع</button></div><div class="c4-hint">اضغط على أي خانة في العمود لإسقاط القرص</div>';
+ shell.innerHTML='<div class="c4-heading"><h2>كونكت 4</h2><p>'+(human?'مباراة بين لاعبين':'المستوى: '+c4Game.difficulty)+'</p></div><div class="c4-players"><div class="c4-player"><i class="c4-disc red"></i><div><strong></strong><small>الأحمر</small></div></div><span class="c4-vs">VS</span><div class="c4-player"><i class="c4-disc blue"></i><div><strong></strong><small>الأزرق</small></div></div></div><div class="c4-status"><div class="c4-statusline"><span id="c4-status">...</span><span class="c4-clock" id="c4-clock">15 ثانية</span></div><div class="c4-track"><div class="c4-progress" id="c4-progress"></div></div></div><div class="c4-board-wrap"><div class="c4-board" id="c4-board"></div><svg class="c4-win-svg" id="c4-win-svg" viewBox="0 0 700 600" preserveAspectRatio="none"></svg></div><div class="c4-result" id="c4-result"></div>'+actions+'<div class="c4-hint">اضغط على أي خانة في العمود لإسقاط القرص</div>';
  const players=shell.querySelectorAll('.c4-player');
  players[0].querySelector('strong').textContent=p1;players[1].querySelector('strong').textContent=p2;
  const board=shell.querySelector('#c4-board');
@@ -579,8 +589,9 @@ function renderConnect4(previousBoard=null){
   slot.disabled=!myTurn||c4Game.status!=='playing'||c4Game.board[0][col]!==0;
   slot.onclick=()=>submitConnect4Move(col);board.appendChild(slot);
  }));
- shell.querySelector('#c4-again').onclick=()=>{c4GameIdFromUrl=null;showConnect4Setup();};
- shell.querySelector('#c4-level-back').onclick=()=>{c4GameIdFromUrl=null;showConnect4Setup();};
+ const mainBack=document.getElementById('back-home');if(mainBack)mainBack.textContent='رجوع للقائمة الرئيسية';
+  if(onlineMode&&human){const withdraw=shell.querySelector('#c4-withdraw');if(withdraw)withdraw.onclick=()=>withdrawOnlineGame('connect',c4Game.id,withdraw);}
+  else{shell.querySelector('#c4-again').onclick=()=>{c4GameIdFromUrl=null;showConnect4Setup();};shell.querySelector('#c4-level-back').onclick=()=>{c4GameIdFromUrl=null;showConnect4Setup();};}
  if(c4Game.winning_cells?.length===4){
   const first=c4Game.winning_cells[0],last=c4Game.winning_cells[3];
   const svg=shell.querySelector('#c4-win-svg'),boardEl=shell.querySelector('#c4-board');
@@ -667,7 +678,7 @@ document.getElementById('back-home').onclick=showHome;
 (async()=>{
  try{
   const r=await fetch('/api/mini-app');if(!r.ok)throw new Error('API');
-  const data=await r.json();botUsername=data.bot_username||'';
+  const data=await r.json();botUsername=data.bot_username||'';onlineGameImages=data.online_game_images||{};
   if(data.banner){const im=document.getElementById('banner');im.src=data.banner;im.style.display='block';}
   const root=document.getElementById('custom');
   for(const b of data.buttons||[]){
