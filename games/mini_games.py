@@ -218,7 +218,7 @@ def _draw_dot_edge(state, edge, player):
         raise ValueError("الحركة غير صالحة")
     if matrix[r][c]:
         raise ValueError("هذا الخط مرسوم بالفعل")
-    matrix[r][c] = True
+    matrix[r][c] = player
     completed = []
     for br in range(4):
         for bc in range(4):
