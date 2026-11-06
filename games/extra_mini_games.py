@@ -194,6 +194,8 @@ async def battleship_join(user_id,name,raw_id):
       async with c.transaction():
         row=await c.fetchrow("SELECT * FROM battleship_games WHERE id=$1 FOR UPDATE",gid)
         if not row or row["mode"]!="online": raise ValueError("الغرفة غير متاحة")
+        if row["status"] in ("won","lost"):
+          return _battle_public(row,user_id)
         if row["status"]=="playing" and int(user_id) not in (int(row["player1_id"]),int(row["player2_id"] or 0)):
           return _battle_public(row,user_id)
         if row["status"] not in ("waiting","playing","won","lost"): raise ValueError("الغرفة غير متاحة")
