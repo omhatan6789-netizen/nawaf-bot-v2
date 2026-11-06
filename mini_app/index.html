@@ -214,18 +214,22 @@ function showConnect4Setup(){
 async function c4Request(path,payload){
  const initData=tg?.initData||'';
  if(!initData)throw new Error('افتح الميني آب من داخل تيليجرام حتى نتحقق من حسابك');
- const response=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...payload,initData})});
+ const requestPath=(onlineConnectId&&path==='/api/connect4/state')?'/api/online/spectate':path;
+ const requestPayload=requestPath==='/api/online/spectate'?{game_type:'connect',game_id:payload.game_id,initData}:{...payload,initData};
+ const response=await fetch(requestPath,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(requestPayload)});
  const data=await response.json().catch(()=>({}));
  if(!response.ok||!data.ok)throw new Error(data.error||'تعذر الاتصال بالسيرفر');
- return data.game;
+ return requestPath==='/api/online/spectate'?data.result.game:data.game;
 }
 async function c4ChallengeRequest(path,payload={}){
  const initData=tg?.initData||'';
  if(!initData)throw new Error('افتح الميني آب من داخل تيليجرام حتى نتحقق من حسابك');
- const response=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...payload,initData})});
+ const requestPath=(onlineMiniGameId&&path==='/api/minigames/challenge/state')?'/api/online/spectate':path;
+ const requestPayload=requestPath==='/api/online/spectate'?{game_type:'mini',game_id:payload.challenge_id,initData}:{...payload,initData};
+ const response=await fetch(requestPath,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(requestPayload)});
  const data=await response.json().catch(()=>({}));
  if(!response.ok||!data.ok)throw new Error(data.error||'تعذر الاتصال بالسيرفر');
- return data.result;
+ return requestPath==='/api/online/spectate'?{phase:'playing',game:data.result.game}:data.result;
 }
 function stopMiniGameTimers(){
  if(miniSoloPoll)clearTimeout(miniSoloPoll);if(miniSoloBotTimer)clearTimeout(miniSoloBotTimer);if(miniSoloClock)clearTimeout(miniSoloClock);if(miniSoloTick)clearInterval(miniSoloTick);
@@ -352,16 +356,16 @@ function renderMiniGame(){
  if(game.status!=='playing'){
   shell.querySelector('#mg-result').classList.add('show');
   shell.querySelector('#mg-result').textContent=game.status==='draw'?(onlineMode?'🤝 تعادل!':'🤝 تعادل! تم إرجاع الرهان'):game.status==='won'?'🏆 فزت!':'🏆 فاز '+(game.winner_name||'اللاعب الآخر');
-  shell.querySelector('#mg-status').textContent='انتهت اللعبة';shell.querySelector('#mg-clock').textContent='—';return;
+  shell.querySelector('#mg-status').textContent=game.spectator?'👁 انتهت اللعبة — وضع المشاهدة':'انتهت اللعبة';shell.querySelector('#mg-clock').textContent='—';if(onlineMode)scheduleMiniGamePoll();return;
  }
  if(game.game_type==='dots'){
   renderDotsBoard(shell,game);
-  shell.querySelector('#mg-status').textContent=humanTurn?'دورك!':'دور '+(game.my_player===1?p2:p1);
+  shell.querySelector('#mg-status').textContent=game.spectator?'👁 مشاهدة مباشرة — دور اللاعبين':humanTurn?'دورك!':'دور '+(game.my_player===1?p2:p1);
  }else{
-  shell.querySelector('#mg-status').textContent=humanTurn?'احفظ التسلسل...':'دور '+(game.my_player===1?p2:p1);
+  shell.querySelector('#mg-status').textContent=game.spectator?'👁 وضع المشاهدة — تابع حركة اللاعبين':humanTurn?'احفظ التسلسل...':'دور '+(game.my_player===1?p2:p1);
   renderMemoryBoard(shell,game);
  }
- if(game.game_type==='dots'||!humanTurn)startMiniGameTimer(game);
+ if(!game.spectator&&(game.game_type==='dots'||!humanTurn))startMiniGameTimer(game);
  scheduleMiniGamePoll();
 }
 function renderDotsBoard(shell,game,onMove=submitMiniGameAction){
@@ -381,7 +385,7 @@ function renderMemoryBoard(shell,game){
  shell.querySelector('#mg-score').innerHTML='<span>المستوى: '+state.level+'</span><span>التقدم: '+state.progress+'/'+state.level+'</span>';
  const colors=['#ef4444','#3b82f6','#22c55e','#facc15'];
  colors.forEach((color,index)=>{const b=document.createElement('button');b.className='mg-memory-tile';b.style.background=color;b.disabled=!game.your_turn;b.dataset.color=index;b.onclick=()=>{flashMemoryPick(b);submitMiniGameAction({color:index});};root.appendChild(b);});
- if(game.your_turn){const key='multi:'+game.id+':'+game.turn_player_id+':'+state.level+':'+state.sequence.length;presentMemorySequence(state.sequence.slice(0,state.level),key,()=>{if(miniGame?.your_turn&&miniGame.status==='playing')startMiniGameTimer(miniGame);});}
+ if(game.your_turn||game.spectator){const key='multi:'+game.id+':'+game.turn_player_id+':'+state.level+':'+state.sequence.length;presentMemorySequence(state.sequence.slice(0,state.level),key,()=>{if(miniGame?.your_turn&&miniGame.status==='playing')startMiniGameTimer(miniGame);});}
  else shell.querySelector('#mg-status').textContent='اللاعب الآخر يلعب الآن';
 }
 function playMemorySequence(sequence){
@@ -522,8 +526,10 @@ function renderConnect4(previousBoard=null){
  if(c4Game.status!=='playing'){
   const result=shell.querySelector('#c4-result');result.classList.add('show');
   result.textContent=c4Game.status==='draw'?(onlineMode?'🤝 تعادل!':'🤝 تعادل! تم إرجاع الرهانات'):c4Game.status==='won'?'🏆 فزت! لعب ممتاز!':'🏆 فاز '+(c4Game.winner_name||p2)+'!';
-  shell.querySelector('#c4-status').textContent='انتهت المباراة';shell.querySelector('#c4-clock').textContent='—';shell.querySelector('#c4-progress').style.width='0%';if(onlineMode){showOnlineEndOverlay('connect',c4Game.id);pollConnect4State();}
+  shell.querySelector('#c4-status').textContent='انتهت المباراة';shell.querySelector('#c4-clock').textContent='—';shell.querySelector('#c4-progress').style.width='0%';if(onlineMode){if(!c4Game.spectator)showOnlineEndOverlay('connect',c4Game.id);pollConnect4State();}
  }else if(!myTurn){
+  if(c4Game.spectator){shell.querySelector('#c4-status').textContent='👁 وضع المشاهدة — تابع اللعب مباشرة';shell.querySelector('#c4-clock').textContent='مباشر';pollConnect4State();}
+  else {
   const rpsLine=human&&c4Game.challenge_starter_name
    ? '✊ حجر ورقة مقص: يبدأ '+c4Game.challenge_starter_name
    : c4Game.rps_result
@@ -540,6 +546,7 @@ function renderConnect4(previousBoard=null){
    c4BotTimer=setTimeout(runC4BotMove,1620+fallDelay);
   }
   else if(human){startC4Timer();pollConnect4State();}
+  }
  }else{
   shell.querySelector('#c4-status').textContent=human&&c4Game.challenge_starter_name
    ? '✊ حجر ورقة مقص: يبدأ '+c4Game.challenge_starter_name+' — دورك! اختر عمودًا'
