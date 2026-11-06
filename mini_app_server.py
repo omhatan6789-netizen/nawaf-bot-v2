@@ -144,6 +144,7 @@ def handle_connect4_post(handler):
     if path not in (
         "/api/connect4/new", "/api/connect4/move",
         "/api/connect4/bot-move", "/api/connect4/state",
+        "/api/connect4/challenge/state", "/api/connect4/challenge/choice",
     ):
         return False
     try:
@@ -153,10 +154,26 @@ def handle_connect4_post(handler):
             verify_init_data, create_game, play_move,
             play_bot_move, get_game_state,
         )
+        from games.connect4_challenge import (
+            get_connect4_challenge_state, choose_connect4_challenge_rps,
+        )
         if _bot is None:
             raise RuntimeError("البوت ما زال يستعد، حاول بعد قليل")
         user = verify_init_data(payload.get("initData", ""), _bot.token)
-        if path.endswith("/new"):
+        if path == "/api/connect4/challenge/state":
+            result = _run(get_connect4_challenge_state(
+                int(user["id"]), payload.get("challenge_id", "")
+            ))
+            body = json.dumps({"ok": True, "result": result}, ensure_ascii=False).encode()
+            handler.send_response(200)
+        elif path == "/api/connect4/challenge/choice":
+            result = _run(choose_connect4_challenge_rps(
+                int(user["id"]), payload.get("challenge_id", ""),
+                payload.get("choice", ""),
+            ))
+            body = json.dumps({"ok": True, "result": result}, ensure_ascii=False).encode()
+            handler.send_response(200)
+        elif path.endswith("/new"):
             me = _run(_bot.get_me())
             state = _run(create_game(
                 int(user["id"]), payload.get("difficulty", "متوسط"),
