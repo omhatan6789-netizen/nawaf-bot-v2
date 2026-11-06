@@ -140,7 +140,7 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
         me = await context.bot.get_me()
         room_url = f"https://t.me/{me.username}?startapp=online_lobby_{lobby_id.hex}"
         keyboard = InlineKeyboardMarkup([[
-            InlineKeyboardButton("فتح غرفة اللعبة 🎮", url=room_url)
+            InlineKeyboardButton("فتح غرفة اللعبة", url=room_url)
         ]])
         lobby_text = (
             f"🎮 غرفة أونلاين — {title}\\n\\n"
