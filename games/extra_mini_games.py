@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from database.pool import get_pool
 
 WORDS = [
-"سيارة","مدرسة","مكتبة","طائرة","حاسوب","هاتف","نافذة","حديقة","مفتاح","مصباح",
+"سيارة","مدرسة","مكتبة","طائرة","حاسوب","هاتف","نافذة","حديقة","مفتاح","مصباح","نواف","أمين","خالد","فهد","سارة","ليان",
 "وسادة","حقيبة","ساعة","مرآة","ثلاجة","غسالة","مروحة","تلفاز","سفينة","قطار",
 "دراجة","مظلة","طاولة","كرسي","قلم","دفتر","كتاب","ملعقة","شوكة","سكين",
 "برتقال","تفاحة","موزة","فراولة","بطيخ","ليمون","عنب","تمر","قهوة","شاي",
@@ -125,6 +125,7 @@ async def word_guess(user_id,raw_id,guess):
         players=_decode(row["players"]); me=next((p for p in players if int(p["id"])==int(user_id)),None)
         if not me: raise ValueError("أنت متفرج ولا يمكنك الإجابة")
         answers=_decode(row["answers"]); words=_decode(row["words"]); i=int(row["current_index"])
+        if answers.get("last_winner") and row["round_until"] is not None: raise ValueError("انتظر انتقال الجولة التالية")
         if row["round_until"] and row["round_until"]>datetime.now(timezone.utc): raise ValueError("انتظر انتهاء عرض الإجابة")
         target=words[i]
         if len(guess) != len(target): raise ValueError("عدد الحروف غير مطابق للكلمة")
@@ -142,8 +143,11 @@ async def word_next(user_id,raw_id):
       async with c.transaction():
         row=await c.fetchrow("SELECT * FROM word_games WHERE id=$1 FOR UPDATE",gid)
         if not row: raise ValueError("الغرفة غير موجودة")
-        if int(row["owner_id"])!=int(user_id) and row["mode"]=="online": raise ValueError("تحديث الجولة تلقائي لصاحب الغرفة")
-        if row["round_until"] and row["round_until"]>datetime.now(timezone.utc): raise ValueError("لم ينته العد التنازلي")
+        if row["status"]!="playing": return _public_word(row,user_id)
+        players=_decode(row["players"])
+        if not any(int(p["id"])==int(user_id) for p in players): raise ValueError("المتفرجون لا يمكنهم الانتقال بين الجولات")
+        if row["round_until"] is None: raise ValueError("لا توجد إجابة مكتملة للانتقال")
+        if row["round_until"]>datetime.now(timezone.utc): raise ValueError("لم ينته العد التنازلي")
         nxt=int(row["current_index"])+1
         players=_decode(row["players"])
         reached=any(int(p.get("score",0))>=int(row["win_target"]) for p in players)
