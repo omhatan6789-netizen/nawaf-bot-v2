@@ -160,6 +160,7 @@ def handle_connect4_post(handler):
         if _bot is None:
             raise RuntimeError("البوت ما زال يستعد، حاول بعد قليل")
         user = verify_init_data(payload.get("initData", ""), _bot.token)
+        is_challenge_api = path.startswith("/api/connect4/challenge/")
         if path == "/api/connect4/challenge/state":
             result = _run(get_connect4_challenge_state(
                 int(user["id"]), payload.get("challenge_id", "")
@@ -189,8 +190,9 @@ def handle_connect4_post(handler):
             state = _run(play_bot_move(int(user["id"]), payload.get("game_id", "")))
         else:
             state = _run(get_game_state(int(user["id"]), payload.get("game_id", "")))
-        body = json.dumps({"ok": True, "game": state}, ensure_ascii=False).encode()
-        handler.send_response(200)
+        if not is_challenge_api:
+            body = json.dumps({"ok": True, "game": state}, ensure_ascii=False).encode()
+            handler.send_response(200)
     except ValueError as exc:
         body = json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False).encode()
         handler.send_response(400)
