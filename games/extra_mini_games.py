@@ -132,7 +132,7 @@ async def word_guess(user_id,raw_id,guess):
         if _fold(guess)==_fold(target):
           me["score"]=int(me.get("score",0))+1
           answers={"last_winner":me["name"],"last_word":target,"last_guess":guess,"last_feedback":word_feedback(target,guess),"last_user_id":int(user_id)}
-          await c.execute("""UPDATE word_games SET players=$2::jsonb,answers=$3::jsonb,round_until=NOW()+INTERVAL '3 seconds',updated_at=NOW() WHERE id=$1""",
+          await c.execute("""UPDATE word_games SET players=$2::jsonb,answers=$3::jsonb,round_until=CASE WHEN mode='online' THEN NOW()+INTERVAL '3 seconds' ELSE NOW() END,updated_at=NOW() WHERE id=$1""",
             gid,json.dumps(players,ensure_ascii=False),json.dumps(answers,ensure_ascii=False))
           return {"correct":True,"round_winner":me["name"],"word":target,"guess":guess,"feedback":word_feedback(target,guess),"round_until":int((datetime.now(timezone.utc).timestamp()+3)*1000)}
         feedback=word_feedback(target,guess)
