@@ -1,0 +1,2 @@
+ALTER TABLE online_game_lobbies
+    ADD COLUMN IF NOT EXISTS creator_joined BOOLEAN NOT NULL DEFAULT FALSE;
