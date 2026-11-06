@@ -51,10 +51,11 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
             lobby_id, game_type, inline.from_user.id,
             inline.from_user.full_name or inline.from_user.first_name or "اللاعب الأول",
         )
-        keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("⚙️ إعدادات اللاعبين", callback_data=f"online_settings:{lobby_id.hex}")],
-            [InlineKeyboardButton("انضمام 👥", callback_data=f"online_join:{lobby_id.hex}")],
-        ])
+        keyboard = InlineKeyboardMarkup(
+            ([[InlineKeyboardButton("⚙️ إعدادات اللاعبين", callback_data=f"online_settings:{lobby_id.hex}")]]
+             if game_type == "dots" else [])
+            + [[InlineKeyboardButton("انضمام 👥", callback_data=f"online_join:{lobby_id.hex}")]]
+        )
         results.append(InlineQueryResultArticle(
             id=lobby_id.hex,
             title=title,
@@ -147,7 +148,9 @@ async def online_lobby_callback(update: Update, context: ContextTypes.DEFAULT_TY
                 return
 
             ids = [lobby["creator_id"], lobby["player2_id"], lobby["player3_id"], lobby["player4_id"]]
-            joined_ids = [int(x) for x in ids if x is not None]
+            joined_ids = [int(x) for x in ids[1:] if x is not None]
+            if lobby["creator_joined"]:
+                joined_ids.append(int(lobby["creator_id"]))
             if int(user.id) in joined_ids:
                 await query.answer("أنت منضم بالفعل.", show_alert=True)
                 return
@@ -192,10 +195,11 @@ async def online_lobby_callback(update: Update, context: ContextTypes.DEFAULT_TY
                     + ("الطور: فريقين (2 ضد 2)" if lobby["team_mode"] == "teams" else "الطور: كل لاعب لحاله")
                     + "\\nاضغطوا «انضمام» حتى يكتمل عدد اللاعبين."
                 )
-                waiting_keyboard = InlineKeyboardMarkup([
-                    [InlineKeyboardButton("انضمام 👥", callback_data=f"online_join:{lobby_id.hex}")],
-                    [InlineKeyboardButton("⚙️ إعدادات اللاعبين", callback_data=f"online_settings:{lobby_id.hex}")],
-                ])
+                waiting_keyboard = InlineKeyboardMarkup(
+                    ([[InlineKeyboardButton("⚙️ إعدادات اللاعبين", callback_data=f"online_settings:{lobby_id.hex}")]]
+                     if lobby["game_type"] == "dots" else [])
+                    + [[InlineKeyboardButton("انضمام 👥", callback_data=f"online_join:{lobby_id.hex}")]]
+                )
             else:
                 game_type = lobby["game_type"]
                 chat_id = lobby["chat_id"] or 0
