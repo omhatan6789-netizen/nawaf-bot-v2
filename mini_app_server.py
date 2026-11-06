@@ -191,8 +191,18 @@ def handle_mini_app_request(handler):
             handler.send_header("Content-Length", str(len(body)))
             handler.end_headers()
             handler.wfile.write(body)
-        except Exception:
-            handler.send_error(503, "Mini App is starting")
+        except Exception as exc:
+            logging.getLogger(__name__).exception("Mini App payload failed")
+            body = json.dumps(
+                {"ok": False, "error": str(exc)[:300] or "تعذر تحميل بيانات الميني آب"},
+                ensure_ascii=False,
+            ).encode()
+            handler.send_response(503)
+            handler.send_header("Content-Type", "application/json; charset=utf-8")
+            handler.send_header("Cache-Control", "no-store")
+            handler.send_header("Content-Length", str(len(body)))
+            handler.end_headers()
+            handler.wfile.write(body)
         return True
     if path.startswith("/mini-app/sound/"):
         try:
