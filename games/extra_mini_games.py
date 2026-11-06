@@ -18,7 +18,7 @@ def _decode(v):
     return json.loads(v) if isinstance(v,str) else (v or {})
 def _fold(text):
     s=unicodedata.normalize("NFKC",str(text or "")).strip().replace("ـ","")
-    s=s.translate(str.maketrans({"أ":"ا","إ":"ا","آ":"ا","ٱ":"ا","ى":"ي","ؤ":"و","ئ":"ي"}))
+    s=s.translate(str.maketrans({"أ":"ا","إ":"ا","آ":"ا","ٱ":"ا","ى":"ي","ؤ":"و","ئ":"ي","ة":"ه"}))
     return s
 def _letter_class(target, guess, i):
     if guess[i] == target[i]:
@@ -76,7 +76,8 @@ async def word_join(user_id,name,raw_id):
     async with pool.acquire() as c:
       async with c.transaction():
         row=await c.fetchrow("SELECT * FROM word_games WHERE id=$1 FOR UPDATE",gid)
-        if not row or row["status"]!="waiting": raise ValueError("الغرفة لم تعد تستقبل لاعبين")
+        if not row: raise ValueError("الغرفة غير موجودة")
+        if row["status"]!="waiting": return _public_word(row,user_id)
         players=_decode(row["players"])
         if not any(int(p["id"])==int(user_id) for p in players):
           if len(players)>=10: raise ValueError("اكتمل عدد اللاعبين")
@@ -172,7 +173,10 @@ async def battleship_join(user_id,name,raw_id):
     async with pool.acquire() as c:
       async with c.transaction():
         row=await c.fetchrow("SELECT * FROM battleship_games WHERE id=$1 FOR UPDATE",gid)
-        if not row or row["mode"]!="online" or row["status"]!="waiting": raise ValueError("الغرفة غير متاحة")
+        if not row or row["mode"]!="online": raise ValueError("الغرفة غير متاحة")
+        if row["status"]=="playing" and int(user_id) not in (int(row["player1_id"]),int(row["player2_id"] or 0)):
+          return _battle_public(row,user_id)
+        if row["status"] not in ("waiting","playing"): raise ValueError("الغرفة غير متاحة")
         if int(row["player1_id"])==int(user_id): pass
         elif row["player2_id"] is None:
           await c.execute("UPDATE battleship_games SET player2_id=$2,player2_name=$3,status='playing',turn_player_id=player1_id,updated_at=NOW() WHERE id=$1",gid,int(user_id),str(name or "لاعب")[:80])
