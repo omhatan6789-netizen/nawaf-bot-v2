@@ -730,7 +730,10 @@ async def withdraw_online_game(user_id: int, game_type: str, raw_game_id: str):
             )
             if not row:
                 raise ValueError("المباراة غير موجودة")
-            state = row["game_state"]\n            if isinstance(state, str):\n                state = json.loads(state)\n            state = state or {}
+            state = row["game_state"]
+            if isinstance(state, str):
+                state = json.loads(state)
+            state = state or {}
             ids = state.get("multi_player_ids") or [
                 int(row["player1_id"]), int(row["player2_id"])
             ]
