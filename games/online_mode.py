@@ -18,6 +18,29 @@ GAME_INFO = {
     "memory": ("اختبر ذاكرتك 🧠", "احفظ التسلسل وتحدَّ لاعبًا آخر"),
 }
 
+def _safe_player_name(value, fallback: str) -> str:
+    if isinstance(value, str):
+        name = value.strip()
+        if name and "InlineKeyboardButton" not in name:
+            return name
+    return fallback
+
+
+def _lobby_text(game_type: str, count: int, mode: str, joined_players=None) -> str:
+    joined_players = joined_players or {}
+    lines = [
+        f"• {joined_players.get(i, f'بانتظار اللاعب {i + 1}')}"
+        for i in range(count)
+    ]
+    mode_label = "فريقين (2 ضد 2)" if count == 4 and mode == "teams" else "كل لاعب لحاله"
+    return (
+        f"🎮 غرفة أونلاين — {GAME_INFO[game_type][0]}\n\n"
+        f"اللاعبون: {len(joined_players)}/{count}\n"
+        + "\n".join(lines)
+        + f"\n\nالطور: {mode_label}\n"
+        + "اضغطوا «انضمام» حتى يكتمل عدد اللاعبين."
+    )
+
 
 def _select_games(query: str):
     value = (query or "").strip().lower()
@@ -61,10 +84,7 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
             title=title,
             description=description,
             input_message_content=InputTextMessageContent(
-                f"🎮 تحدي أونلاين\nاللعبة: {title}\n\n"
-                "اللاعبون: 0/2\n"
-                "الطور: فردي\n\n"
-                "اضغط إعدادات اللاعبين لاختيار 2 أو 4 لاعبين."
+                _lobby_text(game_type, 2, "individual")
             ),
             reply_markup=keyboard,
         ))
@@ -107,7 +127,7 @@ async def online_lobby_callback(update: Update, context: ContextTypes.DEFAULT_TY
             [InlineKeyboardButton("👥 لاعبان", callback_data=f"online_config:{lobby_id.hex}:2:individual"),
              InlineKeyboardButton("👥👥 أربعة لاعبين", callback_data=f"online_config:{lobby_id.hex}:4:choose")],
         ])
-        await _edit_lobby_message(query, context, "⚙️ إعدادات لعبة المربعات\\nاختر عدد اللاعبين ونظام اللعب:", keyboard)
+        await _edit_lobby_message(query, context, "⚙️ إعدادات لعبة المربعات\nاختر عدد اللاعبين ونظام اللعب:", keyboard)
         await query.answer()
         return
     if action == "online_config":
@@ -133,7 +153,7 @@ async def online_lobby_callback(update: Update, context: ContextTypes.DEFAULT_TY
             [InlineKeyboardButton("انضمام 👥", callback_data=f"online_join:{lobby_id.hex}")],
             [InlineKeyboardButton("⚙️ إعدادات اللاعبين", callback_data=f"online_settings:{lobby_id.hex}")],
         ])
-        await _edit_lobby_message(query, context, f"🎮 غرفة أونلاين — {GAME_INFO['dots'][0]}\\n\\nعدد اللاعبين: {count}\\nالطور: {'فريقين (2 ضد 2)' if mode == 'teams' else 'كل لاعب لحاله'}\\n\\nاضغطوا انضمام للانضمام إلى الغرفة.", keyboard)
+        await _edit_lobby_message(query, context, f"🎮 غرفة أونلاين — {GAME_INFO['dots'][0]}\n\nعدد اللاعبين: {count}\nالطور: {'فريقين (2 ضد 2)' if mode == 'teams' else 'كل لاعب لحاله'}\n\nاضغطوا انضمام للانضمام إلى الغرفة.", keyboard)
         await query.answer("تم حفظ إعدادات اللاعبين.")
         return
     game_id = None
@@ -183,23 +203,23 @@ async def online_lobby_callback(update: Update, context: ContextTypes.DEFAULT_TY
                 "SELECT * FROM online_game_lobbies WHERE id=$1 FOR UPDATE",
                 lobby_id,
             )
-            player1_name = lobby["creator_name"]
-            player2_name = lobby["player2_name"]
+            player1_name = _safe_player_name(lobby["creator_name"], "اللاعب الأول")
+            player2_name = _safe_player_name(lobby["player2_name"], "اللاعب الثاني")
             players = [
-                (lobby["creator_id"], lobby["creator_name"], bool(lobby["creator_joined"])),
-                (lobby["player2_id"], lobby["player2_name"], bool(lobby["player2_id"])),
-                (lobby["player3_id"], lobby["player3_name"], bool(lobby["player3_id"])),
-                (lobby["player4_id"], lobby["player4_name"], bool(lobby["player4_id"])),
+                (lobby["creator_id"], _safe_player_name(lobby["creator_name"], "اللاعب الأول"), bool(lobby["creator_joined"])),
+                (lobby["player2_id"], _safe_player_name(lobby["player2_name"], "اللاعب الثاني"), bool(lobby["player2_id"])),
+                (lobby["player3_id"], _safe_player_name(lobby["player3_name"], "اللاعب الثالث"), bool(lobby["player3_id"])),
+                (lobby["player4_id"], _safe_player_name(lobby["player4_name"], "اللاعب الرابع"), bool(lobby["player4_id"])),
             ][:int(lobby["player_count"])]
             joined_count = sum(1 for pid, name, joined in players if pid is not None and joined)
             if joined_count < int(lobby["player_count"]):
                 lines = [f"• {name if joined else 'بانتظار اللاعب ' + str(i+1)}" for i, (pid, name, joined) in enumerate(players)]
                 waiting_text = (
-                    f"🎮 غرفة أونلاين — {GAME_INFO[lobby['game_type']][0]}\\n\\n"
-                    f"اللاعبون: {joined_count}/{lobby['player_count']}\\n"
-                    + "\\n".join(lines) + "\\n\\n"
+                    f"🎮 غرفة أونلاين — {GAME_INFO[lobby['game_type']][0]}\n\n"
+                    f"اللاعبون: {joined_count}/{lobby['player_count']}\n"
+                    + "\n".join(lines) + "\n\n"
                     + ("الطور: فريقين (2 ضد 2)" if lobby["team_mode"] == "teams" else "الطور: كل لاعب لحاله")
-                    + "\\nاضغطوا «انضمام» حتى يكتمل عدد اللاعبين."
+                    + "\nاضغطوا «انضمام» حتى يكتمل عدد اللاعبين."
                 )
                 waiting_keyboard = InlineKeyboardMarkup(
                     ([[InlineKeyboardButton("⚙️ إعدادات اللاعبين", callback_data=f"online_settings:{lobby_id.hex}")]]
@@ -284,9 +304,9 @@ async def online_lobby_callback(update: Update, context: ContextTypes.DEFAULT_TY
     )
     launch_url = f"https://t.me/{me.username}?startapp={start_param}"
     text = (
-        f"✅ اكتمل عدد اللاعبين — {GAME_INFO[game_type][0]}\\n\\n"
-        + "\\n".join(f"👤 {name}" for _, name, _ in players)
-        + "\\n\\nاضغطوا على الزر لفتح اللعبة والبدء مباشرة."
+        f"✅ اكتمل عدد اللاعبين — {GAME_INFO[game_type][0]}\n\n"
+        + "\n".join(f"👤 {name}" for _, name, _ in players)
+        + "\n\nاضغطوا على الزر لفتح اللعبة والبدء مباشرة."
     )
     keyboard = InlineKeyboardMarkup([[
         InlineKeyboardButton("🎮 فتح اللعبة", url=launch_url)
