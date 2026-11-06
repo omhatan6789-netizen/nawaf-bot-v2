@@ -137,12 +137,15 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
             lobby_id, game_type, inline.from_user.id,
             inline.from_user.full_name or inline.from_user.first_name or "اللاعب الأول",
         )
-        keyboard = InlineKeyboardMarkup(
-            ([[InlineKeyboardButton("⚙️ إعدادات اللاعبين", callback_data=f"online_settings:{lobby_id.hex}")]]
-             if game_type == "dots" else [])
-            + [[InlineKeyboardButton("انضمام 👥", callback_data=f"online_join:{lobby_id.hex}")]]
+        me = await context.bot.get_me()
+        room_url = f"https://t.me/{me.username}?startapp=online_lobby_{lobby_id.hex}"
+        keyboard = InlineKeyboardMarkup([[
+            InlineKeyboardButton("فتح غرفة اللعبة 🎮", url=room_url)
+        ]])
+        lobby_text = (
+            f"🎮 غرفة أونلاين — {title}\\n\\n"
+            "افتحوا الغرفة من الزر بالأسفل للانضمام وضبط الإعدادات وبدء اللعبة داخل الميني آب."
         )
-        lobby_text = _lobby_text(game_type, 2, "individual")
         photo_file_id = await pool.fetchval(
             "SELECT photo_file_id FROM online_game_images WHERE game_type=$1",
             game_type,
