@@ -152,7 +152,7 @@ function showTop(kind,title){
 }
 
 function showGames(){
- stopC4Timer();stopMiniGameTimers();stopExtraGame();document.body.classList.remove('c4-active');home.hidden=true;page.hidden=false;pageTitle.textContent='الألعاب 🎮';pageContent.replaceChildren();
+ stopC4Timer();stopMiniGameTimers();document.body.classList.remove('c4-active');home.hidden=true;page.hidden=false;pageTitle.textContent='الألعاب 🎮';pageContent.replaceChildren();
  const games=[
   ['🔴','كونكت 4','العب ضد البوت أو تحدَّ لاعبًا','connect'],
   ['🟦','المربعات','ارسم الخطوط واجمع المربعات','dots'],
@@ -826,8 +826,7 @@ document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>{
 document.getElementById('back-home').onclick=showHome;
 (async()=>{
  try{
-  const r=await fetch('/api/mini-app');if(!r.ok)throw new Error('API');
-  const data=await r.json();botUsername=data.bot_username||'';onlineGameImages=data.online_game_images||{};
+  const r=await fetch('/api/mini-app');const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error||('HTTP '+r.status));botUsername=data.bot_username||'';onlineGameImages=data.online_game_images||{};
   if(data.banner){const im=document.getElementById('banner');im.src=data.banner;im.style.display='block';}
   const root=document.getElementById('custom');
   for(const b of data.buttons||[]){
@@ -845,6 +844,6 @@ document.getElementById('back-home').onclick=showHome;
   else if(miniGameChallengeIdFromStart){home.hidden=true;page.hidden=false;pageTitle.textContent='الألعاب';startMiniGameChallenge();}
   else if(c4ChallengeIdFromStart){home.hidden=true;page.hidden=false;pageTitle.textContent='كونكت 4';startConnect4Challenge();}
   else if(c4GameIdFromUrl){home.hidden=true;page.hidden=false;pageTitle.textContent='كونكت 4';startConnect4();}
- }catch(e){document.getElementById('custom').innerHTML='<div class="empty">تعذر تحميل الإضافات حاليًا</div>';}
+ }catch(e){console.error('Mini App extensions load failed:',e);const box=document.createElement('div');box.className='empty';box.textContent='تعذر تحميل الإضافات: '+(e?.message||'خطأ غير معروف');document.getElementById('custom').replaceChildren(box);}
 })();
 </script></body></html>
