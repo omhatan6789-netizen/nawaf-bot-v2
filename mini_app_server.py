@@ -33,6 +33,9 @@ async def _payload(top=None):
     sounds = await pool.fetch(
         "SELECT id,title,media_kind,mime_type FROM mini_app_sounds ORDER BY id"
     )
+    online_images = await pool.fetch(
+        "SELECT game_type,photo_file_id FROM online_game_images"
+    )
     leaderboard = None
     if top == "points":
         from database.points import get_points_leaderboard
@@ -88,6 +91,9 @@ async def _payload(top=None):
              "mime_type": r["mime_type"], "url": f"/mini-app/sound/{r['id']}"}
             for r in sounds
         ],
+        "online_game_images": {
+            r["game_type"]: "/tg-file/" + r["photo_file_id"] for r in online_images
+        },
     }
 
 def _run(coro, timeout=20):
