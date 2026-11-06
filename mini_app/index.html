@@ -189,7 +189,7 @@ const c4StartParam=tg?.initDataUnsafe?.start_param||'';
 const c4ChallengeIdFromStart=c4StartParam.startsWith('c4c_')?c4StartParam.slice(4):new URLSearchParams(window.location.search).get('challenge_id');
 const miniGameChallengeIdFromStart=c4StartParam.startsWith('mg_')?c4StartParam.slice(3):new URLSearchParams(window.location.search).get('mini_game_id');
 let miniGame=null,miniGamePollTimer=null,miniGameChallengePollTimer=null,miniGameTimer=null,miniGameTick=null,miniGameBusy=false,miniGameInputLocked=true;
-let memoryPlaybackTimers=[];
+let memoryPlaybackTimers=[],memoryPresentationKey=null;
 let miniSoloGame=null,miniSoloId=null,miniSoloPoll=null,miniSoloBotTimer=null,miniSoloClock=null,miniSoloTick=null,miniSoloBusy=false;
 const c4Levels=[['سهل','مناسب للتجربة'],['متوسط','تحدي متوازن'],['صعب','يفكر قبل أن يلعب'],['مستحيل','أقوى تحدي']];
 function stopC4Timer(){if(c4Timer)clearTimeout(c4Timer);if(c4Tick)clearInterval(c4Tick);if(c4BotTimer)clearTimeout(c4BotTimer);if(c4PollTimer)clearTimeout(c4PollTimer);if(c4ChallengePollTimer)clearTimeout(c4ChallengePollTimer);c4Timer=null;c4Tick=null;c4BotTimer=null;c4PollTimer=null;c4ChallengePollTimer=null;}
