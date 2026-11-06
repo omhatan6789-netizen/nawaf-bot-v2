@@ -152,23 +152,33 @@ def _decode_state(value):
 def _public_state(row, user_id: int):
     game_type = row["game_type"]
     state = _decode_state(row["game_state"]) or {}
-    player1 = int(row["player1_id"])
-    player2 = int(row["player2_id"])
+    ids = state.get("multi_player_ids") or [int(row["player1_id"]), int(row["player2_id"])]
+    names = state.get("multi_player_names") or [row["player1_name"], row["player2_name"]]
     winner = row["winner_id"]
     status = row["status"]
-    if status in ("won", "draw") and status == "won":
-        status = "won" if int(winner or 0) == user_id else "lost"
+    if status == "won":
+        status = "won" if int(winner or 0) == int(user_id) else "lost"
+    try:
+        my_index = ids.index(int(user_id)) + 1
+    except ValueError:
+        my_index = 0
+    try:
+        turn_index = ids.index(int(row["turn_player_id"] or 0)) + 1
+    except ValueError:
+        turn_index = 0
     return {
         "id": str(row["id"]), "game_type": game_type, "status": status,
-        "player1_name": row["player1_name"], "player2_name": row["player2_name"],
-        "your_turn": int(row["turn_player_id"] or 0) == user_id,
-        "turn_player_id": row["turn_player_id"],
+        "player1_name": names[0], "player2_name": names[1],
+        "player_names": names, "player_scores": state.get("scores", [0] * len(ids)),
+        "player_count": len(ids), "team_mode": state.get("team_mode", "individual"),
+        "board_size": state.get("board_size", len(state.get("boxes", [])) or 4),
+        "your_turn": int(row["turn_player_id"] or 0) == int(user_id),
+        "turn_player_id": row["turn_player_id"], "turn_index": turn_index,
         "turn_started_at": int(row["turn_started_at"].timestamp() * 1000) if row["turn_started_at"] else None,
         "turn_seconds": TURN_SECONDS[game_type],
         "wager": int(row["wager"]), "winner_id": winner,
-        "winner_name": row["player1_name"] if int(winner or 0) == player1 else row["player2_name"] if int(winner or 0) == player2 else None,
-        "my_player": 1 if user_id == player1 else 2,
-        "state": state,
+        "winner_name": names[ids.index(int(winner))] if winner is not None and int(winner) in ids else None,
+        "my_player": my_index, "state": state,
     }
 
 
@@ -201,12 +211,14 @@ def _dots_edges():
 
 def _available_dot_edges(state):
     edges = []
-    for r in range(5):
-        for c in range(4):
+    rows = len(state["boxes"])
+    cols = len(state["boxes"][0]) if rows else 0
+    for r in range(rows + 1):
+        for c in range(cols):
             if not state["h"][r][c]:
                 edges.append({"kind": "h", "r": r, "c": c})
-    for r in range(4):
-        for c in range(5):
+    for r in range(rows):
+        for c in range(cols + 1):
             if not state["v"][r][c]:
                 edges.append({"kind": "v", "r": r, "c": c})
     return edges
@@ -215,15 +227,17 @@ def _available_dot_edges(state):
 def _draw_dot_edge(state, edge, player):
     kind, r, c = edge["kind"], int(edge["r"]), int(edge["c"])
     matrix = state.get(kind)
-    max_r, max_c = ((5, 4) if kind == "h" else (4, 5))
+    rows = len(state["boxes"])
+    cols = len(state["boxes"][0]) if rows else 0
+    max_r, max_c = ((rows + 1, cols) if kind == "h" else (rows, cols + 1))
     if kind not in ("h", "v") or not (0 <= r < max_r and 0 <= c < max_c):
         raise ValueError("الحركة غير صالحة")
     if matrix[r][c]:
         raise ValueError("هذا الخط مرسوم بالفعل")
     matrix[r][c] = player
     completed = []
-    for br in range(4):
-        for bc in range(4):
+    for br in range(rows):
+        for bc in range(cols):
             if state["boxes"][br][bc]:
                 continue
             closed = (
