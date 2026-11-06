@@ -112,6 +112,7 @@ body.c4-active #page{padding-left:10px;padding-right:10px}
 @media(min-width:700px){.c4-board-wrap{max-width:760px}.c4-arrows{max-width:760px}}
 .mg-score{display:flex;justify-content:space-between;gap:8px;margin:12px 0;font-size:12px;font-weight:800}.mg-status{display:flex;justify-content:space-between;align-items:center;background:#ffffff12;padding:10px 12px;border-radius:12px;margin:8px 0}.mg-progress{height:6px;background:#ffffff1b;border-radius:9px;overflow:hidden;margin-bottom:12px}.mg-progress>div{height:100%;width:100%;background:linear-gradient(90deg,#ef4444,#3b82f6);transition:width .2s}.mg-board{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));grid-template-rows:repeat(9,minmax(0,1fr));gap:0;background:linear-gradient(145deg,#ffffff18,#070b16);padding:10px;border:1px solid #ffffff2b;border-radius:18px;max-width:min(92vw,520px);width:100%;margin:14px auto;aspect-ratio:1;box-shadow:inset 0 0 22px #0008,0 12px 28px #0005;overflow:hidden}.mg-board>div{display:flex;align-items:center;justify-content:center;min-width:0;min-height:0;width:100%;height:100%;position:relative}.mg-dot{width:clamp(6px,2.2vw,11px);height:clamp(6px,2.2vw,11px);border-radius:50%;background:#f8fafc;z-index:2;box-shadow:0 1px 5px #0008}.mg-edge{display:block;border:0;border-radius:999px;background:#ffffff24;padding:0;min-width:0;min-height:0;touch-action:manipulation;transition:background .15s,transform .15s}.mg-edge.horizontal{width:100%;height:clamp(5px,1.7vw,9px)}.mg-edge.vertical{height:100%;width:clamp(5px,1.7vw,9px)}.mg-edge:not(:disabled):active{transform:scale(.88);background:#ffffff70}.mg-edge.on.p1{background:#ef4444;box-shadow:0 0 8px #ef444477}.mg-edge.on.p2{background:#3b82f6;box-shadow:0 0 8px #3b82f677}.mg-box{border-radius:5px;transition:background .2s}.mg-box.p1{background:#ef444455;box-shadow:inset 0 0 12px #ef444433}.mg-box.p2{background:#3b82f655;box-shadow:inset 0 0 12px #3b82f433}.mg-memory{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;max-width:360px;margin:18px auto;position:relative}.mg-countdown{position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;border-radius:22px;background:#050814b8;backdrop-filter:blur(3px);color:#fff;font-size:clamp(58px,18vw,100px);font-weight:1000;text-shadow:0 0 18px #ffffffaa,0 0 42px #ffffff77;pointer-events:none;animation:mg-count-pop .35s ease-out}.mg-countdown.go{font-size:clamp(42px,13vw,76px);color:#fff;letter-spacing:2px}@keyframes mg-count-pop{from{opacity:.25;transform:scale(.72)}to{opacity:1;transform:scale(1)}}.mg-memory-tile{aspect-ratio:1;border:3px solid #ffffff55;border-radius:22px;opacity:.75;transition:transform .12s,opacity .12s,filter .12s}.mg-memory-tile:disabled{opacity:.65}.mg-memory-tile.flash{opacity:1;filter:brightness(1.8);transform:scale(.96);box-shadow:0 0 24px #fff8}.mg-memory-tile:disabled.flash{opacity:1}.mg-memory-tile.pick-flash{opacity:1;filter:brightness(2.2);transform:scale(.94);border-color:#fff;box-shadow:0 0 0 3px #fff9,0 0 28px 10px #fff, inset 0 0 18px #ffffffaa}
 .music-widget{position:fixed;z-index:1000;top:12px;left:12px;direction:rtl}.music-toggle{width:43px;height:43px;border:1px solid #ffffff55;border-radius:50%;background:#16090dcc;color:#fff;font-size:19px;box-shadow:0 4px 18px #0008}.music-panel{display:none;position:absolute;top:51px;left:0;width:min(260px,calc(100vw - 28px));padding:13px;border:1px solid #ffffff35;border-radius:17px;background:#18090df2;box-shadow:0 12px 32px #0009;backdrop-filter:blur(14px)}.music-panel.open{display:block}.music-title{font-size:13px;font-weight:900;margin-bottom:9px}.music-choice{display:block;width:100%;padding:10px;margin:6px 0;border:1px solid #ffffff24;border-radius:11px;background:#ffffff10;color:#fff;text-align:right;font:700 13px inherit}.music-choice.active{border-color:#ff9ba3;background:#8f172455}.music-row{display:flex;align-items:center;gap:9px;margin-top:10px;font-size:12px;color:#ffffffc9}.music-row button{border:1px solid #ffffff35;border-radius:10px;background:#ffffff15;color:#fff;padding:8px 11px;font:700 12px inherit}.music-row input{width:100%;accent-color:#ff7d87}.music-search{display:flex;gap:6px;margin:8px 0}.music-search input{min-width:0;flex:1;border:1px solid #ffffff30;border-radius:9px;background:#ffffff12;color:#fff;padding:9px;font:12px inherit;outline:none}.music-search button{border:1px solid #ffffff35;border-radius:9px;background:#8f172455;color:#fff;padding:8px 10px;font:700 12px inherit}.music-results{max-height:190px;overflow:auto}.music-results .music-choice{font-size:12px}
+.online-end-overlay{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:22px;background:#080307ed;backdrop-filter:blur(16px)}.online-end-card{width:min(100%,440px);padding:24px 18px;border:1px solid #ffffff35;border-radius:26px;background:linear-gradient(145deg,#351018,#10080d);box-shadow:0 18px 70px #000b;text-align:center}.online-end-card h2{font-size:25px;margin:0 0 9px}.online-end-card p{color:#ffffffb8;margin:0 0 22px}.online-end-actions{display:grid;gap:13px}.online-end-actions button{width:100%;min-height:68px;border:0;border-radius:18px;font-size:20px;font-weight:950;color:#fff;background:linear-gradient(135deg,#f04455,#9e1428);box-shadow:0 8px 24px #0006}.online-end-actions button:last-child{background:linear-gradient(135deg,#45404a,#211d25)}.online-end-actions button:disabled{opacity:.6}
 </style></head>
 <body><div class="music-widget"><button class="music-toggle" id="music-toggle" aria-label="الموسيقى">♪</button><div class="music-panel" id="music-panel"><div class="music-title">اصوات الميني آب 🎧</div><div class="music-search"><input id="youtube-music-query" type="search" placeholder="ابحث في يوتيوب عن أغنية..."><button id="youtube-music-search">بحث</button></div><div id="youtube-music-results" class="music-results"></div><div id="custom-sound-player" style="margin-top:9px"></div><div id="custom-sound-choices"></div><div class="music-row"><button id="music-play">تشغيل</button><span id="music-state">متوقفة</span></div><div class="music-row" id="music-volume-row"><label for="music-volume">الصوت</label><input id="music-volume" type="range" min="0" max="1" step="0.01" value="0.5"></div><div style="font-size:10px;color:#ffffff70;margin-top:8px">الأصوات التي تضيفها من البوت تظهر هنا تلقائيًا.</div></div></div><main class="wrap">
 <div class="hero"><img id="banner" alt=""></div>
@@ -187,10 +188,13 @@ function showMiniGameDifficulty(type){
 }
 
 let c4Difficulty='متوسط',c4Game=null,c4Timer=null,c4Tick=null,c4Busy=false,c4Seconds=15,c4BotTimer=null,c4PollTimer=null,c4RpsChoice=null,c4ChallengePollTimer=null;
-let c4GameIdFromUrl=new URLSearchParams(window.location.search).get('game_id');
 const c4StartParam=tg?.initDataUnsafe?.start_param||'';
+const onlineConnectId=c4StartParam.startsWith('online_c4_')?c4StartParam.slice(10):'';
+const onlineMiniGameId=c4StartParam.startsWith('online_mg_')?c4StartParam.slice(10):'';
+const onlineMode=!!(onlineConnectId||onlineMiniGameId);
+let c4GameIdFromUrl=onlineConnectId||new URLSearchParams(window.location.search).get('game_id');
 const c4ChallengeIdFromStart=c4StartParam.startsWith('c4c_')?c4StartParam.slice(4):new URLSearchParams(window.location.search).get('challenge_id');
-const miniGameChallengeIdFromStart=c4StartParam.startsWith('mg_')?c4StartParam.slice(3):new URLSearchParams(window.location.search).get('mini_game_id');
+const miniGameChallengeIdFromStart=onlineMiniGameId||(c4StartParam.startsWith('mg_')?c4StartParam.slice(3):new URLSearchParams(window.location.search).get('mini_game_id'));
 let miniGame=null,miniGamePollTimer=null,miniGameChallengePollTimer=null,miniGameTimer=null,miniGameTick=null,miniGameBusy=false,miniGameInputLocked=true;
 let memoryPlaybackTimers=[],memoryPresentationKey=null;
 let miniSoloGame=null,miniSoloId=null,miniSoloPoll=null,miniSoloBotTimer=null,miniSoloClock=null,miniSoloTick=null,miniSoloBusy=false;
@@ -233,6 +237,28 @@ function stopMiniGameTimers(){
  memoryPlaybackTimers.forEach(clearTimeout);memoryPlaybackTimers=[];
  miniGamePollTimer=miniGameChallengePollTimer=miniGameTimer=miniGameTick=null;memoryPresentationKey=null;miniGameInputLocked=true;
 }
+function clearOnlineEndOverlay(){document.querySelector('.online-end-overlay')?.remove();}
+async function restartOnlineGame(gameType,gameId){
+ const overlay=document.querySelector('.online-end-overlay'),button=overlay?.querySelector('[data-online-restart]');
+ if(button){button.disabled=true;button.textContent='جاري تجهيز جولة جديدة...';}
+ try{
+  const initData=tg?.initData||'';if(!initData)throw new Error('افتح اللعبة من تيليجرام أولًا');
+  const response=await fetch('/api/online/restart',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData,game_type:gameType,game_id:gameId})});
+  const data=await response.json().catch(()=>({}));if(!response.ok||!data.ok)throw new Error(data.error||'تعذر إعادة اللعب');
+  clearOnlineEndOverlay();
+  if(gameType==='connect'){c4Game=data.result;renderConnect4();}
+  else{miniGame=data.result.game;renderMiniGame();}
+ }catch(e){if(button){button.disabled=false;button.textContent='↻ إعادة اللعب';}const msg=overlay?.querySelector('p');if(msg)msg.textContent=e.message;}
+}
+function showOnlineEndOverlay(gameType,gameId){
+ clearOnlineEndOverlay();const overlay=document.createElement('div');overlay.className='online-end-overlay';
+ const card=document.createElement('div');card.className='online-end-card';const heading=document.createElement('h2');heading.textContent='انتهت اللعبة 🏁';
+ const message=document.createElement('p');message.textContent='تقدرون تعيدون اللعب أو تطلعون من الصفحة.';
+ const actions=document.createElement('div');actions.className='online-end-actions';
+ const again=document.createElement('button');again.dataset.onlineRestart='1';again.textContent='↻ إعادة اللعب';again.onclick=()=>restartOnlineGame(gameType,gameId);
+ const exit=document.createElement('button');exit.textContent='✕ الخروج من الصفحة';exit.onclick=()=>{clearOnlineEndOverlay();if(tg?.close)tg.close();else showHome();};
+ actions.append(again,exit);card.append(heading,message,actions);overlay.appendChild(card);document.body.appendChild(overlay);
+}
 async function miniGameRequest(path,payload={}){
  const initData=tg?.initData||'';
  if(!initData)throw new Error('افتح الميني آب من داخل تيليجرام حتى نتحقق من حسابك');
@@ -263,7 +289,7 @@ function renderMiniGameSolo(){
  if(game.status!=='playing'){
   const result=shell.querySelector('#mg-result');result.classList.add('show');
   result.textContent=game.status==='won'?'🏆 فزت على البوت! أحسنت':game.status==='lost'?'🤖 فاز البوت! حاول مرة ثانية':'🤝 تعادل';
-  shell.querySelector('#mg-status').textContent='انتهت اللعبة';shell.querySelector('#mg-clock').textContent='—';return;
+  shell.querySelector('#mg-status').textContent='انتهت اللعبة';shell.querySelector('#mg-clock').textContent='—';if(onlineMode){showOnlineEndOverlay(game.game_type,game.id);scheduleMiniGamePoll();}return;
  }
  if(isDots){
   const view={...game,player1_name:'أنت',player2_name:'البوت',my_player:1};
@@ -318,7 +344,7 @@ function handleMiniGameResult(result){
 async function pollMiniGameChallenge(){miniGameChallengePollTimer=null;try{handleMiniGameResult(await miniGameRequest('/api/minigames/challenge/state',{challenge_id:miniGameChallengeIdFromStart}));}catch(e){miniGameChallengePollTimer=setTimeout(pollMiniGameChallenge,1800);}}
 async function submitMiniGameChoice(choice){document.querySelectorAll('#mg-rps button').forEach(b=>b.disabled=true);try{handleMiniGameResult(await miniGameRequest('/api/minigames/challenge/choice',{challenge_id:miniGameChallengeIdFromStart,choice}));}catch(e){const el=document.getElementById('mg-rps-status');if(el)el.textContent=e.message;document.querySelectorAll('#mg-rps button').forEach(b=>b.disabled=false);}}
 function renderMiniGame(){
- stopMiniGameTimers();const shell=c4Shell(),game=miniGame,state=game.state,humanTurn=!!game.your_turn;
+ clearOnlineEndOverlay();stopMiniGameTimers();const shell=c4Shell(),game=miniGame,state=game.state,humanTurn=!!game.your_turn;
  const p1=game.player1_name||'اللاعب الأول',p2=game.player2_name||'اللاعب الثاني';
  const heading=game.game_type==='dots'?'المربعات':'اختبر ذاكرتك';
  shell.innerHTML='<div class="c4-heading"><h2>'+heading+'</h2><p>'+p1+' × '+p2+'</p></div><div class="mg-score" id="mg-score"></div><div class="mg-status"><span id="mg-status"></span><b id="mg-clock"></b></div><div class="mg-progress"><div id="mg-progress-bar"></div></div><div id="mg-board"></div><div class="c4-result" id="mg-result"></div><div class="c4-hint">الرهان لكل لاعب: '+game.wager.toLocaleString('en-US')+' نقطة</div><button class="c4-secondary" id="mg-back">رجوع للألعاب</button>';
@@ -464,7 +490,7 @@ async function startConnect4(rpsChoice=null){
  }catch(e){const shell=document.getElementById('c4-shell');if(shell){const error=document.createElement('div');error.className='c4-error';error.textContent=e.message;shell.appendChild(error);if(btn){btn.disabled=false;btn.textContent='ابدأ التحدي ✦';}}}
 }
 function renderConnect4(previousBoard=null){
- stopC4Timer();const shell=c4Shell();
+ clearOnlineEndOverlay();stopC4Timer();const shell=c4Shell();
  const human=c4Game.game_mode==='human';
  const p1=human?(c4Game.player1_name||'اللاعب الأول'):'أنت';
  const p2=human?(c4Game.player2_name||'اللاعب الثاني'):(c4Game.bot_name||'البوت');
@@ -496,7 +522,7 @@ function renderConnect4(previousBoard=null){
  if(c4Game.status!=='playing'){
   const result=shell.querySelector('#c4-result');result.classList.add('show');
   result.textContent=c4Game.status==='draw'?'🤝 تعادل! تم إرجاع الرهانات':c4Game.status==='won'?'🏆 فزت! لعب ممتاز!':'🏆 فاز '+(c4Game.winner_name||p2)+'!';
-  shell.querySelector('#c4-status').textContent='انتهت المباراة';shell.querySelector('#c4-clock').textContent='—';shell.querySelector('#c4-progress').style.width='0%';
+  shell.querySelector('#c4-status').textContent='انتهت المباراة';shell.querySelector('#c4-clock').textContent='—';shell.querySelector('#c4-progress').style.width='0%';if(onlineMode){showOnlineEndOverlay('connect',c4Game.id);pollConnect4State();}
  }else if(!myTurn){
   const rpsLine=human&&c4Game.challenge_starter_name
    ? '✊ حجر ورقة مقص: يبدأ '+c4Game.challenge_starter_name
@@ -535,7 +561,7 @@ async function runC4BotMove(){
  catch(e){c4Busy=false;const s=document.getElementById('c4-status');if(s)s.textContent=e.message;c4BotTimer=setTimeout(runC4BotMove,1500);}
 }
 async function pollConnect4State(){
- if(c4PollTimer||!c4Game||c4Game.game_mode!=='human'||c4Game.status!=='playing')return;
+ if(c4PollTimer||!c4Game||c4Game.game_mode!=='human'||(!onlineMode&&c4Game.status!=='playing'))return;
  c4PollTimer=setTimeout(async()=>{
   c4PollTimer=null;
   try{const next=await c4Request('/api/connect4/state',{game_id:c4Game.id});
