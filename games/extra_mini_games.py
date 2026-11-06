@@ -110,6 +110,7 @@ async def word_guess(user_id,raw_id,guess):
         answers=_decode(row["answers"]); words=_decode(row["words"]); i=int(row["current_index"])
         if row["round_until"] and row["round_until"]>datetime.now(timezone.utc): raise ValueError("انتظر انتهاء عرض الإجابة")
         target=words[i]
+        if len(guess) != len(target): raise ValueError("عدد الحروف غير مطابق للكلمة")
         if _fold(guess)==_fold(target):
           me["score"]=int(me.get("score",0))+1
           answers={"last_winner":me["name"],"last_word":target,"last_feedback":word_feedback(target,guess),"last_user_id":int(user_id)}
@@ -126,8 +127,11 @@ async def word_next(user_id,raw_id):
         if not row: raise ValueError("الغرفة غير موجودة")
         if int(row["owner_id"])!=int(user_id) and row["mode"]=="online": raise ValueError("تحديث الجولة تلقائي لصاحب الغرفة")
         if row["round_until"] and row["round_until"]>datetime.now(timezone.utc): raise ValueError("لم ينته العد التنازلي")
-        nxt=int(row["current_index"])+1; status="finished" if nxt>=int(row["word_limit"]) else "playing"
-        await c.execute("UPDATE word_games SET current_index=$2,status=$3,round_until=NULL,updated_at=NOW(),finished_at=CASE WHEN $3='finished' THEN NOW() ELSE finished_at END WHERE id=$1",gid,nxt,status)
+        nxt=int(row["current_index"])+1
+        players=_decode(row["players"])
+        reached=any(int(p.get("score",0))>=int(row["win_target"]) for p in players)
+        status="finished" if nxt>=int(row["word_limit"]) or (row["mode"]=="training" and reached) else "playing"
+        await c.execute("UPDATE word_games SET current_index=$2,status=$3,answers='{}'::jsonb,round_until=NULL,updated_at=NOW(),finished_at=CASE WHEN $3='finished' THEN NOW() ELSE finished_at END WHERE id=$1",gid,nxt,status)
     return await word_state(user_id,raw_id)
 
 def _fleet():
@@ -206,19 +210,22 @@ async def battleship_move(user_id,raw_id,r,c):
         else:
           s["turn"]=player if hit else 1-player
           await conn.execute("UPDATE battleship_games SET state=$2::jsonb,turn_player_id=$3,updated_at=NOW() WHERE id=$1",gid,json.dumps(s),ids[s["turn"]])
-    if row["mode"]=="bot" and not winner if False else False: pass
     if row["mode"]=="bot":
       await battleship_bot_turn(gid)
     return await battleship_state(user_id,raw_id)
 async def battleship_bot_turn(gid):
     pool=get_pool()
-    async with pool.acquire() as c:
-      async with c.transaction():
+    # Keep firing while the bot scores hits; a miss returns the turn to the human.
+    for _ in range(100):
+      async with pool.acquire() as c:
+       async with c.transaction():
         row=await c.fetchrow("SELECT * FROM battleship_games WHERE id=$1 FOR UPDATE",gid)
         if not row or row["mode"]!="bot" or row["status"]!="playing": return
         s=_decode(row["state"])
         if s["turn"]!=1:return
-        shots=s["shots"][1]; candidates=[[r,c] for r in range(10) for c in range(10) if [r,c] not in shots]
+        shots=s["shots"][1]
+        candidates=[[r,c] for r in range(10) for c in range(10) if [r,c] not in shots]
+        if not candidates:return
         difficulty=row["difficulty"]
         if difficulty in ("صعب","مستحيل"):
           adjacent=[]
@@ -226,11 +233,12 @@ async def battleship_bot_turn(gid):
             if any([r,c] in ship for ship in s["ships"][0]):
               for nr,nc in ((r-1,c),(r+1,c),(r,c-1),(r,c+1)):
                 if 0<=nr<10 and 0<=nc<10 and [nr,nc] in candidates: adjacent.append([nr,nc])
-          if adjacent: candidates=adjacent
+          if adjacent:candidates=adjacent
         cell=random.choice(candidates);hit,_=_shot(s,1,*cell)
         total=sum(len(ship) for ship in s["ships"][0])
         if sum(1 for x in shots if any(x in ship for ship in s["ships"][0]))>=total:
           await c.execute("UPDATE battleship_games SET state=$2::jsonb,status='lost',winner_id=player1_id,updated_at=NOW() WHERE id=$1",gid,json.dumps(s))
-        else:
-          s["turn"]=1 if hit else 0
-          await c.execute("UPDATE battleship_games SET state=$2::jsonb,turn_player_id=CASE WHEN $3=0 THEN player1_id ELSE -1 END,updated_at=NOW() WHERE id=$1",gid,json.dumps(s),s["turn"])
+          return
+        s["turn"]=1 if hit else 0
+        await c.execute("UPDATE battleship_games SET state=$2::jsonb,turn_player_id=CASE WHEN $3=0 THEN player1_id ELSE -1 END,updated_at=NOW() WHERE id=$1",gid,json.dumps(s),s["turn"])
+        if not hit:return
