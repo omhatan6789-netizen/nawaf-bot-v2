@@ -406,7 +406,7 @@ function playMemoryTone(frequency=660,duration=0.11){
    showCount('GO!');if(status)status.textContent='انطلق!';playMemoryTone(880,0.24);
    memoryPlaybackTimers.push(setTimeout(()=>{if(memoryPresentationKey!==key)return;if(overlay)overlay.style.display='none';if(status)status.textContent='احفظ التسلسل...';sequence.forEach((color,i)=>{
     memoryPlaybackTimers.push(setTimeout(()=>{const tile=document.querySelector('.mg-memory-tile[data-color="'+color+'"]');if(tile)tile.classList.add('flash');playMemoryTone([392,494,587,784][color],.2);},i*720+250));
-    memoryPlaybackTimers.push(setTimeout(()=>{document.querySelectorAll('.mg-memory-tile').forEach(x=>x.classList.remove('flash'));if(i===sequence.length-1){miniGameInputLocked=false;document.querySelectorAll('.mg-memory-tile').forEach(b=>b.disabled=false);const s=document.getElementById('mg-status');if(s)s.textContent='دورك! كرر التسلسل';if(onDone)onDone();}},i*720+580));
+    memoryPlaybackTimers.push(setTimeout(()=>{document.querySelectorAll('.mg-memory-tile').forEach(x=>x.classList.remove('flash'));if(i===sequence.length-1){miniGameInputLocked=false;document.querySelectorAll('.mg-memory-tile').forEach(b=>b.disabled=false);const s=document.getElementById('mg-status');if(s)s.textContent=miniGame?.spectator?'👁 اللاعب يشاهد التسلسل':'دورك! كرر التسلسل';document.querySelectorAll('.mg-memory-tile').forEach(b=>b.disabled=!miniGame?.your_turn);if(onDone)onDone();}},i*720+580));
    });},650));
   };countdown();
  }
