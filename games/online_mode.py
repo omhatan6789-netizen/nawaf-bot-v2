@@ -1,0 +1,251 @@
+from __future__ import annotations
+
+import json
+import random
+import uuid
+
+from telegram import (
+    InlineKeyboardButton, InlineKeyboardMarkup, InlineQueryResultArticle,
+    InputTextMessageContent, Update,
+)
+from telegram.ext import ContextTypes
+
+from database.pool import get_pool
+
+GAME_INFO = {
+    "connect": ("كونكت 4 🔴", "لعبة توصيل أربعة أقراص"),
+    "dots": ("المربعات 🟦", "ارسم الخطوط واجمع أكبر عدد من المربعات"),
+    "memory": ("اختبر ذاكرتك 🧠", "احفظ التسلسل وتحدَّ لاعبًا آخر"),
+}
+
+
+def _select_games(query: str):
+    value = (query or "").strip().lower()
+    if not value:
+        return list(GAME_INFO)
+    if any(word in value for word in ("كونكت", "connect", "4")):
+        return ["connect"]
+    if any(word in value for word in ("مربع", "المربعات", "dots", "dot")):
+        return ["dots"]
+    if any(word in value for word in ("ذاكرة", "ذاكرت", "memory")):
+        return ["memory"]
+    return list(GAME_INFO)
+
+
+async def online_games_inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    inline = update.inline_query
+    if not inline:
+        return
+    pool = get_pool()
+    await pool.execute(
+        "DELETE FROM online_game_lobbies WHERE created_at < NOW() - INTERVAL '2 days' AND status <> 'playing'"
+    )
+    results = []
+    for game_type in _select_games(inline.query):
+        lobby_id = uuid.uuid4()
+        title, description = GAME_INFO[game_type]
+        await pool.execute(
+            """INSERT INTO online_game_lobbies
+               (id,game_type,creator_id,creator_name)
+               VALUES($1,$2,$3,$4)""",
+            lobby_id, game_type, inline.from_user.id,
+            inline.from_user.full_name or inline.from_user.first_name or "اللاعب الأول",
+        )
+        keyboard = InlineKeyboardMarkup([[
+            InlineKeyboardButton("انضمام 👥", callback_data=f"online_join:{lobby_id.hex}")
+        ]])
+        results.append(InlineQueryResultArticle(
+            id=lobby_id.hex,
+            title=title,
+            description=description,
+            input_message_content=InputTextMessageContent(
+                f"🎮 تحدي أونلاين\nاللعبة: {title}\n\n"
+                f"اللاعبون: 1/2\n"
+                f"• {inline.from_user.full_name or inline.from_user.first_name}\n\n"
+                "بانتظار انضمام لاعب آخر..."
+            ),
+            reply_markup=keyboard,
+        ))
+    await inline.answer(results, cache_time=0, is_personal=True)
+
+
+async def online_lobby_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    if not query or not query.data:
+        return
+    try:
+        lobby_id = uuid.UUID(hex=query.data.split(":", 1)[1])
+    except (ValueError, IndexError):
+        await query.answer("تعذر قراءة غرفة اللعب.", show_alert=True)
+        return
+
+    pool = get_pool()
+    user = query.from_user
+    game_id = None
+    game_type = None
+    player1_name = player2_name = None
+    chat_id = getattr(getattr(query, "message", None), "chat_id", None)
+
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            lobby = await conn.fetchrow(
+                "SELECT * FROM online_game_lobbies WHERE id=$1 FOR UPDATE",
+                lobby_id,
+            )
+            if not lobby or lobby["status"] != "pending":
+                await query.answer("الغرفة لم تعد متاحة.", show_alert=True)
+                return
+            if int(lobby["creator_id"]) == int(user.id):
+                await query.answer("أنت منشئ الغرفة ومُسجّل كلاعب أول بالفعل.", show_alert=True)
+                return
+            if lobby["player2_id"]:
+                await query.answer("اكتمل عدد اللاعبين بالفعل.", show_alert=True)
+                return
+
+            player1_name = lobby["creator_name"]
+            player2_name = user.full_name or user.first_name or "اللاعب الثاني"
+            game_type = lobby["game_type"]
+            chat_id = chat_id or lobby["chat_id"] or 0
+            await conn.execute(
+                """UPDATE online_game_lobbies
+                   SET player2_id=$2,player2_name=$3,chat_id=$4,status='starting',updated_at=NOW()
+                   WHERE id=$1""",
+                lobby_id, user.id, player2_name, chat_id,
+            )
+
+            game_id = uuid.uuid4()
+            if game_type == "connect":
+                from games.connect4 import ROWS, COLS
+                board = [[0 for _ in range(COLS)] for _ in range(ROWS)]
+                await conn.execute(
+                    """INSERT INTO connect4_games
+                       (id,user_id,player2_id,difficulty,board,game_mode,chat_id,
+                        player1_name,player2_name,turn_player_id,wager,wager_settled)
+                       VALUES($1,$2,$3,'متوسط',$4::jsonb,'human',$5,$6,$7,$2,0,TRUE)""",
+                    game_id, int(lobby["creator_id"]), int(user.id),
+                    json.dumps(board), chat_id, player1_name, player2_name,
+                )
+            else:
+                if game_type == "dots":
+                    state = {
+                        "h": [[0 for _ in range(4)] for _ in range(5)],
+                        "v": [[0 for _ in range(5)] for _ in range(4)],
+                        "boxes": [[0 for _ in range(4)] for _ in range(4)],
+                        "scores": [0, 0],
+                    }
+                else:
+                    state = {
+                        "sequence": [random.randrange(4) for _ in range(3)],
+                        "level": 3, "progress": 0, "round_successes": [],
+                        "starter_id": int(lobby["creator_id"]),
+                    }
+                await conn.execute(
+                    """INSERT INTO mini_game_challenges
+                       (id,game_type,chat_id,player1_id,player1_name,player2_id,player2_name,
+                        wager,status,turn_player_id,game_state,wager_settled)
+                       VALUES($1,$2,$3,$4,$5,$6,$7,1,'playing',$4,$8::jsonb,TRUE)""",
+                    game_id, game_type, chat_id, int(lobby["creator_id"]),
+                    player1_name, int(user.id), player2_name, json.dumps(state),
+                )
+            await conn.execute(
+                """UPDATE online_game_lobbies SET status='playing',game_id=$2,updated_at=NOW()
+                   WHERE id=$1""",
+                lobby_id, game_id,
+            )
+
+    me = await context.bot.get_me()
+    start_param = (
+        f"online_c4_{game_id.hex}" if game_type == "connect"
+        else f"online_mg_{game_id.hex}"
+    )
+    launch_url = f"https://t.me/{me.username}?startapp={start_param}"
+    text = (
+        f"✅ اكتمل عدد اللاعبين — {GAME_INFO[game_type][0]}\n\n"
+        f"👤 اللاعب الأول: {player1_name}\n"
+        f"👤 اللاعب الثاني: {player2_name}\n\n"
+        "اضغطوا على الزر لفتح اللعبة والبدء مباشرة."
+    )
+    keyboard = InlineKeyboardMarkup([[
+        InlineKeyboardButton("🎮 فتح اللعبة", url=launch_url)
+    ]])
+    try:
+        if query.inline_message_id:
+            await context.bot.edit_message_text(
+                text=text, inline_message_id=query.inline_message_id,
+                reply_markup=keyboard,
+            )
+        elif query.message:
+            await query.edit_message_text(text, reply_markup=keyboard)
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception("Could not update online game lobby message")
+    await query.answer("تم انضمامك وبدأت الغرفة!")
+
+
+async def restart_online_game(user_id: int, game_type: str, raw_game_id: str):
+    try:
+        game_id = uuid.UUID(hex=str(raw_game_id).replace("-", ""))
+    except Exception:
+        raise ValueError("معرّف اللعبة غير صالح")
+
+    pool = get_pool()
+    if game_type == "connect":
+        from games.connect4 import ROWS, COLS, public_state
+        async with pool.acquire() as conn:
+            async with conn.transaction():
+                row = await conn.fetchrow(
+                    """SELECT * FROM connect4_games WHERE id=$1
+                       AND (user_id=$2 OR player2_id=$2) FOR UPDATE""",
+                    game_id, int(user_id),
+                )
+                if not row:
+                    raise ValueError("هذه اللعبة ليست لك")
+                if row["status"] not in ("won", "draw", "lost"):
+                    raise ValueError("اللعبة ما انتهت بعد")
+                starter = random.choice([int(row["user_id"]), int(row["player2_id"])])
+                board = [[0 for _ in range(COLS)] for _ in range(ROWS)]
+                row = await conn.fetchrow(
+                    """UPDATE connect4_games SET board=$2::jsonb,status='playing',
+                       last_move=NULL,winning_cells='[]'::jsonb,winner_id=NULL,
+                       turn_player_id=$3,turn_started_at=NOW(),wager=0,wager_settled=TRUE,
+                       updated_at=NOW() WHERE id=$1 RETURNING *""",
+                    game_id, json.dumps(board), starter,
+                )
+                return public_state(row, int(user_id))
+
+    if game_type not in ("dots", "memory"):
+        raise ValueError("نوع اللعبة غير معروف")
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            row = await conn.fetchrow(
+                """SELECT * FROM mini_game_challenges WHERE id=$1
+                   AND (player1_id=$2 OR player2_id=$2) FOR UPDATE""",
+                game_id, int(user_id),
+            )
+            if not row:
+                raise ValueError("هذه اللعبة ليست لك")
+            if row["status"] not in ("won", "draw"):
+                raise ValueError("اللعبة ما انتهت بعد")
+            starter = random.choice([int(row["player1_id"]), int(row["player2_id"])])
+            if game_type == "dots":
+                state = {
+                    "h": [[0 for _ in range(4)] for _ in range(5)],
+                    "v": [[0 for _ in range(5)] for _ in range(4)],
+                    "boxes": [[0 for _ in range(4)] for _ in range(4)],
+                    "scores": [0, 0],
+                }
+            else:
+                state = {
+                    "sequence": [random.randrange(4) for _ in range(3)],
+                    "level": 3, "progress": 0, "round_successes": [],
+                    "starter_id": starter,
+                }
+            await conn.execute(
+                """UPDATE mini_game_challenges SET status='playing',winner_id=NULL,
+                   turn_player_id=$2,turn_started_at=NOW(),game_state=$3::jsonb,
+                   player1_choice=NULL,player2_choice=NULL,rps_result=NULL,
+                   wager=1,wager_settled=TRUE,updated_at=NOW() WHERE id=$1""",
+                game_id, starter, json.dumps(state),
+            )
+    from games.mini_games import get_mini_game_challenge_state
+    return await get_mini_game_challenge_state(int(user_id), game_id.hex)
