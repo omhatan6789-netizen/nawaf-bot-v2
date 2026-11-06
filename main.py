@@ -2,7 +2,7 @@ import asyncio
 import logging
 
 from telegram import Update
-from telegram.ext import Application, ApplicationBuilder, CallbackQueryHandler, ChatMemberHandler, CommandHandler, ContextTypes, ConversationHandler, MessageHandler, filters
+from telegram.ext import Application, ApplicationBuilder, CallbackQueryHandler, ChatMemberHandler, CommandHandler, ContextTypes, ConversationHandler, InlineQueryHandler, MessageHandler, filters
 
 from config import load_settings
 from handlers.mini_app import mini_app_message, register_mini_app_menu
@@ -87,6 +87,7 @@ from handlers.temporary_messages import (
 from games.rock_paper_scissors import (
     start_rock_paper_scissors, rock_paper_scissors_callback,
 )
+from games.online_mode import online_games_inline_query, online_lobby_callback
 from games.connect4_challenge import (
     connect4_challenge_command, connect4_challenge_callback,
 )
@@ -380,6 +381,8 @@ def build_application() -> Application:
     )
     application.bot_data["settings"] = settings
     # Delete slash commands while allowing their normal handlers to execute in later groups.
+    application.add_handler(InlineQueryHandler(online_games_inline_query), group=-100)
+    application.add_handler(CallbackQueryHandler(online_lobby_callback, pattern=r"^online_join:"))
     application.add_handler(MessageHandler(
         filters.COMMAND,
         delete_slash_command_message,
