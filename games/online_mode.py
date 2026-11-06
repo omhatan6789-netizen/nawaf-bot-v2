@@ -5,7 +5,7 @@ import random
 import uuid
 
 from telegram import (
-    InlineKeyboardButton, InlineKeyboardMarkup, InlineQueryResultArticle, InlineQueryResultPhoto,
+    InlineKeyboardButton, InlineKeyboardMarkup, InlineQueryResultArticle,
     InputTextMessageContent, Update,
 )
 from telegram.ext import ContextTypes
@@ -150,27 +150,21 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
             "SELECT photo_file_id FROM online_game_images WHERE game_type=$1",
             game_type,
         )
+        # Article results are rendered as a vertical list: thumbnail on the side,
+        # with the game title and description visible beside it.
+        result_kwargs = {
+            "id": lobby_id.hex,
+            "title": title,
+            "description": description,
+            "input_message_content": InputTextMessageContent(lobby_text),
+            "reply_markup": keyboard,
+        }
         if photo_file_id:
-            # CachedPhoto hides its title in Telegram clients when the image preview loads.
-            # A regular Photo result with an explicit thumbnail keeps the game name visible.
             photo_url = f"https://nawaf-bot-v2.onrender.com/tg-file/{photo_file_id}"
-            results.append(InlineQueryResultPhoto(
-                id=lobby_id.hex,
-                photo_url=photo_url,
-                thumbnail_url=photo_url,
-                title=title,
-                description=description,
-                caption=lobby_text,
-                reply_markup=keyboard,
-            ))
-        else:
-            results.append(InlineQueryResultArticle(
-                id=lobby_id.hex,
-                title=title,
-                description=description,
-                input_message_content=InputTextMessageContent(lobby_text),
-                reply_markup=keyboard,
-            ))
+            result_kwargs["thumbnail_url"] = photo_url
+            result_kwargs["thumbnail_width"] = 80
+            result_kwargs["thumbnail_height"] = 80
+        results.append(InlineQueryResultArticle(**result_kwargs))
     await inline.answer(results, cache_time=0, is_personal=True)
 
 
