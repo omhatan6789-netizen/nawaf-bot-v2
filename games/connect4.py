@@ -241,14 +241,51 @@ async def get_game_state(user_id: int, game_id: str):
     except Exception:
         raise ValueError("المباراة غير موجودة")
     pool = get_pool()
-    row = await pool.fetchrow(
-        """SELECT * FROM connect4_games
-           WHERE id=$1 AND (user_id=$2 OR player2_id=$2)""",
-        parsed_id, user_id,
-    )
-    if not row:
-        raise ValueError("المباراة غير موجودة أو ليست لك")
-    return public_state(row, user_id)
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            row = await conn.fetchrow(
+                """SELECT * FROM connect4_games
+                   WHERE id=$1 AND (user_id=$2 OR player2_id=$2) FOR UPDATE""",
+                parsed_id, user_id,
+            )
+            if not row:
+                raise ValueError("المباراة غير موجودة أو ليست لك")
+
+            # The server owns the shared turn clock. Any participant polling after
+            # expiry can advance the timed-out player's move exactly once.
+            if row["game_mode"] == "human" and row["status"] == "playing":
+                expired = await conn.fetchval(
+                    "SELECT NOW() > $1::timestamptz + ($2 * INTERVAL '1 second')",
+                    row["turn_started_at"], TURN_SECONDS,
+                )
+                if expired:
+                    board = row["board"]
+                    if isinstance(board, str):
+                        board = json.loads(board)
+                    valid = legal_columns(board)
+                    if valid:
+                        timed_out_player = int(row["turn_player_id"])
+                        piece = 1 if timed_out_player == int(row["user_id"]) else 2
+                        chosen = random.choice(valid)
+                        drop_piece(board, chosen, piece)
+                        cells = winning_line(board, piece) or []
+                        status = "won" if cells else ("draw" if not legal_columns(board) else "playing")
+                        winner_id = timed_out_player if status == "won" else None
+                        if status in ("won", "draw"):
+                            await _settle_human_wager(conn, row, winner_id)
+                        next_player = int(
+                            row["player2_id"] if timed_out_player == int(row["user_id"])
+                            else row["user_id"]
+                        )
+                        row = await conn.fetchrow(
+                            """UPDATE connect4_games SET board=$2::jsonb,status=$3,
+                               last_move=$4,winning_cells=$5::jsonb,winner_id=$6,
+                               turn_player_id=$7,turn_started_at=NOW(),updated_at=NOW()
+                               WHERE id=$1 RETURNING *""",
+                            parsed_id, json.dumps(board), status, chosen,
+                            json.dumps(cells), winner_id, next_player,
+                        )
+            return public_state(row, user_id)
 
 
 async def _settle_human_wager(conn, row, winner_id: int | None):
