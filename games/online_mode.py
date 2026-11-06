@@ -214,11 +214,21 @@ async def online_lobby_callback(update: Update, context: ContextTypes.DEFAULT_TY
                     )
                 else:
                     if game_type == "dots":
+                        count = int(lobby["player_count"])
+                        size = 4 if count == 2 else 6
+                        ids_for_game = [int(x[0]) for x in players]
+                        names_for_game = [x[1] or f"اللاعب {i+1}" for i, x in enumerate(players)]
                         state = {
-                            "h": [[0 for _ in range(4)] for _ in range(5)],
-                            "v": [[0 for _ in range(5)] for _ in range(4)],
-                            "boxes": [[0 for _ in range(4)] for _ in range(4)],
-                            "scores": [0, 0],
+                            "h": [[0 for _ in range(size)] for _ in range(size + 1)],
+                            "v": [[0 for _ in range(size + 1)] for _ in range(size)],
+                            "boxes": [[0 for _ in range(size)] for _ in range(size)],
+                            "scores": [0 for _ in range(count)],
+                            "multi_player_ids": ids_for_game,
+                            "multi_player_names": names_for_game,
+                            "player_count": count,
+                            "team_mode": lobby["team_mode"] if count == 4 else "individual",
+                            "board_size": size,
+                            "turn_index": 0,
                         }
                     else:
                         state = {
@@ -229,10 +239,14 @@ async def online_lobby_callback(update: Update, context: ContextTypes.DEFAULT_TY
                     await conn.execute(
                         """INSERT INTO mini_game_challenges
                            (id,game_type,chat_id,player1_id,player1_name,player2_id,player2_name,
+                            player3_id,player3_name,player4_id,player4_name,
                             wager,status,turn_player_id,game_state,wager_settled)
-                           VALUES($1,$2,$3,$4,$5,$6,$7,1,'playing',$4,$8::jsonb,TRUE)""",
+                           VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,1,'playing',$4,$12::jsonb,TRUE)""",
                         game_id, game_type, chat_id, int(lobby["creator_id"]),
-                        player1_name, int(lobby["player2_id"]), player2_name, json.dumps(state),
+                        player1_name, int(lobby["player2_id"]), player2_name,
+                        int(lobby["player3_id"]) if lobby["player3_id"] else None, lobby["player3_name"],
+                        int(lobby["player4_id"]) if lobby["player4_id"] else None, lobby["player4_name"],
+                        json.dumps(state),
                     )
                 await conn.execute(
                     """UPDATE online_game_lobbies SET status='playing',game_id=$2,updated_at=NOW()
