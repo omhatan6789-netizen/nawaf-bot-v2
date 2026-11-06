@@ -152,8 +152,16 @@ def _decode_state(value):
 def _public_state(row, user_id: int):
     game_type = row["game_type"]
     state = _decode_state(row["game_state"]) or {}
-    ids = state.get("multi_player_ids") or [int(row["player1_id"]), int(row["player2_id"])]
-    names = state.get("multi_player_names") or [row["player1_name"], row["player2_name"]]
+    ids = state.get("multi_player_ids") or [
+        int(row["player1_id"]), int(row["player2_id"]),
+        *([int(row["player3_id"])] if row["player3_id"] is not None else []),
+        *([int(row["player4_id"])] if row["player4_id"] is not None else []),
+    ]
+    names = state.get("multi_player_names") or [
+        row["player1_name"], row["player2_name"],
+        *([row["player3_name"]] if row["player3_id"] is not None else []),
+        *([row["player4_name"]] if row["player4_id"] is not None else []),
+    ]
     winner = row["winner_id"]
     status = row["status"]
     if status == "won":
@@ -183,7 +191,11 @@ def _public_state(row, user_id: int):
         "turn_started_at": int(row["turn_started_at"].timestamp() * 1000) if row["turn_started_at"] else None,
         "turn_seconds": TURN_SECONDS[game_type],
         "wager": 0 if state.get("online_free") else int(row["wager"]), "winner_id": winner,
-        "winner_name": ("الفريق الأول" if int(winner or 0) == ids[0] else "الفريق الثاني") if state.get("team_mode") == "teams" and winner is not None else (names[ids.index(int(winner))] if winner is not None and int(winner) in ids else None),
+        "winner_name": (
+            " و".join(str(names[i]) for i in ((0, 2) if int(winner or 0) == ids[0] else (1, 3)) if i < len(names))
+            if state.get("team_mode") == "teams" and len(ids) == 4 and winner is not None
+            else (names[ids.index(int(winner))] if winner is not None and int(winner) in ids else None)
+        ),
         "my_player": my_index, "state": state,
     }
 
