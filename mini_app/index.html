@@ -324,11 +324,10 @@ async function withdrawOnlineGame(gameType,gameId,button){
 function showOnlineEndOverlay(gameType,gameId){
  clearOnlineEndOverlay();const overlay=document.createElement('div');overlay.className='online-end-overlay';
  const card=document.createElement('div');card.className='online-end-card';const heading=document.createElement('h2');heading.textContent='انتهت اللعبة 🏁';
- const message=document.createElement('p');message.textContent=gameType==='connect'?'انتهت المباراة. تقدر ترجع للقائمة الرئيسية.':'تقدرون تعيدون اللعب أو تطلعون من الصفحة.';
+ const message=document.createElement('p');message.textContent=gameType==='connect'?'انتهت المباراة. تقدر ترجع للقائمة الرئيسية.':'تقدر ترجع للقائمة الرئيسية.';
  const actions=document.createElement('div');actions.className='online-end-actions';
  const again=document.createElement('button');again.dataset.onlineRestart='1';again.textContent='↻ إعادة اللعب';again.onclick=()=>restartOnlineGame(gameType,gameId);
  const exit=document.createElement('button');exit.textContent='رجوع للقائمة الرئيسية';exit.onclick=()=>{clearOnlineEndOverlay();showHome();};
- if(gameType!=='connect')actions.appendChild(again);
  actions.appendChild(exit);card.append(heading,message,actions);overlay.appendChild(card);document.body.appendChild(overlay);
 }
 async function miniGameRequest(path,payload={}){
