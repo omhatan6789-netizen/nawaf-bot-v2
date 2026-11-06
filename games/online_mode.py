@@ -351,12 +351,14 @@ async def online_lobby_callback(update: Update, context: ContextTypes.DEFAULT_TY
                             "team_mode": lobby["team_mode"] if count == 4 else "individual",
                             "board_size": size,
                             "turn_index": 0,
+                            "online_free": True,
                         }
                     else:
                         state = {
                             "sequence": [random.randrange(4) for _ in range(3)],
                             "level": 3, "progress": 0, "round_successes": [],
                             "starter_id": int(lobby["creator_id"]),
+                            "online_free": True,
                         }
                     await conn.execute(
                         """INSERT INTO mini_game_challenges
@@ -510,12 +512,14 @@ async def online_lobby_api(user_id: int, action: str, raw_lobby_id: str, setting
                             "team_mode": lobby["team_mode"] if count == 4 else "individual",
                             "board_size": size,
                             "turn_index": 0,
+                            "online_free": True,
                         }
                     else:
                         state = {
                             "sequence": [random.randrange(4) for _ in range(3)],
                             "level": 3, "progress": 0, "round_successes": [],
                             "starter_id": int(ids[0]),
+                            "online_free": True,
                         }
                     await conn.execute(
                         """INSERT INTO mini_game_challenges
