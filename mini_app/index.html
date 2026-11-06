@@ -660,7 +660,7 @@ async function pollConnect4State(){
 let extraStartParam=tg?.initDataUnsafe?.start_param||'';
 let extraGameId=(extraStartParam.startsWith('word_')?extraStartParam.slice(5):extraStartParam.startsWith('battle_')?extraStartParam.slice(7):'');
 let extraGameType=extraStartParam.startsWith('word_')?'word':extraStartParam.startsWith('battle_')?'battleship':'';
-let extraGame=null,extraPoll=null,extraBusy=false,extraStartedAt=0,extraElapsedTimer=null,extraLastRevealKey='';
+let extraGame=null,extraPoll=null,extraBusy=false,extraStartedAt=0,extraElapsedTimer=null,extraLastRevealKey='',extraAdvancing=false;
 async function extraGameRequest(action,game_type,extra={}){
  const initData=tg?.initData||'';
  if(!initData)throw new Error('افتح اللعبة من داخل تيليجرام');
@@ -727,10 +727,10 @@ function showWordReveal(name,word,done){
  const card=document.createElement('div');card.className='online-end-card';card.innerHTML='<h2>🎉 '+escapeLobbyText(name)+' جاوب صح!</h2><p>الكلمة كانت: <b>'+escapeLobbyText(word)+'</b></p><div style="font-size:55px;font-weight:1000" id="word-countdown">3</div>';
  overlay.appendChild(card);document.body.appendChild(overlay);let n=3;const timer=setInterval(()=>{n--;const el=card.querySelector('#word-countdown');if(el)el.textContent=n;if(n<=0){clearInterval(timer);overlay.remove();done();}},1000);
 }
-async function advanceWord(){try{extraGame=await extraGameRequest('next','word');renderWordGame();}catch(e){showExtraError(e);}}
+async function advanceWord(){if(extraAdvancing)return;extraAdvancing=true;try{extraGame=await extraGameRequest('next','word');renderWordGame();}catch(e){showExtraError(e);}finally{extraAdvancing=false;}}
 function scheduleExtraPoll(){
  if(extraPoll)clearTimeout(extraPoll);
- extraPoll=setTimeout(async()=>{try{if(extraGameType==='word'){extraGame=await extraGameRequest('state','word');if(extraGame.status==='waiting')renderWordLobby();else if(extraGame.status==='playing'&&extraGame.round_until&&Date.now()>=extraGame.round_until&&tg?.initDataUnsafe?.user?.id===Number(extraGame.players?.[0]?.id)){extraGame=await extraGameRequest('next','word');renderWordGame();}else renderWordGame();}else if(extraGameType==='battleship'){extraGame=await extraGameRequest('state','battleship');renderBattleship();}}catch(e){}scheduleExtraPoll();},1800);
+ extraPoll=setTimeout(async()=>{try{if(extraGameType==='word'){extraGame=await extraGameRequest('state','word');if(extraGame.status==='waiting')renderWordLobby();else if(extraGame.status==='playing'&&extraGame.round_until&&Date.now()>=extraGame.round_until&&(extraGame.players||[]).some(p=>Number(p.id)===Number(tg?.initDataUnsafe?.user?.id))){await advanceWord();}else renderWordGame();}else if(extraGameType==='battleship'){extraGame=await extraGameRequest('state','battleship');renderBattleship();}}catch(e){}scheduleExtraPoll();},1800);
 }
 function showExtraError(error){const shell=document.getElementById('c4-shell');if(shell){let el=shell.querySelector('.c4-error');if(!el){el=document.createElement('div');el.className='c4-error';shell.appendChild(el);}el.textContent=error?.message||'حدث خطأ';}}
 function showBattleshipSetup(){
