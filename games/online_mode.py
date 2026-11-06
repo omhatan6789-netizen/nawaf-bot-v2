@@ -331,20 +331,29 @@ async def restart_online_game(user_id: int, game_type: str, raw_game_id: str):
         async with conn.transaction():
             row = await conn.fetchrow(
                 """SELECT * FROM mini_game_challenges WHERE id=$1
-                   AND (player1_id=$2 OR player2_id=$2) FOR UPDATE""",
+                   AND (player1_id=$2 OR player2_id=$2 OR player3_id=$2 OR player4_id=$2) FOR UPDATE""",
                 game_id, int(user_id),
             )
             if not row:
                 raise ValueError("هذه اللعبة ليست لك")
             if row["status"] not in ("won", "draw"):
                 raise ValueError("اللعبة ما انتهت بعد")
-            starter = random.choice([int(row["player1_id"]), int(row["player2_id"])])
+            old_state = row["game_state"] if isinstance(row["game_state"], dict) else json.loads(row["game_state"])
+            ids = old_state.get("multi_player_ids") or [int(row["player1_id"]), int(row["player2_id"])]
+            starter = random.choice(ids)
             if game_type == "dots":
+                size = int(old_state.get("board_size", 4))
                 state = {
-                    "h": [[0 for _ in range(4)] for _ in range(5)],
-                    "v": [[0 for _ in range(5)] for _ in range(4)],
-                    "boxes": [[0 for _ in range(4)] for _ in range(4)],
-                    "scores": [0, 0],
+                    "h": [[0 for _ in range(size)] for _ in range(size + 1)],
+                    "v": [[0 for _ in range(size + 1)] for _ in range(size)],
+                    "boxes": [[0 for _ in range(size)] for _ in range(size)],
+                    "scores": [0 for _ in ids],
+                    "multi_player_ids": ids,
+                    "multi_player_names": old_state.get("multi_player_names", [row["player1_name"], row["player2_name"]]),
+                    "player_count": len(ids),
+                    "team_mode": old_state.get("team_mode", "individual"),
+                    "board_size": size,
+                    "turn_index": ids.index(starter),
                 }
             else:
                 state = {
