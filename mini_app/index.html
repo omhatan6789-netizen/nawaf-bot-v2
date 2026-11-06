@@ -110,7 +110,7 @@ body.c4-active #page{padding-left:10px;padding-right:10px}
 .c4-slot .c4-disc.blue{background:radial-gradient(circle at 35% 25%,#c2e5ff,#278bff 52%,#0647a5)}
 .c4-arrow:disabled{opacity:.12;animation:none;cursor:default}
 @media(min-width:700px){.c4-board-wrap{max-width:760px}.c4-arrows{max-width:760px}}
-</style></head>
+.mg-score{display:flex;justify-content:space-between;gap:8px;margin:12px 0;font-size:12px;font-weight:800}.mg-status{display:flex;justify-content:space-between;align-items:center;background:#ffffff12;padding:10px 12px;border-radius:12px;margin:8px 0}.mg-progress{height:6px;background:#ffffff1b;border-radius:9px;overflow:hidden;margin-bottom:12px}.mg-progress>div{height:100%;width:100%;background:linear-gradient(90deg,#ef4444,#3b82f6);transition:width .2s}.mg-board{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:2px;background:#151b2d;padding:8px;border-radius:14px;max-width:520px;margin:auto;aspect-ratio:1}.mg-board>div{display:flex;align-items:center;justify-content:center;min-width:0;min-height:0}.mg-dot{width:10px;height:10px;border-radius:50%;background:#fff;z-index:2}.mg-edge{border:0;border-radius:9px;background:#ffffff20;padding:0;min-width:0;min-height:0}.mg-edge.horizontal{width:88%;height:8px}.mg-edge.vertical{height:88%;width:8px}.mg-edge.on.p1{background:#ef4444}.mg-edge.on.p2{background:#3b82f6}.mg-box.p1{background:#ef444455;border-radius:4px}.mg-box.p2{background:#3b82f655;border-radius:4px}.mg-memory{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;max-width:360px;margin:18px auto}.mg-memory-tile{aspect-ratio:1;border:3px solid #ffffff55;border-radius:22px;opacity:.75;transition:transform .12s,opacity .12s,filter .12s}.mg-memory-tile:disabled{opacity:.65}.mg-memory-tile.flash{opacity:1;filter:brightness(1.8);transform:scale(.96);box-shadow:0 0 24px #fff8}.mg-memory-tile:disabled.flash{opacity:1}</style></head>
 <body><main class="wrap">
 <div class="hero"><img id="banner" alt=""></div>
 <div class="brand">Dev bot ~ نواف</div>
@@ -132,7 +132,7 @@ const home=document.getElementById('home');
 const page=document.getElementById('page');
 const pageTitle=document.getElementById('page-title');
 const pageContent=document.getElementById('page-content');
-function showHome(){stopC4Timer();document.body.classList.remove('c4-active');page.hidden=true;home.hidden=false;}
+function showHome(){stopC4Timer();stopMiniGameTimers();document.body.classList.remove('c4-active');page.hidden=true;home.hidden=false;}
 function openBot(startParam=''){if(!botUsername)return;const link='https://t.me/'+botUsername+(startParam?'?start='+encodeURIComponent(startParam):'');if(tg?.openTelegramLink)tg.openTelegramLink(link);else location.href=link;}
 function showTop(kind,title){
  home.hidden=true;page.hidden=false;pageTitle.textContent=title;pageContent.replaceChildren();
@@ -146,18 +146,35 @@ function showTop(kind,title){
 }
 
 function showGames(){
- stopC4Timer();document.body.classList.remove('c4-active');home.hidden=true;page.hidden=false;pageTitle.textContent='الألعاب 🎮';pageContent.replaceChildren();
- const card=document.createElement('button');card.className='custom-card';card.style.width='100%';card.style.cursor='pointer';
- const icon=document.createElement('span');icon.style.fontSize='30px';icon.textContent='🔴';card.appendChild(icon);
- const label=document.createElement('span');label.className='label';label.textContent='كونكت 4';card.appendChild(label);
- const hint=document.createElement('span');hint.className='dots';hint.textContent='ابدأ';card.appendChild(hint);
- card.onclick=showConnect4Setup;pageContent.appendChild(card);
+ stopC4Timer();stopMiniGameTimers();document.body.classList.remove('c4-active');home.hidden=true;page.hidden=false;pageTitle.textContent='الألعاب 🎮';pageContent.replaceChildren();
+ const games=[
+  ['🔴','كونكت 4','العب ضد البوت أو تحدَّ لاعبًا','connect'],
+  ['🟦','المربعات','ارسم الخطوط واجمع أكبر عدد من المربعات','dots'],
+  ['🧠','اختبر ذاكرتك','احفظ التسلسل وتحدَّ لاعبًا آخر','memory']
+ ];
+ games.forEach(([emoji,name,hint,type])=>{
+  const card=document.createElement('button');card.className='custom-card';card.style.width='100%';card.style.cursor='pointer';
+  const icon=document.createElement('span');icon.style.fontSize='28px';icon.textContent=emoji;card.appendChild(icon);
+  const label=document.createElement('span');label.className='label';label.textContent=name;card.appendChild(label);
+  const sub=document.createElement('span');sub.className='dots';sub.textContent=hint;card.appendChild(sub);
+  card.onclick=()=>{if(type==='connect'){showConnect4Setup();return;}showMiniGameInstructions(type);};
+  pageContent.appendChild(card);
+ });
+}
+function showMiniGameInstructions(type){
+ stopMiniGameTimers();document.body.classList.add('c4-active');
+ const shell=c4Shell(),isDots=type==='dots';
+ shell.innerHTML='<div class="c4-heading"><h2>'+(isDots?'المربعات 🟦':'اختبر ذاكرتك 🧠')+'</h2><p>تحدي بين لاعبين مع رهان بالنقاط</p></div><div class="c4-panel"><div class="c4-result show">'+(isDots?'كل خط ترسمه قد يمنحك مربعًا إضافيًا.':'احفظ تسلسل الألوان وكرره، وكل جولة يزيد التسلسل.')+'</div><p class="c4-hint">لبدء التحدي: رد على رسالة اللاعب في القروب واكتب <b>'+(isDots?'مربعات':'ذاكرة')+'</b>، أو أضف مبلغ الرهان بعد الأمر.</p><button class="c4-start" id="mg-back">رجوع للألعاب</button></div>';
+ shell.querySelector('#mg-back').onclick=showGames;
 }
 
 let c4Difficulty='متوسط',c4Game=null,c4Timer=null,c4Tick=null,c4Busy=false,c4Seconds=15,c4BotTimer=null,c4PollTimer=null,c4RpsChoice=null,c4ChallengePollTimer=null;
 let c4GameIdFromUrl=new URLSearchParams(window.location.search).get('game_id');
 const c4StartParam=tg?.initDataUnsafe?.start_param||'';
 const c4ChallengeIdFromStart=c4StartParam.startsWith('c4c_')?c4StartParam.slice(4):new URLSearchParams(window.location.search).get('challenge_id');
+const miniGameChallengeIdFromStart=c4StartParam.startsWith('mg_')?c4StartParam.slice(3):new URLSearchParams(window.location.search).get('mini_game_id');
+let miniGame=null,miniGamePollTimer=null,miniGameChallengePollTimer=null,miniGameTimer=null,miniGameTick=null,miniGameBusy=false,miniGameInputLocked=true;
+let memoryPlaybackTimers=[];
 const c4Levels=[['سهل','مناسب للتجربة'],['متوسط','تحدي متوازن'],['صعب','يفكر قبل أن يلعب'],['مستحيل','أقوى تحدي']];
 function stopC4Timer(){if(c4Timer)clearTimeout(c4Timer);if(c4Tick)clearInterval(c4Tick);if(c4BotTimer)clearTimeout(c4BotTimer);if(c4PollTimer)clearTimeout(c4PollTimer);if(c4ChallengePollTimer)clearTimeout(c4ChallengePollTimer);c4Timer=null;c4Tick=null;c4BotTimer=null;c4PollTimer=null;c4ChallengePollTimer=null;}
 function c4Shell(){document.body.classList.add('c4-active');pageContent.innerHTML='<div class="c4-shell" id="c4-shell"></div>';return document.getElementById('c4-shell');}
@@ -186,6 +203,122 @@ async function c4ChallengeRequest(path,payload={}){
  const data=await response.json().catch(()=>({}));
  if(!response.ok||!data.ok)throw new Error(data.error||'تعذر الاتصال بالسيرفر');
  return data.result;
+}
+function stopMiniGameTimers(){
+ if(miniGamePollTimer)clearTimeout(miniGamePollTimer);
+ if(miniGameChallengePollTimer)clearTimeout(miniGameChallengePollTimer);
+ if(miniGameTimer)clearTimeout(miniGameTimer);
+ if(miniGameTick)clearInterval(miniGameTick);
+ memoryPlaybackTimers.forEach(clearTimeout);memoryPlaybackTimers=[];
+ miniGamePollTimer=miniGameChallengePollTimer=miniGameTimer=miniGameTick=null;
+}
+async function miniGameRequest(path,payload={}){
+ const initData=tg?.initData||'';
+ if(!initData)throw new Error('افتح الميني آب من داخل تيليجرام حتى نتحقق من حسابك');
+ const response=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...payload,initData})});
+ const data=await response.json().catch(()=>({}));
+ if(!response.ok||!data.ok)throw new Error(data.error||'تعذر الاتصال بالسيرفر');
+ return data.result;
+}
+function renderMiniGameRps(state){
+ stopMiniGameTimers();const shell=c4Shell();
+ const choices={r:'حجر ✊',p:'ورقة ✋',s:'مقص ✌️'};
+ shell.innerHTML='<div class="c4-heading"><h2>حجر ورقة مقص ✊</h2><p>اختاروا من يبدأ اللعبة</p></div><div class="c4-panel"><div class="c4-players"><div class="c4-player"><strong></strong><small>اللاعب الأول</small></div><span class="c4-vs">VS</span><div class="c4-player"><strong></strong><small>اللاعب الثاني</small></div></div><div class="c4-label" style="margin:18px 0 10px">اختر حركتك</div><div class="c4-levels" id="mg-rps"></div><div class="c4-result show" id="mg-rps-status"></div></div>';
+ const players=shell.querySelectorAll('.c4-player');players[0].querySelector('strong').textContent=state.player1_name;players[1].querySelector('strong').textContent=state.player2_name;
+ const controls=shell.querySelector('#mg-rps');
+ [['r','✊ حجر'],['p','✋ ورقة'],['s','✌️ مقص']].forEach(([value,label])=>{const b=document.createElement('button');b.className='c4-level';b.textContent=label;b.disabled=!!state.my_choice;if(state.my_choice===value)b.classList.add('active');b.onclick=()=>submitMiniGameChoice(value);controls.appendChild(b);});
+ shell.querySelector('#mg-rps-status').textContent=state.tie?'تعادل! اختاروا من جديد.':state.my_choice?'تم تسجيل اختيارك ('+choices[state.my_choice]+')، ننتظر اللاعب الآخر...':state.opponent_chosen?'اللاعب الآخر اختار، اختر حركتك.':'بانتظار اختيار اللاعبين...';
+}
+async function startMiniGameChallenge(){
+ const shell=c4Shell();shell.innerHTML='<div class="c4-heading"><h2>جاري فتح التحدي...</h2></div>';
+ try{handleMiniGameResult(await miniGameRequest('/api/minigames/challenge/state',{challenge_id:miniGameChallengeIdFromStart}));}
+ catch(e){shell.innerHTML='<div class="c4-error"></div>';shell.querySelector('.c4-error').textContent=e.message;}
+}
+function handleMiniGameResult(result){
+ if(result.phase==='playing'){const next=result.game;if(!miniGame||next.status!==miniGame.status||next.turn_player_id!==miniGame.turn_player_id||next.turn_started_at!==miniGame.turn_started_at||next.game_type==='dots'&&JSON.stringify(next.state)!==JSON.stringify(miniGame.state)){miniGame=next;renderMiniGame();return;}miniGame=next;updateMiniGameProgress();scheduleMiniGamePoll();return;}
+ renderMiniGameRps(result);miniGameChallengePollTimer=setTimeout(pollMiniGameChallenge,1200);
+}
+async function pollMiniGameChallenge(){miniGameChallengePollTimer=null;try{handleMiniGameResult(await miniGameRequest('/api/minigames/challenge/state',{challenge_id:miniGameChallengeIdFromStart}));}catch(e){miniGameChallengePollTimer=setTimeout(pollMiniGameChallenge,1800);}}
+async function submitMiniGameChoice(choice){document.querySelectorAll('#mg-rps button').forEach(b=>b.disabled=true);try{handleMiniGameResult(await miniGameRequest('/api/minigames/challenge/choice',{challenge_id:miniGameChallengeIdFromStart,choice}));}catch(e){const el=document.getElementById('mg-rps-status');if(el)el.textContent=e.message;document.querySelectorAll('#mg-rps button').forEach(b=>b.disabled=false);}}
+function renderMiniGame(){
+ stopMiniGameTimers();const shell=c4Shell(),game=miniGame,state=game.state,humanTurn=!!game.your_turn;
+ const p1=game.player1_name||'اللاعب الأول',p2=game.player2_name||'اللاعب الثاني';
+ const heading=game.game_type==='dots'?'المربعات':'اختبر ذاكرتك';
+ shell.innerHTML='<div class="c4-heading"><h2>'+heading+'</h2><p>'+p1+' × '+p2+'</p></div><div class="mg-score" id="mg-score"></div><div class="mg-status"><span id="mg-status"></span><b id="mg-clock"></b></div><div class="mg-progress"><div id="mg-progress-bar"></div></div><div id="mg-board"></div><div class="c4-result" id="mg-result"></div><div class="c4-hint">الرهان لكل لاعب: '+game.wager.toLocaleString('en-US')+' نقطة</div><button class="c4-secondary" id="mg-back">رجوع للألعاب</button>';
+ shell.querySelector('#mg-back').onclick=showGames;
+ if(game.status!=='playing'){
+  shell.querySelector('#mg-result').classList.add('show');
+  shell.querySelector('#mg-result').textContent=game.status==='draw'?'🤝 تعادل! تم إرجاع الرهان':game.status==='won'?'🏆 فزت!':'🏆 فاز '+(game.winner_name||'اللاعب الآخر');
+  shell.querySelector('#mg-status').textContent='انتهت اللعبة';shell.querySelector('#mg-clock').textContent='—';return;
+ }
+ if(game.game_type==='dots')renderDotsBoard(shell,game);
+ else renderMemoryBoard(shell,game);
+ shell.querySelector('#mg-status').textContent=humanTurn?'دورك!':'دور '+(game.my_player===1?p2:p1);
+ startMiniGameTimer(game);
+ scheduleMiniGamePoll();
+}
+function renderDotsBoard(shell,game){
+ const state=game.state,root=shell.querySelector('#mg-board');root.className='mg-board';
+ shell.querySelector('#mg-score').innerHTML='<span>🔴 '+game.player1_name+': '+state.scores[0]+'</span><span>🔵 '+game.player2_name+': '+state.scores[1]+'</span>';
+ for(let r=0;r<9;r++)for(let c=0;c<9;c++){
+  const cell=document.createElement('div');
+  if(r%2===0&&c%2===0){cell.className='mg-dot';}
+  else if(r%2===0&&c%2===1){const rr=r/2,cc=(c-1)/2,on=state.h[rr][cc];const b=document.createElement('button');b.className='mg-edge horizontal'+(on?' on p'+(state.boxes[Math.min(rr,3)][Math.min(cc,3)]||1):'');b.disabled=!game.your_turn||on;b.onclick=()=>submitMiniGameAction({kind:'h',r:rr,c:cc});cell.appendChild(b);}
+  else if(r%2===1&&c%2===0){const rr=(r-1)/2,cc=c/2,on=state.v[rr][cc];const b=document.createElement('button');b.className='mg-edge vertical'+(on?' on':'');b.disabled=!game.your_turn||on;b.onclick=()=>submitMiniGameAction({kind:'v',r:rr,c:cc});cell.appendChild(b);}
+  else{const rr=(r-1)/2,cc=(c-1)/2,owner=state.boxes[rr][cc];cell.className='mg-box'+(owner?' p'+owner:'');}
+  root.appendChild(cell);
+ }
+}
+function renderMemoryBoard(shell,game){
+ const state=game.state,root=shell.querySelector('#mg-board');root.className='mg-memory';
+ shell.querySelector('#mg-score').innerHTML='<span>المستوى: '+state.level+'</span><span>التقدم: '+state.progress+'/'+state.level+'</span>';
+ const colors=['#ef4444','#3b82f6','#22c55e','#facc15'];
+ colors.forEach((color,index)=>{const b=document.createElement('button');b.className='mg-memory-tile';b.style.background=color;b.disabled=!game.your_turn;b.dataset.color=index;b.onclick=()=>submitMiniGameAction({color:index});root.appendChild(b);});
+ if(game.your_turn)playMemorySequence(state.sequence.slice(0,state.level));
+ else shell.querySelector('#mg-status').textContent='احفظ دورك القادم، اللاعب الآخر يلعب الآن';
+}
+function playMemorySequence(sequence){
+ miniGameInputLocked=true;const status=document.getElementById('mg-status');if(status)status.textContent='احفظ التسلسل...';
+ sequence.forEach((color,i)=>{
+  const on=setTimeout(()=>{const tile=document.querySelector('.mg-memory-tile[data-color="'+color+'"]');if(tile)tile.classList.add('flash');},i*720+350);
+  const off=setTimeout(()=>{document.querySelectorAll('.mg-memory-tile').forEach(x=>x.classList.remove('flash'));if(i===sequence.length-1){miniGameInputLocked=false;const s=document.getElementById('mg-status');if(s)s.textContent='دورك! كرر التسلسل';}},i*720+700);
+  memoryPlaybackTimers.push(on,off);
+ });
+}
+function updateMiniGameProgress(){
+ if(!miniGame)return;
+ const game=miniGame,state=game.state;
+ const score=document.getElementById('mg-score');
+ if(score&&game.game_type==='memory')score.innerHTML='<span>المستوى: '+state.level+'</span><span>التقدم: '+state.progress+'/'+state.level+'</span>';
+ const status=document.getElementById('mg-status');
+ if(status&&game.game_type==='memory'&&game.your_turn&&!miniGameInputLocked)status.textContent='دورك! كرر التسلسل';
+}
+function startMiniGameTimer(game){
+ if(miniGameTimer)clearTimeout(miniGameTimer);if(miniGameTick)clearInterval(miniGameTick);
+ const started=Number(game.turn_started_at)||Date.now(),duration=Number(game.turn_seconds)||15;
+ const update=()=>{const left=Math.max(0,duration-(Date.now()-started)/1000),clock=document.getElementById('mg-clock'),bar=document.getElementById('mg-progress-bar');if(clock)clock.textContent=Math.ceil(left)+' ثانية';if(bar)bar.style.width=(left/duration*100)+'%';};
+ update();miniGameTick=setInterval(update,200);miniGameTimer=setTimeout(update,duration*1000+100);
+}
+function scheduleMiniGamePoll(){if(miniGamePollTimer)clearTimeout(miniGamePollTimer);miniGamePollTimer=setTimeout(pollMiniGameState,1100);}
+async function pollMiniGameState(){
+ miniGamePollTimer=null;
+ try{
+  const result=await miniGameRequest('/api/minigames/challenge/state',{challenge_id:miniGameChallengeIdFromStart});
+  if(result.phase==='playing'){
+   const next=result.game,changed=!miniGame||next.status!==miniGame.status||next.turn_player_id!==miniGame.turn_player_id||next.turn_started_at!==miniGame.turn_started_at||(next.game_type==='dots'&&JSON.stringify(next.state)!==JSON.stringify(miniGame.state));
+   const progressChanged=miniGame&&next.game_type==='memory'&&next.state.progress!==miniGame.state.progress;
+   miniGame=next;if(changed)renderMiniGame();else{if(progressChanged)updateMiniGameProgress();scheduleMiniGamePoll();}
+  }else{renderMiniGameRps(result);miniGameChallengePollTimer=setTimeout(pollMiniGameChallenge,1200);}
+ }catch(e){scheduleMiniGamePoll();}
+}
+async function submitMiniGameAction(action){
+ if(miniGameBusy||!miniGame?.your_turn||miniGame.status!=='playing'||(miniGame.game_type==='memory'&&miniGameInputLocked))return;
+ miniGameBusy=true;document.querySelectorAll('.mg-edge,.mg-memory-tile').forEach(b=>b.disabled=true);
+ try{
+  const result=await miniGameRequest('/api/minigames/action',{challenge_id:miniGameChallengeIdFromStart,action});
+  const next=result.game,changed=next.status!==miniGame.status||next.turn_player_id!==miniGame.turn_player_id||next.turn_started_at!==miniGame.turn_started_at;
+  miniGame=next;miniGameBusy=false;if(changed)renderMiniGame();else{updateMiniGameProgress();document.querySelectorAll('.mg-memory-tile').forEach(b=>b.disabled=false);scheduleMiniGamePoll();}
+ }catch(e){miniGameBusy=false;const status=document.getElementById('mg-status');if(status)status.textContent=e.message;document.querySelectorAll('.mg-edge,.mg-memory-tile').forEach(b=>b.disabled=false);}
 }
 function renderC4ChallengeRps(state){
  stopC4Timer();const shell=c4Shell();
@@ -346,7 +479,8 @@ document.getElementById('back-home').onclick=showHome;
    else{if(b.image){const im=document.createElement('img');im.className='thumb';im.src=b.image;a.appendChild(im);}const name=document.createElement('span');name.className='label';name.textContent=b.title;a.appendChild(name);const dots=document.createElement('span');dots.className='dots';dots.textContent='⋮';a.appendChild(dots);}
    root.appendChild(a);
   }
-  if(c4ChallengeIdFromStart){home.hidden=true;page.hidden=false;pageTitle.textContent='كونكت 4';startConnect4Challenge();}
+  if(miniGameChallengeIdFromStart){home.hidden=true;page.hidden=false;pageTitle.textContent='الألعاب';startMiniGameChallenge();}
+  else if(c4ChallengeIdFromStart){home.hidden=true;page.hidden=false;pageTitle.textContent='كونكت 4';startConnect4Challenge();}
   else if(c4GameIdFromUrl){home.hidden=true;page.hidden=false;pageTitle.textContent='كونكت 4';startConnect4();}
  }catch(e){document.getElementById('custom').innerHTML='<div class="empty">تعذر تحميل الإضافات حاليًا</div>';}
 })();
