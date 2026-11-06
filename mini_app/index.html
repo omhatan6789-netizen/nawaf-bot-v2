@@ -461,7 +461,7 @@ async function submitConnect4Move(col,automatic=false){
  document.querySelectorAll('.c4-slot,.c4-arrow').forEach(x=>x.disabled=true);
  const status=document.getElementById('c4-status');if(status)status.textContent=automatic?'انتهى الوقت! اخترنا لك حركة عشوائية':'جاري إسقاط القرص...';
  try{c4Game=await c4Request('/api/connect4/move',{game_id:c4Game.id,column:col});c4Busy=false;renderConnect4(previousBoard);}
- catch(e){c4Busy=false;const s=document.getElementById('c4-status');if(s)s.textContent=e.message;startC4Timer();}
+ catch(e){c4Busy=false;const s=document.getElementById('c4-status');if(s)s.textContent=e.message;startC4Timer();pollConnect4State();}
 }
 document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>{
  const a=b.dataset.action;
