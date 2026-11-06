@@ -271,7 +271,7 @@ async def get_mini_game_challenge_state(user_id: int, raw_id: str):
         async with conn.transaction():
             row = await conn.fetchrow(
                 """SELECT * FROM mini_game_challenges WHERE id=$1
-                   AND (player1_id=$2 OR player2_id=$2) FOR UPDATE""",
+                   AND (player1_id=$2 OR player2_id=$2 OR player3_id=$2 OR player4_id=$2) FOR UPDATE""",
                 game_id, user_id,
             )
             if not row:
@@ -399,13 +399,31 @@ async def play_mini_game_action(user_id: int, raw_id: str, action: dict):
                 row = await _finish_game(conn, row, other_id)
                 return {"phase": "playing", "game": _public_state(row, user_id)}
             if row["game_type"] == "dots":
+                ids = state.get("multi_player_ids") or [int(row["player1_id"]), int(row["player2_id"])]
+                names = state.get("multi_player_names") or [row["player1_name"], row["player2_name"]]
+                try:
+                    player_index = ids.index(int(user_id))
+                except ValueError:
+                    raise ValueError("أنت لست لاعبًا في هذه الغرفة")
+                player = player_index + 1
                 edge = random.choice(_available_dot_edges(state)) if expired else action
                 completed = _draw_dot_edge(state, edge, player)
-                if sum(state["scores"]) == 16:
-                    winner_id = int(row["player1_id"] if state["scores"][0] > state["scores"][1] else row["player2_id"]) if state["scores"][0] != state["scores"][1] else None
+                board_size = len(state["boxes"]) * (len(state["boxes"][0]) if state["boxes"] else 0)
+                if sum(state["scores"]) >= board_size:
+                    if state.get("team_mode") == "teams" and len(ids) == 4:
+                        team_scores = [state["scores"][0] + state["scores"][2], state["scores"][1] + state["scores"][3]]
+                        winner_id = ids[0] if team_scores[0] > team_scores[1] else ids[1] if team_scores[1] > team_scores[0] else None
+                        state["team_scores"] = team_scores
+                    else:
+                        high = max(state["scores"])
+                        winners = [i for i, score in enumerate(state["scores"]) if score == high]
+                        winner_id = ids[winners[0]] if len(winners) == 1 else None
                     row = await _finish_game(conn, row, winner_id)
                 else:
-                    next_player = int(user_id) if completed else other_id
+                    current_index = ids.index(int(row["turn_player_id"]))
+                    next_index = current_index if completed else (current_index + 1) % len(ids)
+                    next_player = ids[next_index]
+                    state["turn_index"] = next_index
                     row = await conn.fetchrow(
                         """UPDATE mini_game_challenges SET game_state=$2::jsonb,
                            turn_player_id=$3,turn_started_at=NOW(),updated_at=NOW()
