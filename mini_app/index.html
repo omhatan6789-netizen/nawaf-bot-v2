@@ -707,10 +707,10 @@ function renderWordGame(){
  if(finished){
   if(extraPoll)clearTimeout(extraPoll);extraPoll=null;submit.remove();input.remove();
   const elapsed=Math.max(0,Math.floor((Date.now()-(g.started_at||extraStartedAt))/1000)),time=elapsed>=3600?Math.floor(elapsed/3600)+' ساعة '+Math.floor(elapsed%3600/60)+' دقيقة '+elapsed%60+' ثانية':elapsed>=60?Math.floor(elapsed/60)+' دقيقة '+elapsed%60+' ثانية':elapsed+' ثانية';
-  shell.querySelector('#word-message').textContent='🏆 مبروك! '+(g.winner||'انتهت اللعبة')+' · '+g.my_score+' كلمة صحيحة';
+  shell.querySelector('#word-message').textContent=training?(g.my_score>=g.win_target?'🏆 مبروك! حققت هدفك — '+g.my_score+' كلمة صحيحة':'انتهى التدريب! حققت '+g.my_score+' من '+g.win_target+' كلمات مطلوبة'):(g.winner==='تعادل'?'🤝 انتهت اللعبة بالتعادل':'🏆 مبروك! '+(g.winner||'انتهت اللعبة')+' · '+g.my_score+' كلمة صحيحة');
   shell.querySelector('#word-clock').textContent=training?'أنهيت التدريب خلال '+time:'';
   if(g.mode==='online'){
-   showOnlineEndOverlay('word',g.id,'🏆 مبروك '+(g.winner||'للفائز')+'!');
+   showOnlineEndOverlay('word',g.id,g.winner==='تعادل'?'🤝 انتهت بالتعادل':'🏆 مبروك '+(g.winner||'للفائز')+'!');
    const resultLine=document.querySelector('.online-end-card p');
    if(resultLine)resultLine.textContent=(g.players||[]).map(p=>p.name+' — '+p.score+' كلمة').join(' | ')+' · انتهت '+g.total+' كلمات';
   }
