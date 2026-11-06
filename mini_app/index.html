@@ -271,7 +271,7 @@ function renderMiniGameSolo(){
   const root=shell.querySelector('#mg-board');root.className='mg-memory';
   const colors=['#ef4444','#3b82f6','#22c55e','#facc15'];
   colors.forEach((color,index)=>{const b=document.createElement('button');b.className='mg-memory-tile';b.style.background=color;b.disabled=true;b.dataset.color=index;b.onclick=()=>submitMiniGameSoloAction({color:index});root.appendChild(b);});
-  if(game.your_turn){const key='solo:'+game.id+':'+state.level+':'+state.sequence.length;presentMemorySequence(state.sequence.slice(0,state.level),key,()=>{if(miniSoloGame?.your_turn&&miniSoloGame.status==='playing')startSoloMiniGameClock(miniSoloGame,true);});}
+  if(game.your_turn){const key='solo:'+game.id+':'+state.level+':'+state.sequence.length;presentMemorySequence(state.sequence.slice(0,state.level),key,()=>{if(miniSoloGame?.your_turn&&miniSoloGame.status==='playing')startSoloMiniGameClock(miniSoloGame);});}
   else shell.querySelector('#mg-status').textContent='دور البوت...';
  }
  if(game.your_turn&&isDots)startSoloMiniGameClock(game);
@@ -352,7 +352,7 @@ function renderMemoryBoard(shell,game){
  shell.querySelector('#mg-score').innerHTML='<span>المستوى: '+state.level+'</span><span>التقدم: '+state.progress+'/'+state.level+'</span>';
  const colors=['#ef4444','#3b82f6','#22c55e','#facc15'];
  colors.forEach((color,index)=>{const b=document.createElement('button');b.className='mg-memory-tile';b.style.background=color;b.disabled=!game.your_turn;b.dataset.color=index;b.onclick=()=>submitMiniGameAction({color:index});root.appendChild(b);});
- if(game.your_turn){const key='multi:'+game.id+':'+game.turn_player_id+':'+state.level+':'+state.sequence.length;presentMemorySequence(state.sequence.slice(0,state.level),key,()=>{if(miniGame?.your_turn&&miniGame.status==='playing')startMiniGameTimer(miniGame,true);});}
+ if(game.your_turn){const key='multi:'+game.id+':'+game.turn_player_id+':'+state.level+':'+state.sequence.length;presentMemorySequence(state.sequence.slice(0,state.level),key,()=>{if(miniGame?.your_turn&&miniGame.status==='playing')startMiniGameTimer(miniGame);});}
  else shell.querySelector('#mg-status').textContent='اللاعب الآخر يلعب الآن';
 }
 function playMemorySequence(sequence){
