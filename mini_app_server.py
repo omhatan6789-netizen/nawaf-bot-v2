@@ -281,7 +281,7 @@ def handle_connect4_post(handler):
             ))
             body = json.dumps({"ok": True, "result": result}, ensure_ascii=False).encode()
             handler.send_response(200)
-        if path == "/api/minigames/solo/new":
+        elif path == "/api/minigames/solo/new":
             result = _run(create_mini_game_solo(
                 int(user["id"]), payload.get("game_type", ""),
                 payload.get("difficulty", "متوسط"),
