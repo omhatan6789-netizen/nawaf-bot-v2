@@ -191,6 +191,7 @@ let c4Difficulty='متوسط',c4Game=null,c4Timer=null,c4Tick=null,c4Busy=false,
 const c4StartParam=tg?.initDataUnsafe?.start_param||'';
 const onlineConnectId=c4StartParam.startsWith('online_c4_')?c4StartParam.slice(10):'';
 const onlineMiniGameId=c4StartParam.startsWith('online_mg_')?c4StartParam.slice(10):'';
+const onlineLobbyId=c4StartParam.startsWith('online_lobby_')?c4StartParam.slice(13):'';
 const onlineMode=!!(onlineConnectId||onlineMiniGameId);
 let c4GameIdFromUrl=onlineConnectId||new URLSearchParams(window.location.search).get('game_id');
 const c4ChallengeIdFromStart=c4StartParam.startsWith('c4c_')?c4StartParam.slice(4):new URLSearchParams(window.location.search).get('challenge_id');
@@ -241,6 +242,61 @@ function stopMiniGameTimers(){
  memoryPlaybackTimers.forEach(clearTimeout);memoryPlaybackTimers=[];
  miniGamePollTimer=miniGameChallengePollTimer=miniGameTimer=miniGameTick=null;memoryPresentationKey=null;miniGameInputLocked=true;
 }
+
+let onlineLobbyPoll=null, onlineLobbyState=null;
+async function onlineLobbyRequest(action,settings={}){
+ const initData=tg?.initData||'';
+ if(!initData)throw new Error('افتح الغرفة من داخل تيليجرام');
+ const response=await fetch('/api/online/lobby',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData,lobby_id:onlineLobbyId,action,settings})});
+ const data=await response.json().catch(()=>({}));
+ if(!response.ok||!data.ok)throw new Error(data.error||'تعذر تحديث الغرفة');
+ return data.result;
+}
+function renderOnlineLobby(state){
+ onlineLobbyState=state;
+ const shell=c4Shell(),names={connect:'Connect Four 🔴',dots:'Dots and Boxes 🟦',memory:'Memory Match 🧠'};
+ const me=Number(tg?.initDataUnsafe?.user?.id||0),isCreator=state.is_creator;
+ const joined=state.players||[];
+ const slots=Array.from({length:state.player_count},(_,i)=>joined[i]?'<div class="c4-player"><strong>'+escapeLobbyText(joined[i].name)+'</strong><small>منضم ✓</small></div>':'<div class="c4-player"><strong>بانتظار لاعب</strong><small>المقعد '+(i+1)+'</small></div>').join('');
+ const canConfigure=isCreator&&state.status==='pending';
+ shell.innerHTML='<div class="c4-heading"><h2>غرفة اللعبة 🎮</h2><p>'+names[state.game_type]+'</p></div><div class="c4-panel"><div class="c4-label">اللاعبون ('+joined.length+'/'+state.player_count+')</div><div class="c4-players" style="display:grid;grid-template-columns:1fr 1fr;gap:9px">'+slots+'</div><div class="c4-label" style="margin-top:18px">إعدادات الغرفة</div><div class="c4-levels" id="online-counts"></div><div class="c4-levels" id="online-modes"></div><div class="c4-result show" id="online-room-status"></div><button class="c4-start" id="online-join">انضمام إلى الغرفة 👥</button><button class="c4-secondary" id="online-start">بدء اللعبة 🚀</button><button class="c4-secondary" id="online-leave">مغادرة الغرفة</button></div>';
+ const status=shell.querySelector('#online-room-status');
+ const counts=shell.querySelector('#online-counts'),modes=shell.querySelector('#online-modes');
+ const supported=state.game_type==='dots'?[2,3,4]:[2];
+ supported.forEach(n=>{const b=document.createElement('button');b.className='c4-level'+(state.player_count===n?' active':'');b.textContent=n+' لاعبين';b.disabled=!canConfigure;b.onclick=()=>onlineLobbyRequest('configure',{player_count:n,team_mode:n===4?state.team_mode:'individual'}).then(loadOnlineLobby).catch(showOnlineLobbyError);counts.appendChild(b);});
+ if(state.game_type==='dots'&&state.player_count===4){
+  [['individual','كل لاعب لحاله'],['teams','فريقين 2 ضد 2']].forEach(([v,t])=>{const b=document.createElement('button');b.className='c4-level'+(state.team_mode===v?' active':'');b.textContent=t;b.disabled=!canConfigure;b.onclick=()=>onlineLobbyRequest('configure',{player_count:4,team_mode:v}).then(loadOnlineLobby).catch(showOnlineLobbyError);modes.appendChild(b);});
+ }else{modes.remove();}
+ const join=shell.querySelector('#online-join'),start=shell.querySelector('#online-start'),leave=shell.querySelector('#online-leave');
+ join.disabled=state.status!=='pending'||state.is_joined||joined.length>=state.player_count;
+ join.textContent=state.is_joined?'أنت منضم بالفعل ✓':'انضمام إلى الغرفة 👥';
+ join.onclick=()=>onlineLobbyRequest('join',{name:tg?.initDataUnsafe?.user?.first_name||'لاعب'}).then(loadOnlineLobby).catch(showOnlineLobbyError);
+ start.hidden=!isCreator||state.status!=='pending';
+ start.disabled=joined.length<state.player_count;
+ start.onclick=()=>onlineLobbyRequest('start').then(result=>{onlineLobbyState=result;loadOnlineLobby();}).catch(showOnlineLobbyError);
+ leave.hidden=state.status!=='pending'||!state.is_joined;
+ leave.onclick=()=>onlineLobbyRequest('leave').then(loadOnlineLobby).catch(showOnlineLobbyError);
+ if(state.status==='playing'){
+  status.textContent='بدأت المباراة! افتحوا اللعبة من الزر أدناه.';
+  const launch=document.createElement('button');launch.className='c4-start';launch.textContent='فتح اللعبة الآن 🎮';
+  launch.onclick=()=>{const param=state.game_type==='connect'?'online_c4_'+state.game_id:'online_mg_'+state.game_id;const url='https://t.me/'+botUsername+'?startapp='+param;if(tg?.openTelegramLink)tg.openTelegramLink(url);else location.href=url;};
+  shell.querySelector('.c4-panel').appendChild(launch);
+  start.hidden=true;join.hidden=true;leave.hidden=true;
+ }else if(state.status==='cancelled'){status.textContent='تم إلغاء الغرفة.';join.hidden=true;start.hidden=true;leave.hidden=true;}
+ else{status.textContent=isCreator?'أنت صاحب الغرفة. اضبط الإعدادات وانتظر انضمام اللاعبين.':'انضم للغرفة وانتظر بدء صاحبها.';}
+}
+function escapeLobbyText(value){return String(value||'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
+function showOnlineLobbyError(error){const el=document.getElementById('online-room-status');if(el)el.textContent=error?.message||'حدث خطأ';}
+async function loadOnlineLobby(){
+ const state=await onlineLobbyRequest('state');renderOnlineLobby(state);
+}
+function startOnlineLobby(){
+ home.hidden=true;page.hidden=false;pageTitle.textContent='غرفة اللعبة';pageContent.replaceChildren();
+ if(onlineLobbyPoll)clearInterval(onlineLobbyPoll);
+ loadOnlineLobby().catch(showOnlineLobbyError);
+ onlineLobbyPoll=setInterval(()=>loadOnlineLobby().catch(()=>{}),2200);
+}
+
 function clearOnlineEndOverlay(){document.querySelector('.online-end-overlay')?.remove();}
 async function restartOnlineGame(gameType,gameId){
  const overlay=document.querySelector('.online-end-overlay'),button=overlay?.querySelector('[data-online-restart]');
@@ -620,7 +676,8 @@ document.getElementById('back-home').onclick=showHome;
    else{if(b.image){const im=document.createElement('img');im.className='thumb';im.src=b.image;a.appendChild(im);}const name=document.createElement('span');name.className='label';name.textContent=b.title;a.appendChild(name);const dots=document.createElement('span');dots.className='dots';dots.textContent='⋮';a.appendChild(dots);}
    root.appendChild(a);
   }
-  if(miniGameChallengeIdFromStart){home.hidden=true;page.hidden=false;pageTitle.textContent='الألعاب';startMiniGameChallenge();}
+  if(onlineLobbyId){startOnlineLobby();}
+  else if(miniGameChallengeIdFromStart){home.hidden=true;page.hidden=false;pageTitle.textContent='الألعاب';startMiniGameChallenge();}
   else if(c4ChallengeIdFromStart){home.hidden=true;page.hidden=false;pageTitle.textContent='كونكت 4';startConnect4Challenge();}
   else if(c4GameIdFromUrl){home.hidden=true;page.hidden=false;pageTitle.textContent='كونكت 4';startConnect4();}
  }catch(e){document.getElementById('custom').innerHTML='<div class="empty">تعذر تحميل الإضافات حاليًا</div>';}
