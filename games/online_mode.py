@@ -16,6 +16,7 @@ GAME_INFO = {
     "connect": ("Connect Four 🔴", "لعبة توصيل أربعة أقراص"),
     "dots": ("Dots and Boxes 🟦", "ارسم الخطوط واجمع أكبر عدد من المربعات"),
     "memory": ("Memory Match 🧠", "اختبر ذاكرتك وطابق الألوان والتسلسل"),
+    "word": ("خمن الكلمة 🔤", "تحدَّ حتى 10 لاعبين واكتشفوا الكلمة قبل انتهاء الوقت"),
 }
 
 def _safe_player_name(value, fallback: str) -> str:
@@ -58,6 +59,7 @@ async def online_image_add_start(update: Update, context: ContextTypes.DEFAULT_T
         [InlineKeyboardButton("كونكت 4 🔴", callback_data="online_image:connect")],
         [InlineKeyboardButton("المربعات 🟦", callback_data="online_image:dots")],
         [InlineKeyboardButton("اختبر ذاكرتك 🧠", callback_data="online_image:memory")],
+        [InlineKeyboardButton("خمن الكلمة 🔤", callback_data="online_image:word")],
     ])
     await message.reply_text("اختر اللعبة التي تريد إضافة صورتها، وبعدها أرسل الصورة:", reply_markup=keyboard)
 
@@ -115,6 +117,8 @@ def _select_games(query: str):
         return ["dots"]
     if any(word in value for word in ("ذاكرة", "ذاكرت", "memory")):
         return ["memory"]
+    if any(word in value for word in ("خمن", "كلمة", "word")):
+        return ["word"]
     return list(GAME_INFO)
 
 
@@ -127,25 +131,42 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
         "DELETE FROM online_game_lobbies WHERE created_at < NOW() - INTERVAL '2 days' AND status <> 'playing'"
     )
     results = []
+    me = await context.bot.get_me()
     for game_type in _select_games(inline.query):
-        lobby_id = uuid.uuid4()
         title, description = GAME_INFO[game_type]
-        await pool.execute(
-            """INSERT INTO online_game_lobbies
-               (id,game_type,creator_id,creator_name)
-               VALUES($1,$2,$3,$4)""",
-            lobby_id, game_type, inline.from_user.id,
-            inline.from_user.full_name or inline.from_user.first_name or "اللاعب الأول",
-        )
-        me = await context.bot.get_me()
-        room_url = f"https://t.me/{me.username}?startapp=online_lobby_{lobby_id.hex}"
+        if game_type == "word":
+            from games.extra_mini_games import word_create
+            game = await word_create(
+                inline.from_user.id,
+                inline.from_user.full_name or inline.from_user.first_name or "اللاعب الأول",
+                mode="online",
+            )
+            game_id = uuid.UUID(hex=game["id"])
+            room_url = f"https://t.me/{me.username}?startapp=word_{game_id.hex}"
+            lobby_text = (
+                f"🔤 غرفة أونلاين — {title}\\n\\n"
+                f"أنشأ {inline.from_user.full_name or inline.from_user.first_name or 'لاعب'} غرفة خمن الكلمة.\\n"
+                "انضموا من الزر بالأسفل، ويمكن لصاحب الغرفة بدء اللعبة بعد انضمام اللاعبين."
+            )
+            result_id = game_id.hex
+        else:
+            lobby_id = uuid.uuid4()
+            await pool.execute(
+                """INSERT INTO online_game_lobbies
+                   (id,game_type,creator_id,creator_name)
+                   VALUES($1,$2,$3,$4)""",
+                lobby_id, game_type, inline.from_user.id,
+                inline.from_user.full_name or inline.from_user.first_name or "اللاعب الأول",
+            )
+            room_url = f"https://t.me/{me.username}?startapp=online_lobby_{lobby_id.hex}"
+            lobby_text = (
+                f"🎮 غرفة أونلاين — {title}\\n\\n"
+                "افتحوا الغرفة من الزر بالأسفل للانضمام وضبط الإعدادات وبدء اللعبة داخل الميني آب."
+            )
+            result_id = lobby_id.hex
         keyboard = InlineKeyboardMarkup([[
             InlineKeyboardButton("فتح غرفة اللعبة", url=room_url)
         ]])
-        lobby_text = (
-            f"🎮 غرفة أونلاين — {title}\n\n"
-            "افتحوا الغرفة من الزر بالأسفل للانضمام وضبط الإعدادات وبدء اللعبة داخل الميني آب."
-        )
         photo_file_id = await pool.fetchval(
             "SELECT photo_file_id FROM online_game_images WHERE game_type=$1",
             game_type,
@@ -153,7 +174,7 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
         # Article results are rendered as a vertical list: thumbnail on the side,
         # with the game title and description visible beside it.
         result_kwargs = {
-            "id": lobby_id.hex,
+            "id": result_id,
             "title": title,
             "description": description,
             "input_message_content": InputTextMessageContent(lobby_text),
