@@ -660,7 +660,7 @@ async function pollConnect4State(){
 let extraStartParam=tg?.initDataUnsafe?.start_param||'';
 let extraGameId=(extraStartParam.startsWith('word_')?extraStartParam.slice(5):extraStartParam.startsWith('battle_')?extraStartParam.slice(7):'');
 let extraGameType=extraStartParam.startsWith('word_')?'word':extraStartParam.startsWith('battle_')?'battleship':'';
-let extraGame=null,extraPoll=null,extraBusy=false,extraStartedAt=0,extraElapsedTimer=null;
+let extraGame=null,extraPoll=null,extraBusy=false,extraStartedAt=0,extraElapsedTimer=null,extraLastRevealKey='';
 async function extraGameRequest(action,game_type,extra={}){
  const initData=tg?.initData||'';
  if(!initData)throw new Error('افتح اللعبة من داخل تيليجرام');
@@ -698,7 +698,7 @@ function shareExtraGame(type,id){
  if(tg?.openTelegramLink)tg.openTelegramLink(url);else if(navigator.clipboard)navigator.clipboard.writeText(deep).then(()=>alert('تم نسخ رابط الغرفة'));
 }
 function renderWordGame(){
- const g=extraGame;if(!g)return;const shell=c4Shell(),finished=g.status==='finished',training=g.mode==='training';
+ if(extraElapsedTimer)clearInterval(extraElapsedTimer);const g=extraGame;if(!g)return;const shell=c4Shell(),finished=g.status==='finished',training=g.mode==='training';
  shell.innerHTML='<div class="c4-heading"><h2>خمن الكلمة 🔤</h2><p id="word-round-label">الكلمة '+Math.min(g.current_index+1,g.total)+' من '+g.total+'</p></div><div class="mg-score" id="word-scores"></div><div class="c4-panel"><div class="c4-result show" id="word-message">'+(finished?'انتهت اللعبة!':'اكتب تخمينك')+'</div><div id="word-feedback" style="display:flex;justify-content:center;gap:6px;flex-wrap:wrap;margin:14px 0"></div><input id="word-guess" autocomplete="off" maxlength="16" placeholder="اكتب الكلمة هنا" style="width:100%;padding:15px;border-radius:12px;border:1px solid #ffffff45;background:#100709;color:white;font:700 20px inherit;text-align:center"><button class="c4-start" id="word-submit">تأكيد الإجابة</button><div class="c4-hint" id="word-clock"></div><button class="c4-secondary" id="word-back">رجوع للألعاب</button></div>';
  const scores=shell.querySelector('#word-scores');scores.innerHTML=(g.players||[]).map(p=>'<span>'+escapeLobbyText(p.name)+': '+p.score+'</span>').join('');
  const input=shell.querySelector('#word-guess'),submit=shell.querySelector('#word-submit');
@@ -712,8 +712,13 @@ function renderWordGame(){
   return;
  }
  if(training&&g.current_word)input.placeholder='الكلمة من '+g.current_word.length+' أحرف';
- submit.onclick=async()=>{if(extraBusy)return;extraBusy=true;submit.disabled=true;try{const res=await extraGameRequest('guess','word',{guess:input.value});if(res.correct){shell.querySelector('#word-message').textContent='🏆 '+res.round_winner+' عرف الكلمة: '+res.word;showWordReveal(res.round_winner,res.word,()=>advanceWord());}else{const fb=shell.querySelector('#word-feedback');fb.replaceChildren();(res.feedback||[]).forEach(c=>{const b=document.createElement('span');b.textContent='●';b.style.cssText='font-size:26px;color:'+({green:'#22c55e',orange:'#f97316',white:'#fff',green_purple:'#22c55e',yellow_purple:'#eab308'}[c]||'#fff');if(c.includes('purple'))b.style.textShadow='2px 2px #a855f7';fb.appendChild(b);});shell.querySelector('#word-message').textContent='مو هي الكلمة، حاول مرة ثانية';}}catch(e){showExtraError(e);}finally{extraBusy=false;submit.disabled=false;input.value='';input.focus();}};
+ submit.onclick=async()=>{if(extraBusy)return;const guessed=input.value.trim();extraBusy=true;submit.disabled=true;try{const res=await extraGameRequest('guess','word',{guess:guessed});if(res.correct){shell.querySelector('#word-message').textContent='🏆 '+res.round_winner+' عرف الكلمة: '+res.word;extraLastRevealKey=String(g.current_index)+':'+res.round_winner;showWordReveal(res.round_winner,res.word,()=>{if(g.mode==='training'||Number(tg?.initDataUnsafe?.user?.id)===Number(g.players?.[0]?.id))advanceWord();});}else{const fb=shell.querySelector('#word-feedback');fb.replaceChildren();(res.feedback||[]).forEach((c,i)=>{const tile=document.createElement('span');tile.textContent=Array.from(guessed)[i]||'';tile.style.cssText='display:flex;align-items:center;justify-content:center;width:38px;height:42px;border-radius:8px;font-size:21px;font-weight:900;color:#111;background:'+({green:'#22c55e',orange:'#f97316',white:'#fff',green_purple:'#22c55e',yellow_purple:'#eab308'}[c]||'#fff')+';border:2px solid '+(c.includes('purple')?'#a855f7':'#ffffff55')+';';fb.appendChild(tile);});shell.querySelector('#word-message').textContent='مو هي الكلمة، حاول مرة ثانية';}}catch(e){showExtraError(e);}finally{extraBusy=false;submit.disabled=false;input.value='';input.focus();}};
  shell.querySelector('#word-back').onclick=()=>{stopExtraGame();showGames();};
+ if(g.mode==='online'&&g.round_winner&&g.round_until&&Date.now()<g.round_until){
+   submit.disabled=true;input.disabled=true;
+   const revealKey=String(g.current_index)+':'+g.round_winner;
+   if(extraLastRevealKey!==revealKey){extraLastRevealKey=revealKey;showWordReveal(g.round_winner,g.last_word,()=>{if(Number(tg?.initDataUnsafe?.user?.id)===Number(g.players?.[0]?.id))advanceWord();});}
+ }
  if(training&&g.current_word){const start=extraStartedAt||Date.now();extraElapsedTimer=setInterval(()=>{const sec=Math.floor((Date.now()-start)/1000),el=document.getElementById('word-clock');if(el)el.textContent='الوقت: '+(sec>=3600?Math.floor(sec/3600)+'س '+Math.floor(sec%3600/60)+'د':sec>=60?Math.floor(sec/60)+'د '+sec%60+'ث':sec+'ث');},1000);}
  scheduleExtraPoll();
 }
@@ -742,8 +747,8 @@ async function renderBattleship(){
  shell.innerHTML='<div class="c4-heading"><h2>معركة السفن 🚢</h2><p>'+(g.player_names||[]).join(' × ')+'</p></div><div class="mg-status"><span id="battle-status"></span><b>'+(g.your_turn?'دورك':'دور الخصم')+'</b></div><div class="c4-panel"><div class="c4-label">شبكة الخصم — اضغط لتطلق</div><div id="battle-board" style="display:grid;grid-template-columns:repeat(10,1fr);gap:3px;max-width:440px;margin:auto"></div><div class="c4-label" style="margin-top:15px">أسطولك</div><div id="battle-own" style="display:grid;grid-template-columns:repeat(10,1fr);gap:3px;max-width:440px;margin:auto"></div><button class="c4-secondary" id="battle-share">مشاركة الغرفة</button><button class="c4-secondary" id="battle-back">رجوع للألعاب</button></div>';
  const own=new Set(s.own_ships?.flat()||[]),ownShots=new Set(s.own_shots?.map(x=>x.join(','))||[]),enemyShots=new Set(s.enemy_shots?.map(x=>x.join(','))||[]),hits=new Set(s.your_hits?.map(x=>x.join(','))||[]),enemyHits=new Set(s.enemy_hits?.map(x=>x.join(','))||[]);
  const board=shell.querySelector('#battle-board'),ownBoard=shell.querySelector('#battle-own');
- for(let r=0;r<10;r++)for(let c=0;c<10;c++){const key=r+','+c,b=document.createElement('button');b.style.cssText='aspect-ratio:1;border:1px solid #ffffff35;border-radius:4px;background:'+(enemyShots.has(key)?(hits.has(key)?'#e53935':'#64748b'):'#175b91')+';padding:0;min-width:0';b.disabled=!g.your_turn||spectator||g.status!=='playing'||enemyShots.has(key);b.textContent=enemyShots.has(key)?(hits.has(key)?'✕':'•'):'';b.onclick=()=>battleShot(r,c);board.appendChild(b);
- const ob=document.createElement('div');ob.style.cssText='aspect-ratio:1;border:1px solid #ffffff35;border-radius:4px;background:'+(own.has([r,c])?'#64748b':'#175b91');if(ownShots.has(key))ob.style.background=enemyHits.has(key)?'#e53935':'#64748b';ownBoard.appendChild(ob);}
+ for(let r=0;r<10;r++)for(let c=0;c<10;c++){const key=r+','+c,b=document.createElement('button');b.style.cssText='aspect-ratio:1;border:1px solid #ffffff35;border-radius:4px;background:'+(ownShots.has(key)?(hits.has(key)?'#e53935':'#64748b'):'#175b91')+';padding:0;min-width:0';b.disabled=!g.your_turn||spectator||g.status!=='playing'||ownShots.has(key);b.textContent=ownShots.has(key)?(hits.has(key)?'✕':'•'):'';b.onclick=()=>battleShot(r,c);board.appendChild(b);
+ const ob=document.createElement('div');ob.style.cssText='aspect-ratio:1;border:1px solid #ffffff35;border-radius:4px;background:'+(own.has([r,c])?'#64748b':'#175b91');if(enemyShots.has(key))ob.style.background=enemyHits.has(key)?'#e53935':'#64748b';ownBoard.appendChild(ob);}
  shell.querySelector('#battle-status').textContent=g.status==='waiting'?'بانتظار انضمام اللاعب':g.status==='won'||g.status==='lost'?'انتهت المعركة':g.your_turn?'اختر موقعًا للهجوم':'انتظر دور الخصم';
  shell.querySelector('#battle-share').onclick=()=>shareExtraGame('battleship',g.id);shell.querySelector('#battle-back').onclick=()=>{stopExtraGame();showGames();};
  if(g.status==='won'||g.status==='lost'){showOnlineEndOverlay('battleship',g.id,'🏆 '+(g.winner_name||'انتهت المعركة'));return;}
