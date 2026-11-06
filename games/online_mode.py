@@ -312,10 +312,12 @@ async def get_online_spectator_state(user_id: int, game_type: str, raw_game_id: 
     if game_type == "connect":
         from games.connect4 import get_game_state
         row = await pool.fetchrow(
-            "SELECT user_id FROM connect4_games WHERE id=$1 AND game_mode='human'", game_id
+            "SELECT user_id,player2_id FROM connect4_games WHERE id=$1 AND game_mode='human'", game_id
         )
         if not row:
             raise ValueError("اللعبة غير موجودة")
+        if int(user_id) in (int(row["user_id"]), int(row["player2_id"])):
+            return {"game": await get_game_state(int(user_id), game_id.hex)}
         state = await get_game_state(int(row["user_id"]), game_id.hex)
         latest_status = await pool.fetchval("SELECT status FROM connect4_games WHERE id=$1", game_id)
         state["status"] = latest_status or state["status"]
@@ -324,12 +326,15 @@ async def get_online_spectator_state(user_id: int, game_type: str, raw_game_id: 
     if game_type in ("dots", "memory", "mini"):
         from games.mini_games import get_mini_game_challenge_state
         row = await pool.fetchrow(
-            "SELECT player1_id FROM mini_game_challenges WHERE id=$1 AND ($2='mini' OR game_type=$2)",
+            "SELECT player1_id,player2_id FROM mini_game_challenges WHERE id=$1 AND ($2='mini' OR game_type=$2)",
             game_id, game_type
         )
         if not row:
             raise ValueError("اللعبة غير موجودة")
-        result = await get_mini_game_challenge_state(int(row["player1_id"]), game_id.hex)
+        viewer_id = int(user_id) if int(user_id) in (int(row["player1_id"]), int(row["player2_id"])) else int(row["player1_id"])
+        result = await get_mini_game_challenge_state(viewer_id, game_id.hex)
+        if int(user_id) in (int(row["player1_id"]), int(row["player2_id"])):
+            return result
         latest_status = await pool.fetchval("SELECT status FROM mini_game_challenges WHERE id=$1", game_id)
         if result.get("phase") == "playing":
             game = result["game"]
