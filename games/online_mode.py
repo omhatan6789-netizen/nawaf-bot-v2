@@ -5,7 +5,7 @@ import random
 import uuid
 
 from telegram import (
-    InlineKeyboardButton, InlineKeyboardMarkup, InlineQueryResultArticle,
+    InlineKeyboardButton, InlineKeyboardMarkup, InlineQueryResultArticle, InlineQueryResultPhoto,
     InputTextMessageContent, Update,
 )
 from telegram.ext import ContextTypes
@@ -160,16 +160,25 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
                 logging.getLogger(__name__).exception(
                     "Could not prepare inline thumbnail for %s", game_type
                 )
-        results.append(InlineQueryResultArticle(
-            id=lobby_id.hex,
-            title=title,
-            description=description,
-            input_message_content=InputTextMessageContent(lobby_text),
-            reply_markup=keyboard,
-            thumbnail_url=thumbnail_url,
-            thumbnail_width=320 if thumbnail_url else None,
-            thumbnail_height=320 if thumbnail_url else None,
-        ))
+        if thumbnail_url:
+            # Photo results render the saved cover in the inline chooser AND in the sent message.
+            results.append(InlineQueryResultPhoto(
+                id=lobby_id.hex,
+                photo_url=thumbnail_url,
+                thumbnail_url=thumbnail_url,
+                title=title,
+                description=description,
+                caption=lobby_text,
+                reply_markup=keyboard,
+            ))
+        else:
+            results.append(InlineQueryResultArticle(
+                id=lobby_id.hex,
+                title=title,
+                description=description,
+                input_message_content=InputTextMessageContent(lobby_text),
+                reply_markup=keyboard,
+            ))
     await inline.answer(results, cache_time=0, is_personal=True)
 
 
@@ -525,7 +534,7 @@ async def online_lobby_api(user_id: int, action: str, raw_lobby_id: str, setting
                            (id,game_type,chat_id,player1_id,player1_name,player2_id,player2_name,
                             player3_id,player3_name,player4_id,player4_name,
                             wager,status,turn_player_id,game_state,wager_settled)
-                           VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,0,'playing',$4,$12::jsonb,TRUE)""",
+                           VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,1,'playing',$4,$12::jsonb,TRUE)""",
                         game_id, lobby["game_type"], lobby["chat_id"] or 0,
                         int(ids[0]), names[0], int(ids[1]), names[1],
                         int(ids[2]) if count >= 3 else None, names[2] if count >= 3 else None,
@@ -539,6 +548,10 @@ async def online_lobby_api(user_id: int, action: str, raw_lobby_id: str, setting
             elif action != "state":
                 raise ValueError("طلب غير معروف")
             lobby = await conn.fetchrow("SELECT * FROM online_game_lobbies WHERE id=$1", lobby_id)
+    photo_file_id = await pool.fetchval(
+        "SELECT photo_file_id FROM online_game_images WHERE game_type=$1",
+        lobby["game_type"],
+    )
     count = int(lobby["player_count"])
     player_rows = [{"id": int(lobby["creator_id"]), "name": _safe_player_name(lobby["creator_name"], "صاحب الغرفة")}]
     for i in range(2, count + 1):
@@ -551,7 +564,7 @@ async def online_lobby_api(user_id: int, action: str, raw_lobby_id: str, setting
         "team_mode": lobby["team_mode"], "players": player_rows,
         "is_creator": user_id == int(lobby["creator_id"]),
         "is_joined": user_id in [p["id"] for p in player_rows],
-        "game_id": lobby["game_id"].hex if lobby["game_id"] else None,
+        "game_id": lobby["game_id"].hex if lobby["game_id"] else None,\n        "image_url": ("/tg-file/" + photo_file_id) if photo_file_id else None,
     }
 
 
@@ -678,3 +691,61 @@ async def get_online_spectator_state(user_id: int, game_type: str, raw_game_id: 
         result["spectator"] = True
         return result
     raise ValueError("نوع اللعبة غير معروف")
+
+
+async def withdraw_online_game(user_id: int, game_type: str, raw_game_id: str):
+    """End an online match as a forfeit when one of its players withdraws."""
+    try:
+        game_id = uuid.UUID(hex=str(raw_game_id).replace("-", ""))
+    except Exception:
+        raise ValueError("معرّف اللعبة غير صالح")
+    user_id = int(user_id)
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            if game_type == "connect":
+                row = await conn.fetchrow(
+                    "SELECT * FROM connect4_games WHERE id=$1 AND game_mode='human' FOR UPDATE",
+                    game_id,
+                )
+                if not row:
+                    raise ValueError("المباراة غير موجودة")
+                ids = [int(row["user_id"]), int(row["player2_id"])]
+                if user_id not in ids:
+                    raise ValueError("أنت لست لاعبًا في هذه المباراة")
+                if row["status"] != "playing":
+                    raise ValueError("المباراة منتهية بالفعل")
+                winner_id = ids[1] if user_id == ids[0] else ids[0]
+                updated = await conn.fetchrow(
+                    """UPDATE connect4_games SET status='won',winner_id=$2,
+                       turn_started_at=NOW(),updated_at=NOW() WHERE id=$1 RETURNING *""",
+                    game_id, winner_id,
+                )
+                from games.connect4 import public_state
+                return {"game": public_state(updated, user_id), "withdrawn": True}
+            if game_type not in ("dots", "memory"):
+                raise ValueError("نوع اللعبة غير معروف")
+            row = await conn.fetchrow(
+                "SELECT * FROM mini_game_challenges WHERE id=$1 FOR UPDATE", game_id
+            )
+            if not row:
+                raise ValueError("المباراة غير موجودة")
+            state = _decode_state(row["game_state"]) or {}
+            ids = state.get("multi_player_ids") or [
+                int(row["player1_id"]), int(row["player2_id"])
+            ]
+            ids = [int(value) for value in ids]
+            if user_id not in ids:
+                raise ValueError("أنت لست لاعبًا في هذه المباراة")
+            if row["status"] != "playing":
+                raise ValueError("المباراة منتهية بالفعل")
+            index = ids.index(user_id)
+            if state.get("team_mode") == "teams" and len(ids) == 4:
+                winner_id = ids[1] if index in (0, 2) else ids[0]
+            else:
+                remaining = [i for i in range(len(ids)) if i != index]
+                scores = state.get("scores") or [0] * len(ids)
+                winner_index = max(remaining, key=lambda i: (int(scores[i] or 0), -i))
+                winner_id = ids[winner_index]
+            updated = await _finish_game(conn, row, winner_id)
+            return {"phase": "playing", "game": _public_state(updated, user_id), "withdrawn": True}
