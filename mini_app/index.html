@@ -403,11 +403,13 @@ function renderConnect4(previousBoard=null){
   result.textContent=c4Game.status==='draw'?'🤝 تعادل! تم إرجاع الرهانات':(!human&&c4Game.status==='won'?'🏆 فزت! لعب ممتاز!':'🏆 فاز '+(c4Game.winner_name||p2)+'!');
   shell.querySelector('#c4-status').textContent='انتهت المباراة';shell.querySelector('#c4-clock').textContent='—';shell.querySelector('#c4-progress').style.width='0%';
  }else if(!myTurn){
-  const rpsLine=c4Game.rps_result
-   ? (c4Game.rps_result==='bot_starts'
-      ? '✊ حجر ورقة مقص: البوت فاز ('+({r:'حجر',p:'ورقة',s:'مقص'}[c4Game.rps_bot_choice]||'')+')'
-      : '✊ حجر ورقة مقص: أنت فزت ('+({r:'حجر',p:'ورقة',s:'مقص'}[c4Game.rps_bot_choice]||'')+')')
-   : '';
+  const rpsLine=human&&c4Game.challenge_starter_name
+   ? '✊ حجر ورقة مقص: يبدأ '+c4Game.challenge_starter_name
+   : c4Game.rps_result
+    ? (c4Game.rps_result==='bot_starts'
+       ? '✊ حجر ورقة مقص: البوت فاز ('+({r:'حجر',p:'ورقة',s:'مقص'}[c4Game.rps_bot_choice]||'')+')'
+       : '✊ حجر ورقة مقص: أنت فزت ('+({r:'حجر',p:'ورقة',s:'مقص'}[c4Game.rps_bot_choice]||'')+')')
+    : '';
   shell.querySelector('#c4-status').textContent=rpsLine?(rpsLine+' — '+(c4Game.bot_move_pending?'البوت يبدأ الآن':'انتظر دورك')):(c4Game.bot_move_pending?'البوت يستعد للحركة...':'دور '+(human?(myPiece===1?p2:p1):p2));
   shell.querySelector('#c4-clock').textContent='انتظار';
   players.forEach((el,i)=>el.classList.toggle('active',i===activeIndex));
@@ -418,7 +420,9 @@ function renderConnect4(previousBoard=null){
   }
   else if(human){startC4Timer();pollConnect4State();}
  }else{
-  shell.querySelector('#c4-status').textContent=c4Game.rps_result?(c4Game.rps_result==='bot_starts'?'✊ حجر ورقة مقص: فاز '+p2+' ('+({r:'حجر',p:'ورقة',s:'مقص'}[c4Game.rps_bot_choice]||'')+') ويبدأ أولًا':'✊ حجر ورقة مقص: فزت ('+({r:'حجر',p:'ورقة',s:'مقص'}[c4Game.rps_bot_choice]||'')+') وتبدأ أولًا'):'دورك! اختر عمودًا';
+  shell.querySelector('#c4-status').textContent=human&&c4Game.challenge_starter_name
+   ? '✊ حجر ورقة مقص: يبدأ '+c4Game.challenge_starter_name+' — دورك! اختر عمودًا'
+   : c4Game.rps_result?(c4Game.rps_result==='bot_starts'?'✊ حجر ورقة مقص: فاز '+p2+' ('+({r:'حجر',p:'ورقة',s:'مقص'}[c4Game.rps_bot_choice]||'')+') ويبدأ أولًا':'✊ حجر ورقة مقص: فزت ('+({r:'حجر',p:'ورقة',s:'مقص'}[c4Game.rps_bot_choice]||'')+') وتبدأ أولًا'):'دورك! اختر عمودًا';
   players.forEach((el,i)=>{el.classList.toggle('active',i===(human?(myPiece===1?0:1):0));el.style.setProperty('--turn-color',i===(human?(myPiece===1?0:1):0)?'#ff3448':'#278bff');});
   shell.querySelectorAll('.c4-arrow').forEach(el=>el.style.setProperty('--turn-color',myPiece===1?'#ff3448':'#278bff'));
   startC4Timer();
