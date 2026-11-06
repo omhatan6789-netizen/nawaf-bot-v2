@@ -5,7 +5,7 @@ import random
 import uuid
 
 from telegram import (
-    InlineKeyboardButton, InlineKeyboardMarkup, InlineQueryResultArticle, InlineQueryResultCachedPhoto,
+    InlineKeyboardButton, InlineKeyboardMarkup, InlineQueryResultArticle,
     InputTextMessageContent, Update,
 )
 from telegram.ext import ContextTypes
@@ -13,9 +13,9 @@ from telegram.ext import ContextTypes
 from database.pool import get_pool
 
 GAME_INFO = {
-    "connect": ("كونكت 4 🔴", "لعبة توصيل أربعة أقراص"),
-    "dots": ("المربعات 🟦", "ارسم الخطوط واجمع أكبر عدد من المربعات"),
-    "memory": ("اختبر ذاكرتك 🧠", "احفظ التسلسل وتحدَّ لاعبًا آخر"),
+    "connect": ("Connect Four 🔴", "لعبة توصيل أربعة أقراص"),
+    "dots": ("Dots and Boxes 🟦", "ارسم الخطوط واجمع أكبر عدد من المربعات"),
+    "memory": ("Memory Match 🧠", "اختبر ذاكرتك وطابق الألوان والتسلسل"),
 }
 
 def _safe_player_name(value, fallback: str) -> str:
@@ -147,23 +147,26 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
             "SELECT photo_file_id FROM online_game_images WHERE game_type=$1",
             game_type,
         )
+        thumb_url = None
         if photo_file_id:
-            results.append(InlineQueryResultCachedPhoto(
-                id=lobby_id.hex,
-                photo_file_id=photo_file_id,
-                title=title,
-                description=description,
-                caption=lobby_text,
-                reply_markup=keyboard,
-            ))
-        else:
-            results.append(InlineQueryResultArticle(
-                id=lobby_id.hex,
-                title=title,
-                description=description,
-                input_message_content=InputTextMessageContent(lobby_text),
-                reply_markup=keyboard,
-            ))
+            try:
+                photo_file = await context.bot.get_file(photo_file_id)
+                thumb_url = photo_file.file_path
+            except Exception:
+                import logging
+                logging.getLogger(__name__).exception(
+                    "Could not prepare inline thumbnail for %s", game_type
+                )
+        results.append(InlineQueryResultArticle(
+            id=lobby_id.hex,
+            title=title,
+            description=description,
+            input_message_content=InputTextMessageContent(lobby_text),
+            reply_markup=keyboard,
+            thumb_url=thumb_url,
+            thumb_width=320 if thumb_url else None,
+            thumb_height=320 if thumb_url else None,
+        ))
     await inline.answer(results, cache_time=0, is_personal=True)
 
 
