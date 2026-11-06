@@ -260,6 +260,9 @@ async def battleship_bot_turn(gid):
               for nr,nc in ((r-1,c),(r+1,c),(r,c-1),(r,c+1)):
                 if 0<=nr<10 and 0<=nc<10 and [nr,nc] in candidates: adjacent.append([nr,nc])
           if adjacent:candidates=adjacent
+          elif difficulty=="مستحيل":
+            checker=[cell for cell in candidates if (cell[0]+cell[1])%2==0]
+            if checker:candidates=checker
         cell=random.choice(candidates);hit,_=_shot(s,1,*cell)
         total=sum(len(ship) for ship in s["ships"][0])
         if sum(1 for x in shots if any(x in ship for ship in s["ships"][0]))>=total:
