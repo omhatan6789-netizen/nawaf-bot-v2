@@ -811,7 +811,15 @@ async function submitConnect4Move(col,automatic=false){
 document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>{
  const a=b.dataset.action;
  if(a==='help'){openBot('help');return;}
- if(a==='games'){showGames();return;}
+ if(a==='games'){
+  try{showGames();}
+  catch(err){
+   console.error('Open games failed:',err);
+   home.hidden=true;page.hidden=false;pageTitle.textContent='الألعاب 🎮';pageContent.replaceChildren();
+   const e=document.createElement('div');e.className='empty';e.textContent='تعذر فتح قائمة الألعاب: '+(err?.message||'خطأ غير معروف');pageContent.appendChild(e);
+  }
+  return;
+ }
  const names={points:'توب النقاط',active:'توب المتفاعلين العام',robbers:'توب الحرامية'};
  showTop(a,names[a]||'التوب');
 });
