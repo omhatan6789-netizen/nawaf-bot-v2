@@ -263,8 +263,8 @@ function renderDotsBoard(shell,game){
  for(let r=0;r<9;r++)for(let c=0;c<9;c++){
   const cell=document.createElement('div');
   if(r%2===0&&c%2===0){cell.className='mg-dot';}
-  else if(r%2===0&&c%2===1){const rr=r/2,cc=(c-1)/2,on=state.h[rr][cc];const b=document.createElement('button');b.className='mg-edge horizontal'+(on?' on p'+(state.boxes[Math.min(rr,3)][Math.min(cc,3)]||1):'');b.disabled=!game.your_turn||on;b.onclick=()=>submitMiniGameAction({kind:'h',r:rr,c:cc});cell.appendChild(b);}
-  else if(r%2===1&&c%2===0){const rr=(r-1)/2,cc=c/2,on=state.v[rr][cc];const b=document.createElement('button');b.className='mg-edge vertical'+(on?' on':'');b.disabled=!game.your_turn||on;b.onclick=()=>submitMiniGameAction({kind:'v',r:rr,c:cc});cell.appendChild(b);}
+  else if(r%2===0&&c%2===1){const rr=r/2,cc=(c-1)/2,on=state.h[rr][cc];const b=document.createElement('button');b.className='mg-edge horizontal'+(on?' on p'+on:'');b.disabled=!game.your_turn||on;b.onclick=()=>submitMiniGameAction({kind:'h',r:rr,c:cc});cell.appendChild(b);}
+  else if(r%2===1&&c%2===0){const rr=(r-1)/2,cc=c/2,on=state.v[rr][cc];const b=document.createElement('button');b.className='mg-edge vertical'+(on?' on p'+on:'');b.disabled=!game.your_turn||on;b.onclick=()=>submitMiniGameAction({kind:'v',r:rr,c:cc});cell.appendChild(b);}
   else{const rr=(r-1)/2,cc=(c-1)/2,owner=state.boxes[rr][cc];cell.className='mg-box'+(owner?' p'+owner:'');}
   root.appendChild(cell);
  }
@@ -278,10 +278,10 @@ function renderMemoryBoard(shell,game){
  else shell.querySelector('#mg-status').textContent='احفظ دورك القادم، اللاعب الآخر يلعب الآن';
 }
 function playMemorySequence(sequence){
- miniGameInputLocked=true;const status=document.getElementById('mg-status');if(status)status.textContent='احفظ التسلسل...';
+ miniGameInputLocked=true;document.querySelectorAll('.mg-memory-tile').forEach(b=>b.disabled=true);const status=document.getElementById('mg-status');if(status)status.textContent='احفظ التسلسل...';
  sequence.forEach((color,i)=>{
   const on=setTimeout(()=>{const tile=document.querySelector('.mg-memory-tile[data-color="'+color+'"]');if(tile)tile.classList.add('flash');},i*720+350);
-  const off=setTimeout(()=>{document.querySelectorAll('.mg-memory-tile').forEach(x=>x.classList.remove('flash'));if(i===sequence.length-1){miniGameInputLocked=false;const s=document.getElementById('mg-status');if(s)s.textContent='دورك! كرر التسلسل';}},i*720+700);
+  const off=setTimeout(()=>{document.querySelectorAll('.mg-memory-tile').forEach(x=>x.classList.remove('flash'));if(i===sequence.length-1){miniGameInputLocked=false;document.querySelectorAll('.mg-memory-tile').forEach(b=>b.disabled=false);const s=document.getElementById('mg-status');if(s)s.textContent='دورك! كرر التسلسل';}},i*720+700);
   memoryPlaybackTimers.push(on,off);
  });
 }
