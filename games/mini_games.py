@@ -182,13 +182,17 @@ def _public_state(row, user_id: int):
         "turn_player_id": row["turn_player_id"], "turn_index": turn_index,
         "turn_started_at": int(row["turn_started_at"].timestamp() * 1000) if row["turn_started_at"] else None,
         "turn_seconds": TURN_SECONDS[game_type],
-        "wager": int(row["wager"]), "winner_id": winner,
+        "wager": 0 if state.get("online_free") else int(row["wager"]), "winner_id": winner,
         "winner_name": ("الفريق الأول" if int(winner or 0) == ids[0] else "الفريق الثاني") if state.get("team_mode") == "teams" and winner is not None else (names[ids.index(int(winner))] if winner is not None and int(winner) in ids else None),
         "my_player": my_index, "state": state,
     }
 
 
 async def _settle_wager(conn, row, winner_id: int | None):
+    # Online Mini App matches are always free: never touch the points ledger.
+    state = _decode_state(row["game_state"])
+    if state.get("online_free"):
+        return
     if row["wager_settled"]:
         return
     first, second, amount = int(row["player1_id"]), int(row["player2_id"]), int(row["wager"])
