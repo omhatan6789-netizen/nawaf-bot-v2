@@ -5,7 +5,7 @@ import random
 import uuid
 
 from telegram import (
-    InlineKeyboardButton, InlineKeyboardMarkup, InlineQueryResultArticle, InlineQueryResultCachedPhoto,
+    InlineKeyboardButton, InlineKeyboardMarkup, InlineQueryResultArticle, InlineQueryResultPhoto,
     InputTextMessageContent, Update,
 )
 from telegram.ext import ContextTypes
@@ -151,9 +151,13 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
             game_type,
         )
         if photo_file_id:
-            results.append(InlineQueryResultCachedPhoto(
+            # CachedPhoto hides its title in Telegram clients when the image preview loads.
+            # A regular Photo result with an explicit thumbnail keeps the game name visible.
+            photo_url = f"https://nawaf-bot-v2.onrender.com/tg-file/{photo_file_id}"
+            results.append(InlineQueryResultPhoto(
                 id=lobby_id.hex,
-                photo_file_id=photo_file_id,
+                photo_url=photo_url,
+                thumbnail_url=photo_url,
                 title=title,
                 description=description,
                 caption=lobby_text,
