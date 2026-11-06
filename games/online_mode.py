@@ -51,17 +51,19 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
             lobby_id, game_type, inline.from_user.id,
             inline.from_user.full_name or inline.from_user.first_name or "اللاعب الأول",
         )
-        keyboard = InlineKeyboardMarkup([[
-            InlineKeyboardButton("انضمام 👥", callback_data=f"online_join:{lobby_id.hex}")
-        ]])
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("⚙️ إعدادات اللاعبين", callback_data=f"online_settings:{lobby_id.hex}")],
+            [InlineKeyboardButton("انضمام 👥", callback_data=f"online_join:{lobby_id.hex}")],
+        ])
         results.append(InlineQueryResultArticle(
             id=lobby_id.hex,
             title=title,
             description=description,
             input_message_content=InputTextMessageContent(
                 f"🎮 تحدي أونلاين\nاللعبة: {title}\n\n"
-                "اللاعبون: 0/2\n\n"
-                "بانتظار انضمام اللاعبين..."
+                "اللاعبون: 0/2\n"
+                "الطور: فردي\n\n"
+                "اضغط إعدادات اللاعبين لاختيار 2 أو 4 لاعبين."
             ),
             reply_markup=keyboard,
         ))
@@ -90,6 +92,38 @@ async def online_lobby_callback(update: Update, context: ContextTypes.DEFAULT_TY
 
     pool = get_pool()
     user = query.from_user
+    action = query.data.split(":", 1)[0]
+    if action == "online_settings":
+        lobby = await pool.fetchrow("SELECT * FROM online_game_lobbies WHERE id=$1", lobby_id)
+        if not lobby or lobby["status"] != "pending":
+            await query.answer("الغرفة لم تعد متاحة.", show_alert=True)
+            return
+        if int(lobby["creator_id"]) != int(user.id):
+            await query.answer("إعدادات الغرفة لصاحبها فقط.", show_alert=True)
+            return
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("👥 لاعبان", callback_data=f"online_config:{lobby_id.hex}:2:individual"),
+             InlineKeyboardButton("👥👥 أربعة لاعبين", callback_data=f"online_config:{lobby_id.hex}:4:individual")],
+            [InlineKeyboardButton("👤 كل لاعب لحاله", callback_data=f"online_config:{lobby_id.hex}:4:individual"),
+             InlineKeyboardButton("🤝 فريقين 2 ضد 2", callback_data=f"online_config:{lobby_id.hex}:4:teams")],
+        ])
+        if query.message:
+            await query.message.reply_text("⚙️ إعدادات لعبة المربعات\\nاختر عدد اللاعبين ونظام اللعب:", reply_markup=keyboard)
+        await query.answer()
+        return
+    if action == "online_config":
+        parts = query.data.split(":")
+        count, mode = int(parts[2]), parts[3]
+        owner = await pool.fetchval("SELECT creator_id FROM online_game_lobbies WHERE id=$1 AND status='pending'", lobby_id)
+        if owner is None or int(owner) != int(user.id):
+            await query.answer("إعدادات الغرفة لصاحبها فقط.", show_alert=True)
+            return
+        if count not in (2, 4) or mode not in ("individual", "teams") or (count == 2 and mode == "teams"):
+            await query.answer("الإعداد غير صالح.", show_alert=True)
+            return
+        await pool.execute("UPDATE online_game_lobbies SET player_count=$2,team_mode=$3,updated_at=NOW() WHERE id=$1", lobby_id, count, mode)
+        await query.answer("تم حفظ إعدادات اللاعبين.")
+        return
     game_id = None
     game_type = None
     player1_name = player2_name = None
