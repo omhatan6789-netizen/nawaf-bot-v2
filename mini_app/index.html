@@ -228,7 +228,7 @@ function stopMiniGameTimers(){
  if(miniGameTimer)clearTimeout(miniGameTimer);
  if(miniGameTick)clearInterval(miniGameTick);
  memoryPlaybackTimers.forEach(clearTimeout);memoryPlaybackTimers=[];
- miniGamePollTimer=miniGameChallengePollTimer=miniGameTimer=miniGameTick=null;
+ miniGamePollTimer=miniGameChallengePollTimer=miniGameTimer=miniGameTick=null;memoryPresentationKey=null;miniGameInputLocked=true;
 }
 async function miniGameRequest(path,payload={}){
  const initData=tg?.initData||'';
@@ -249,7 +249,7 @@ function renderMiniGameRps(state){
 }
 async function startMiniGameSolo(type,difficulty){
  stopMiniGameTimers();const shell=c4Shell();shell.innerHTML='<div class="c4-heading"><h2>جاري تجهيز اللعبة...</h2></div>';
- try{miniSoloGame=await miniGameRequest('/api/minigames/solo/new',{game_type:type,difficulty});miniSoloId=miniSoloGame.id;renderMiniGameSolo();}
+ try{miniGameInputLocked=true;memoryPresentationKey=null;miniSoloGame=await miniGameRequest('/api/minigames/solo/new',{game_type:type,difficulty});miniSoloId=miniSoloGame.id;renderMiniGameSolo();}
  catch(e){shell.innerHTML='<div class="c4-error"></div>';shell.querySelector('.c4-error').textContent=e.message;}
 }
 function renderMiniGameSolo(){
@@ -264,7 +264,7 @@ function renderMiniGameSolo(){
  }
  if(isDots){
   const view={...game,player1_name:'أنت',player2_name:'البوت',my_player:1};
-  renderDotsBoard(shell,view);
+  renderDotsBoard(shell,view,action=>submitMiniGameSoloAction(action));
   shell.querySelector('#mg-status').textContent=game.your_turn?'دورك!':'🤖 البوت يفكر...';
  }else{
   shell.querySelector('#mg-score').innerHTML='<span>المستوى: '+state.level+'</span><span>تجاوزت: '+(state.rounds_won||0)+' جولة</span>';
@@ -289,7 +289,7 @@ async function pollSoloMiniGame(){
  miniSoloPoll=null;try{const next=await miniGameRequest('/api/minigames/solo/state',{game_id:miniSoloId});
  const prev=miniSoloGame;const structural=!prev||next.status!==prev.status||next.turn_player_id!==prev.turn_player_id||next.turn_started_at!==prev.turn_started_at||(next.game_type==='memory'&&(next.state.level!==prev.state.level||next.state.sequence.length!==prev.state.sequence.length));
  const progressOnly=prev&&next.game_type==='memory'&&next.state.progress!==prev.state.progress;
- miniSoloGame=next;if(structural)renderMiniGameSolo();else{if(progressOnly){const score=document.getElementById('mg-score');if(score)score.innerHTML='<span>المستوى: '+next.state.level+'</span><span>تجاوزت: '+(next.state.rounds_won||0)+' جولة</span>';document.querySelectorAll('.mg-memory-tile').forEach(b=>b.disabled=false);}scheduleSoloMiniGamePoll();}
+ miniSoloGame=next;if(structural)renderMiniGameSolo();else{if(progressOnly){const score=document.getElementById('mg-score');if(score)score.innerHTML='<span>المستوى: '+next.state.level+'</span><span>تجاوزت: '+(next.state.rounds_won||0)+' جولة</span>';document.querySelectorAll('.mg-memory-tile').forEach(b=>b.disabled=miniGameInputLocked);}scheduleSoloMiniGamePoll();}
  }catch(e){scheduleSoloMiniGamePoll();}
 }
 async function playSoloMiniGameBotMove(){
@@ -300,7 +300,7 @@ async function playSoloMiniGameBotMove(){
 async function submitMiniGameSoloAction(action){
  if(miniSoloBusy||!miniSoloGame||!miniSoloGame.your_turn||miniSoloGame.status!=='playing'||(miniSoloGame.game_type==='memory'&&miniGameInputLocked))return;
  miniSoloBusy=true;stopSoloMiniGameClock();document.querySelectorAll('.mg-edge,.mg-memory-tile').forEach(b=>b.disabled=true);
- try{const prev=miniSoloGame;miniSoloGame=await miniGameRequest('/api/minigames/solo/action',{game_id:miniSoloId,action});miniSoloBusy=false;const next=miniSoloGame;const structural=next.status!==prev.status||next.turn_player_id!==prev.turn_player_id||(next.game_type==='memory'&&(next.state.level!==prev.state.level||next.state.sequence.length!==prev.state.sequence.length));if(structural)renderMiniGameSolo();else{const score=document.getElementById('mg-score');if(score)score.innerHTML='<span>المستوى: '+next.state.level+'</span><span>تجاوزت: '+(next.state.rounds_won||0)+' جولة</span>';document.querySelectorAll('.mg-memory-tile').forEach(b=>b.disabled=false);if(next.your_turn)startSoloMiniGameClock(next,true);scheduleSoloMiniGamePoll();}}
+ try{const prev=miniSoloGame;miniSoloGame=await miniGameRequest('/api/minigames/solo/action',{game_id:miniSoloId,action});miniSoloBusy=false;const next=miniSoloGame;const structural=next.status!==prev.status||next.turn_player_id!==prev.turn_player_id||(next.game_type==='memory'&&(next.state.level!==prev.state.level||next.state.sequence.length!==prev.state.sequence.length));if(structural)renderMiniGameSolo();else{const score=document.getElementById('mg-score');if(score)score.innerHTML='<span>المستوى: '+next.state.level+'</span><span>تجاوزت: '+(next.state.rounds_won||0)+' جولة</span>';document.querySelectorAll('.mg-memory-tile').forEach(b=>b.disabled=miniGameInputLocked);if(next.your_turn)startSoloMiniGameClock(next);scheduleSoloMiniGamePoll();}}
  catch(e){miniSoloBusy=false;const status=document.getElementById('mg-status');if(status)status.textContent=e.message;scheduleSoloMiniGamePoll();}
 }
 async function startMiniGameChallenge(){
@@ -335,14 +335,14 @@ function renderMiniGame(){
  if(game.game_type==='dots'||!humanTurn)startMiniGameTimer(game);
  scheduleMiniGamePoll();
 }
-function renderDotsBoard(shell,game){
+function renderDotsBoard(shell,game,onMove=submitMiniGameAction){
  const state=game.state,root=shell.querySelector('#mg-board');root.className='mg-board';
  shell.querySelector('#mg-score').innerHTML='<span>🔴 '+game.player1_name+': '+state.scores[0]+'</span><span>🔵 '+game.player2_name+': '+state.scores[1]+'</span>';
  for(let r=0;r<9;r++)for(let c=0;c<9;c++){
   const cell=document.createElement('div');
   if(r%2===0&&c%2===0){cell.className='mg-dot';}
-  else if(r%2===0&&c%2===1){const rr=r/2,cc=(c-1)/2,on=state.h[rr][cc];const b=document.createElement('button');b.className='mg-edge horizontal'+(on?' on p'+on:'');b.disabled=!game.your_turn||on;b.onclick=()=>submitMiniGameAction({kind:'h',r:rr,c:cc});cell.appendChild(b);}
-  else if(r%2===1&&c%2===0){const rr=(r-1)/2,cc=c/2,on=state.v[rr][cc];const b=document.createElement('button');b.className='mg-edge vertical'+(on?' on p'+on:'');b.disabled=!game.your_turn||on;b.onclick=()=>submitMiniGameAction({kind:'v',r:rr,c:cc});cell.appendChild(b);}
+  else if(r%2===0&&c%2===1){const rr=r/2,cc=(c-1)/2,on=state.h[rr][cc];const b=document.createElement('button');b.className='mg-edge horizontal'+(on?' on p'+on:'');b.disabled=!game.your_turn||on;b.onclick=()=>onMove({kind:'h',r:rr,c:cc});cell.appendChild(b);}
+  else if(r%2===1&&c%2===0){const rr=(r-1)/2,cc=c/2,on=state.v[rr][cc];const b=document.createElement('button');b.className='mg-edge vertical'+(on?' on p'+on:'');b.disabled=!game.your_turn||on;b.onclick=()=>onMove({kind:'v',r:rr,c:cc});cell.appendChild(b);}
   else{const rr=(r-1)/2,cc=(c-1)/2,owner=state.boxes[rr][cc];cell.className='mg-box'+(owner?' p'+owner:'');}
   root.appendChild(cell);
  }
