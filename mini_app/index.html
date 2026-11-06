@@ -224,7 +224,7 @@ function renderMiniGameRps(state){
  stopMiniGameTimers();const shell=c4Shell();
  const choices={r:'حجر ✊',p:'ورقة ✋',s:'مقص ✌️'};
  shell.innerHTML='<div class="c4-heading"><h2>حجر ورقة مقص ✊</h2><p>اختاروا من يبدأ اللعبة</p></div><div class="c4-panel"><div class="c4-players"><div class="c4-player"><strong></strong><small>اللاعب الأول</small></div><span class="c4-vs">VS</span><div class="c4-player"><strong></strong><small>اللاعب الثاني</small></div></div><div class="c4-label" style="margin:18px 0 10px">اختر حركتك</div><div class="c4-levels" id="mg-rps"></div><div class="c4-result show" id="mg-rps-status"></div></div>';
- const players=shell.querySelectorAll('.c4-player');players[0].querySelector('strong').textContent=state.player1_name;players[1].querySelector('strong').textContent=state.player2_name;
+ const players=shell.querySelectorAll('.c4-player');players[0].querySelector('strong').textContent=state.player1_name||'اللاعب الأول';players[1].querySelector('strong').textContent=state.player2_name||'اللاعب الثاني';
  const controls=shell.querySelector('#mg-rps');
  [['r','✊ حجر'],['p','✋ ورقة'],['s','✌️ مقص']].forEach(([value,label])=>{const b=document.createElement('button');b.className='c4-level';b.textContent=label;b.disabled=!!state.my_choice;if(state.my_choice===value)b.classList.add('active');b.onclick=()=>submitMiniGameChoice(value);controls.appendChild(b);});
  shell.querySelector('#mg-rps-status').textContent=state.tie?'تعادل! اختاروا من جديد.':state.my_choice?'تم تسجيل اختيارك ('+choices[state.my_choice]+')، ننتظر اللاعب الآخر...':state.opponent_chosen?'اللاعب الآخر اختار، اختر حركتك.':'بانتظار اختيار اللاعبين...';
@@ -251,9 +251,13 @@ function renderMiniGame(){
   shell.querySelector('#mg-result').textContent=game.status==='draw'?'🤝 تعادل! تم إرجاع الرهان':game.status==='won'?'🏆 فزت!':'🏆 فاز '+(game.winner_name||'اللاعب الآخر');
   shell.querySelector('#mg-status').textContent='انتهت اللعبة';shell.querySelector('#mg-clock').textContent='—';return;
  }
- if(game.game_type==='dots')renderDotsBoard(shell,game);
- else renderMemoryBoard(shell,game);
- shell.querySelector('#mg-status').textContent=humanTurn?'دورك!':'دور '+(game.my_player===1?p2:p1);
+ if(game.game_type==='dots'){
+  renderDotsBoard(shell,game);
+  shell.querySelector('#mg-status').textContent=humanTurn?'دورك!':'دور '+(game.my_player===1?p2:p1);
+ }else{
+  shell.querySelector('#mg-status').textContent=humanTurn?'احفظ التسلسل...':'دور '+(game.my_player===1?p2:p1);
+  renderMemoryBoard(shell,game);
+ }
  startMiniGameTimer(game);
  scheduleMiniGamePoll();
 }
