@@ -300,7 +300,7 @@ def handle_connect4_post(handler):
             profile = user.get("first_name") or user.get("username") or "لاعب"
             if game_type == "word":
                 if action == "create":
-                    result = _run(extra.word_create(uid, profile, payload.get("mode","online"), payload.get("word_count",5), payload.get("win_target")))
+                    result = _run(extra.word_create(uid, profile, payload.get("mode","online"), payload.get("word_count",5), payload.get("win_target"), payload.get("attempts_limit",6), payload.get("word_length",5), payload.get("round_seconds",180)))
                 elif action == "join":
                     result = _run(extra.word_join(uid, profile, payload.get("game_id","")))
                 elif action == "start":
