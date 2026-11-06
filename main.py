@@ -833,7 +833,7 @@ def build_application() -> Application:
     application.add_handler(MessageHandler(filters.Regex(r"^تحويل \d+$"), transfer))
     application.add_handler(MessageHandler(filters.Regex(r"^\d{17}$"), transfer_account_number))
     application.add_handler(CallbackQueryHandler(transfer_message_callback, pattern=r"^tasliyat:transfer_message:"))
-    application.add_handler(MessageHandler(filters.ChatType.PRIVATE, transfer_message_receiver), group=-4)
+    application.add_handler(MessageHandler(filters.ChatType.PRIVATE, transfer_message_receiver), group=-6)
     application.add_handler(CallbackQueryHandler(bank_callback, pattern=r"^tasliyat:bank:"))
 
     application.add_handler(MessageHandler(filters.Regex(r"^عرض الاكواد$"), show_scratch_codes))
