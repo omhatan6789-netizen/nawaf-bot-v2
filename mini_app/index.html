@@ -702,6 +702,7 @@ function renderWordGame(){
  shell.innerHTML='<div class="c4-heading"><h2>خمن الكلمة 🔤</h2><p id="word-round-label">الكلمة '+Math.min(g.current_index+1,g.total)+' من '+g.total+'</p></div><div class="mg-score" id="word-scores"></div><div class="c4-panel"><div class="c4-result show" id="word-message">'+(finished?'انتهت اللعبة!':'اكتب تخمينك')+'</div><div id="word-feedback" style="display:flex;justify-content:center;gap:6px;flex-wrap:wrap;margin:14px 0"></div><input id="word-guess" autocomplete="off" maxlength="16" placeholder="اكتب الكلمة هنا" style="width:100%;padding:15px;border-radius:12px;border:1px solid #ffffff45;background:#100709;color:white;font:700 20px inherit;text-align:center"><button class="c4-start" id="word-submit">تأكيد الإجابة</button><div class="c4-hint" id="word-clock"></div><button class="c4-secondary" id="word-back">رجوع للألعاب</button></div>';
  const scores=shell.querySelector('#word-scores');scores.innerHTML=(g.players||[]).map(p=>'<span>'+escapeLobbyText(p.name)+': '+p.score+'</span>').join('');
  const input=shell.querySelector('#word-guess'),submit=shell.querySelector('#word-submit');
+ if(g.mode==='online'&&!g.is_player){input.disabled=true;submit.disabled=true;input.placeholder='أنت متفرج — المشاهدة فقط';shell.querySelector('#word-message').textContent='👀 أنت تشاهد اللعبة فقط';}
  if(training&&g.current_word){shell.querySelector('#word-round-label').textContent='الكلمة '+(g.current_index+1)+' من '+g.total+' · '+g.my_score+'/'+g.win_target+' للفوز';}
  if(finished){
   if(extraPoll)clearTimeout(extraPoll);extraPoll=null;submit.remove();input.remove();
@@ -823,7 +824,7 @@ document.getElementById('back-home').onclick=showHome;
   }
   if(extraGameType&&extraGameId){
     home.hidden=true;page.hidden=false;pageTitle.textContent=extraGameType==='word'?'خمن الكلمة':'معركة السفن';
-    if(extraGameType==='word'){extraGame=await extraGameRequest('join','word');renderWordLobby();}
+    if(extraGameType==='word'){extraGame=await extraGameRequest('join','word');if(extraGame.status==='waiting')renderWordLobby();else renderWordGame();}
     else{extraGame=await extraGameRequest('join','battleship');renderBattleship();}
   }
   else if(onlineLobbyId){startOnlineLobby();}
