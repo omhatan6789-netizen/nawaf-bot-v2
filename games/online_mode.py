@@ -358,6 +358,9 @@ async def online_lobby_callback(update: Update, context: ContextTypes.DEFAULT_TY
                             "sequence": [random.randrange(4) for _ in range(3)],
                             "level": 3, "progress": 0, "round_successes": [],
                             "starter_id": int(lobby["creator_id"]),
+                            "multi_player_ids": [int(x[0]) for x in players],
+                            "multi_player_names": [x[1] for x in players],
+                            "player_count": len(players),
                             "online_free": True,
                         }
                     await conn.execute(
