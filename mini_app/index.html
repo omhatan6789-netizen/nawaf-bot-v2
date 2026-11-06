@@ -336,9 +336,13 @@ async function submitMiniGameSoloAction(action){
  try{const prev=miniSoloGame;miniSoloGame=await miniGameRequest('/api/minigames/solo/action',{game_id:miniSoloId,action});miniSoloBusy=false;const next=miniSoloGame;const structural=next.game_type==='dots'||next.status!==prev.status||next.turn_player_id!==prev.turn_player_id||(next.game_type==='memory'&&(next.state.level!==prev.state.level||next.state.sequence.length!==prev.state.sequence.length));if(structural)renderMiniGameSolo();else{const score=document.getElementById('mg-score');if(score)score.innerHTML='<span>المستوى: '+next.state.level+'</span><span>تجاوزت: '+(next.state.rounds_won||0)+' جولة</span>';document.querySelectorAll('.mg-memory-tile').forEach(b=>b.disabled=miniGameInputLocked);if(next.your_turn)startSoloMiniGameClock(next);scheduleSoloMiniGamePoll();}}
  catch(e){miniSoloBusy=false;const status=document.getElementById('mg-status');if(status)status.textContent=e.message;scheduleSoloMiniGamePoll();}
 }
+async function fetchOnlineMiniGameState(){
+ const result=await miniGameRequest('/api/online/spectate',{game_type:'mini',game_id:miniGameChallengeIdFromStart});
+ return result.phase?result:{phase:'playing',game:result.game};
+}
 async function startMiniGameChallenge(){
  const shell=c4Shell();shell.innerHTML='<div class="c4-heading"><h2>جاري فتح التحدي...</h2></div>';
- try{handleMiniGameResult(await miniGameRequest('/api/minigames/challenge/state',{challenge_id:miniGameChallengeIdFromStart}));}
+ try{handleMiniGameResult(onlineMode?await fetchOnlineMiniGameState():await miniGameRequest('/api/minigames/challenge/state',{challenge_id:miniGameChallengeIdFromStart}));}
  catch(e){shell.innerHTML='<div class="c4-error"></div>';shell.querySelector('.c4-error').textContent=e.message;}
 }
 function handleMiniGameResult(result){
@@ -432,7 +436,7 @@ function scheduleMiniGamePoll(){if(miniGamePollTimer)clearTimeout(miniGamePollTi
 async function pollMiniGameState(){
  miniGamePollTimer=null;
  try{
-  const result=await miniGameRequest('/api/minigames/challenge/state',{challenge_id:miniGameChallengeIdFromStart});
+  const result=onlineMode?await fetchOnlineMiniGameState():await miniGameRequest('/api/minigames/challenge/state',{challenge_id:miniGameChallengeIdFromStart});
   if(result.phase==='playing'){
    const next=result.game,changed=!miniGame||next.status!==miniGame.status||next.turn_player_id!==miniGame.turn_player_id||next.turn_started_at!==miniGame.turn_started_at||(next.game_type==='dots'&&JSON.stringify(next.state)!==JSON.stringify(miniGame.state));
    const progressChanged=miniGame&&next.game_type==='memory'&&next.state.progress!==miniGame.state.progress;
