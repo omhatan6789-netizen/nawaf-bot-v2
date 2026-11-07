@@ -540,6 +540,17 @@ async def _finish_game(query, game, winner_id):
     game["finished"] = True
     game["status"] = "finished"
     _active_games.pop(game["game_id"], None)
+    try:
+        from database.game_stats import record_game_results
+        names = game.get("player_names") or {}
+        await record_game_results(
+            f"rps:{game['game_id']}", "rock_paper_scissors",
+            [{"id": int(winner_id), "name": str(names.get(winner_id) or "الفائز")}],
+            [{"id": int(loser_id), "name": str(names.get(loser_id) or "الخاسر")}],
+        )
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception("Failed to record RPS results")
     await query.answer()
     await query.edit_message_text(
         build_final_caption(game, winner_id, amount),
