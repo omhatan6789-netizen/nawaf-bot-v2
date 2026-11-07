@@ -6,7 +6,7 @@ from telegram.ext import Application, ApplicationBuilder, CallbackQueryHandler, 
 
 from config import load_settings
 from handlers.mini_app import mini_app_message, register_mini_app_menu
-from mini_app_server import configure_mini_app
+from handlers.mini_app_panel import (\n    mini_app_panel_command, mini_app_panel_callback, mini_app_panel_message, mini_app_color_command,\n)\nfrom mini_app_server import configure_mini_app
 from database.update_processor import ChatSerialUpdateProcessor
 from database import close_pool, init_pool
 from database.pool import get_pool
@@ -403,7 +403,7 @@ def build_application() -> Application:
         filters.ChatType.PRIVATE & (filters.TEXT | filters.PHOTO | filters.AUDIO | filters.VOICE | filters.VIDEO | filters.Document.ALL) & ~filters.COMMAND,
         mini_app_message,
     ), group=-31)
-    application.add_handler(CommandHandler("start", start_command))
+    application.add_handler(MessageHandler(\n        filters.ChatType.PRIVATE & filters.Regex(r"^(?:اوامر الميني|لوحة الميني)$"),\n        mini_app_panel_command,\n    ), group=-30)\n    application.add_handler(MessageHandler(\n        filters.ChatType.PRIVATE & filters.Regex(r"^تعديل لون زر الميني$"),\n        mini_app_color_command,\n    ), group=-30)\n    application.add_handler(CallbackQueryHandler(\n        mini_app_panel_callback, pattern=r"^minipanel:"\n    ))\n    application.add_handler(MessageHandler(\n        filters.ChatType.PRIVATE & ~filters.COMMAND, mini_app_panel_message,\n    ), group=-30)\n    application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("health", health_command))
     application.add_handler(CommandHandler("send", send_command))
     application.add_handler(MessageHandler(
