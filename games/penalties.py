@@ -1,5 +1,6 @@
 import asyncio
 import random
+import uuid
 
 
 from telegram import (
@@ -310,6 +311,7 @@ async def start_penalty_game(
 
     active_penalty_games[chat.id] = {
 
+        "stats_game_key": uuid.uuid4().hex,
         "players": {},
         "order": [],
 
@@ -2323,6 +2325,24 @@ async def finish_penalty_game(
         game[winner]["shooters"]
         + game[winner]["goalies"]
     ))
+
+    losers = list(dict.fromkeys(
+        game[loser]["shooters"] + game[loser]["goalies"]
+    ))
+    try:
+        from database.game_stats import record_game_results
+        player_map = game.get("players", {})
+        winner_rows = [{"id": int(pid), "name": get_player_name(player_map[pid])}
+                       for pid in winners if pid in player_map]
+        loser_rows = [{"id": int(pid), "name": get_player_name(player_map[pid])}
+                      for pid in losers if pid in player_map]
+        await record_game_results(
+            f"penalties:{game.get('stats_game_key') or chat_id}", "penalties",
+            winner_rows, loser_rows,
+        )
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception("Failed to record penalties results")
 
     reward_lines = [
         "✨ جوائز الفريق الفائز: ✨"
