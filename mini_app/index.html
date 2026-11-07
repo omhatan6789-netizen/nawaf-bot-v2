@@ -919,6 +919,7 @@ function scheduleExtraPoll(){
     joined.forEach(p=>showWordJoinToast(p.name));
     left.forEach(p=>showWordWithdrawToast(p.name));
     const withdrawal=next.last_withdrawal;
+    if(withdrawal&&left.some(p=>String(p.id)===String(withdrawal.id)))extraLastWithdrawalKey=String(withdrawal.at);
     if(withdrawal&&String(withdrawal.id)!==String(tg?.initDataUnsafe?.user?.id||'')&&
        !left.some(p=>String(p.id)===String(withdrawal.id))&&
        extraLastWithdrawalKey!==String(withdrawal.at)){
