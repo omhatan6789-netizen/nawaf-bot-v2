@@ -173,20 +173,31 @@ def public_state(row, viewer_id: int | None = None):
         your_turn = int(row.get("turn_player_id") or 0) == int(viewer_id)
     elif mode == "bot":
         your_turn = not bool(row.get("bot_move_pending", False))
+    player1_name = row.get("player1_name") or ("أنت" if mode == "bot" else "مستخدم")
+    player2_name = row.get("player2_name") or opponent_name or ("البوت" if mode == "bot" else "مستخدم")
+    if str(player1_name).startswith(("اللاعب ", "لاعب ")):
+        player1_name = "أنت" if mode == "bot" else "مستخدم"
+    if str(player2_name).startswith(("اللاعب ", "لاعب ")):
+        player2_name = "البوت" if mode == "bot" else "مستخدم"
+    winner_name = (
+        player1_name if row.get("winner_id") == row.get("user_id")
+        else player2_name if row.get("winner_id") == row.get("player2_id")
+        else ("أنت" if mode == "bot" and stored_status == "won" else row.get("bot_name"))
+    )
+    if str(winner_name or "").startswith(("اللاعب ", "لاعب ")):
+        winner_name = "الفائز"
     return {
         "id": str(row["id"]), "board": board, "status": status,
         "difficulty": row["difficulty"], "last_move": row["last_move"],
         "winning_cells": cells or [], "turn_seconds": TURN_SECONDS,
         "turn_started_at": int(row["turn_started_at"].timestamp() * 1000) if row.get("turn_started_at") else None,
-        "game_mode": mode, "player1_name": row.get("player1_name") or "أنت",
-        "player2_name": row.get("player2_name") or opponent_name or "البوت",
+        "game_mode": mode, "player1_name": player1_name,
+        "player2_name": player2_name,
         "bot_name": row.get("bot_name") or "البوت",
         "your_turn": your_turn, "bot_move_pending": bool(row.get("bot_move_pending", False)),
         "my_piece": (1 if is_player1 else 2), "turn_player_id": row.get("turn_player_id"),
         "winner_id": row.get("winner_id"), "wager": int(row.get("wager") or 0),
-        "winner_name": (row.get("player1_name") if row.get("winner_id") == row.get("user_id")
-                        else row.get("player2_name") if row.get("winner_id") == row.get("player2_id")
-                        else ("أنت" if mode == "bot" and stored_status == "won" else row.get("bot_name"))),
+        "winner_name": winner_name,
     }
 
 
