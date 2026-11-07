@@ -1524,6 +1524,7 @@ async def finish_game(context, game):
     # -----------------------------------------------------
 
     winners = []
+    winner_ids = []
 
     for player_id, user in game["players"].items():
 
@@ -1542,6 +1543,7 @@ async def finish_game(context, game):
             score = 0
 
         if score > 0:
+            winner_ids.append(int(player_id))
             winners.append(
                 mention_user(user)
             )
@@ -1593,11 +1595,11 @@ async def finish_game(context, game):
 
     try:
         from database.game_stats import record_game_results
-        winner_ids = {int(pid) for pid in winners}
+        winner_id_set = set(winner_ids)
         winner_rows = [{"id": int(pid), "name": user.get("name", "لاعب")}
-                       for pid, user in game["players"].items() if int(pid) in winner_ids]
+                       for pid, user in game["players"].items() if int(pid) in winner_id_set]
         loser_rows = [{"id": int(pid), "name": user.get("name", "لاعب")}
-                      for pid, user in game["players"].items() if int(pid) not in winner_ids]
+                      for pid, user in game["players"].items() if int(pid) not in winner_id_set]
         await record_game_results(
             f"liar:{game.get('game_id') or chat_id}:{game.get('started_at') or id(game)}",
             "liar", winner_rows, loser_rows,
