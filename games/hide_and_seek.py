@@ -1,5 +1,6 @@
 import random
 import asyncio
+import uuid
 from collections import Counter
 
 from telegram import (
@@ -251,6 +252,7 @@ async def start_hide_game(
     
     active_hide_games[chat.id] = {
 
+        "stats_game_key": uuid.uuid4().hex,
         "players": {},
         "order": [],
 
@@ -1527,6 +1529,21 @@ async def finish_hide_game(
     # ==============================================
 
     if winners:
+        try:
+            from database.game_stats import record_game_results
+            all_players = game.get("players", {})
+            win_set = {int(pid) for pid in winners}
+            winner_rows = [{"id": int(pid), "name": get_player_name(all_players[pid])}
+                           for pid in winners if pid in all_players]
+            loser_rows = [{"id": int(pid), "name": get_player_name(player)}
+                          for pid, player in all_players.items() if int(pid) not in win_set]
+            await record_game_results(
+                f"hide:{game.get('stats_game_key') or chat_id}", "hide",
+                winner_rows, loser_rows,
+            )
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception("Failed to record hide-and-seek results")
 
         for winner_id in winners:
 
