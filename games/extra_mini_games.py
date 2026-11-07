@@ -71,6 +71,7 @@ def _public_word(row, user_id):
         "round_until": int(row["round_until"].timestamp() * 1000) if row["round_until"] else None,
         "round_winner": answers.get("round_winner"), "round_word": answers.get("last_word"),
         "round_end_reason": answers.get("round_end_reason"),
+        "last_withdrawal": answers.get("last_withdrawal"),
         "last_guess": answers.get("last_guess"), "last_feedback": answers.get("last_feedback"),
         "words": word_list if row["status"] == "finished" else [],
         "winner": winner,
@@ -287,6 +288,47 @@ async def word_guess(user_id, raw_id, guess):
                     gid, json.dumps(answers, ensure_ascii=False)
                 )
     return {"correct": False, "feedback": feedback, "state": _public_word(row, user_id)}
+
+
+async def word_leave(user_id, raw_id):
+    try:
+        gid = uuid.UUID(hex=str(raw_id).replace("-", ""))
+    except Exception:
+        raise ValueError("رابط اللعبة غير صالح")
+    pool = get_pool()
+    async with pool.acquire() as c:
+        async with c.transaction():
+            row = await c.fetchrow("SELECT * FROM word_games WHERE id=$1 FOR UPDATE", gid)
+            if not row:
+                raise ValueError("الغرفة غير موجودة")
+            players = _decode(row["players"])
+            leaver = next((p for p in players if int(p["id"]) == int(user_id)), None)
+            if not leaver:
+                raise ValueError("أنت لست لاعبًا في هذه الغرفة")
+            if row["status"] == "finished":
+                return _public_word(row, user_id)
+            players = [p for p in players if int(p["id"]) != int(user_id)]
+            answers = _decode(row["answers"])
+            answers["last_withdrawal"] = {
+                "id": int(user_id), "name": str(leaver.get("name") or "مستخدم"),
+                "at": int(datetime.now(timezone.utc).timestamp() * 1000)
+            }
+            status = "finished" if len(players) <= 1 else row["status"]
+            row = await c.fetchrow(
+                """UPDATE word_games SET players=$2::jsonb,answers=$3::jsonb,status=$4,
+                   round_deadline=CASE WHEN $4='finished' THEN NULL ELSE round_deadline END,
+                   round_until=CASE WHEN $4='finished' THEN NULL ELSE round_until END,
+                   finished_at=CASE WHEN $4='finished' THEN NOW() ELSE finished_at END,
+                   updated_at=NOW() WHERE id=$1 RETURNING *""",
+                gid, json.dumps(players, ensure_ascii=False),
+                json.dumps(answers, ensure_ascii=False), status
+            )
+            if status == "finished" and len(players) == 1:
+                from database.game_stats import record_game_results
+                await record_game_results(
+                    f"mini-word:{gid}", "word_guess", [players[0]], [], conn=c
+                )
+    return _public_word(row, user_id)
 
 async def word_next(user_id, raw_id):
     gid = uuid.UUID(hex=str(raw_id).replace("-", ""))
