@@ -63,10 +63,10 @@ body.c4-active #back-home{margin:10px 0 0;min-height:48px}
 .c4-level{border:1px solid #ffffff35;border-radius:13px;padding:12px 8px;background:#17090b88;color:#fff;font-weight:800;font-size:14px;cursor:pointer}
 .c4-level small{display:block;color:#ffffff8a;font-weight:500;font-size:10px;margin-top:3px}
 .c4-level.active{border-color:#ffb0b4;background:linear-gradient(140deg,#b31a24,#621017);box-shadow:0 0 0 2px #ff525233}
-.c4-start, .c4-danger{background:linear-gradient(135deg,#f04455,#a20d20)!important;color:#fff!important;border:1px solid #ff8994!important;box-shadow:0 4px 0 #650711!important}
+.c4-start{background:linear-gradient(135deg,#f04455,#a20d20)!important;color:#fff!important;border:1px solid #ff8994!important;box-shadow:0 4px 0 #650711!important}
  .c4-secondary{width:100%;border:0;border-radius:14px;min-height:49px;margin-top:14px;font-weight:900;font-size:15px;cursor:pointer}
 .c4-start{background:linear-gradient(100deg,#fff,#ffe7e8);color:#5c0b12;box-shadow:0 4px 0 #5a090e}
-.c4-secondary{background:#ffffff16;color:#fff;border:1px solid #ffffff32}
+.c4-secondary{background:#ffffff16;color:#fff;border:1px solid #ffffff32}.c4-secondary.c4-win{border-color:#22c55e}.c4-secondary.c4-loss{border-color:#ef4444}
 .c4-players{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:13px}
 .c4-player{display:flex;align-items:center;gap:8px;background:#1007098c;border:1px solid #ffffff20;border-radius:14px;padding:9px 11px;min-width:0;flex:1}
 .c4-disc{width:18px;height:18px;border-radius:50%;flex:none;box-shadow:inset 0 3px 5px #fff6,inset 0 -4px 6px #0005,0 2px 5px #0005}
@@ -145,9 +145,9 @@ function showTop(kind,title){
  home.hidden=true;page.hidden=false;pageTitle.textContent=title;pageContent.replaceChildren();
  if(kind==='games'){
   const chooser=document.createElement('div');chooser.className='c4-panel';chooser.style.display='grid';chooser.style.gap='10px';
-  const wins=document.createElement('button');wins.className='c4-start';wins.textContent='🏆 الأكثر فوزًا';
+  const wins=document.createElement('button');wins.className='c4-secondary c4-win';wins.textContent='🏆 الأكثر فوزًا';
   wins.onclick=()=>showTop('game_wins','🏆 توب الأكثر فوزًا');
-  const losses=document.createElement('button');losses.className='c4-danger';losses.textContent='💀 الأكثر خسارة';
+  const losses=document.createElement('button');losses.className='c4-secondary c4-loss';losses.textContent='💀 الأكثر خسارة';
   losses.onclick=()=>showTop('game_losses','💀 توب الأكثر خسارة');
   chooser.append(wins,losses);pageContent.appendChild(chooser);return;
  }
