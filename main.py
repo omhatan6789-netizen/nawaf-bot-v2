@@ -721,9 +721,17 @@ def build_application() -> Application:
         check_image_quiz_message,
     ), group=8)
 
-    # Legacy custom question engine (game/question administration and answers).
+    # Fast text path for the custom question games. Run it immediately after
+    # the mandatory-subscription guard instead of after the many general
+    # group handlers, so game starts and answers are not delayed by them.
     application.add_handler(MessageHandler(
-        filters.ChatType.GROUPS & (filters.TEXT | filters.PHOTO),
+        filters.ChatType.GROUPS & filters.TEXT & ~filters.COMMAND,
+        game_message_handler,
+    ), group=-99)
+
+    # Keep photo-based question creation on its existing later path.
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.PHOTO,
         game_message_handler,
     ), group=30)
 
