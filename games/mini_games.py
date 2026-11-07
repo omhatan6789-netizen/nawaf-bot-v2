@@ -151,7 +151,7 @@ def _decode_state(value):
 
 def _safe_display_name(value):
     name = str(value or "").strip()
-    if not name or name in ("أحد اللاعبين", "أنت") or name.startswith("اللاعب "):
+    if not name or name in ("أحد اللاعبين", "أنت") or name.startswith(("اللاعب ", "لاعب ")):
         return "مستخدم"
     return name
 
