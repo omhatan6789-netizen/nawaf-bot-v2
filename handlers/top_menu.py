@@ -9,6 +9,7 @@ from database.points import get_points_leaderboard
 def _top_menu_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("توب النقاط", callback_data="topmenu:points")],
+        [InlineKeyboardButton("🏆 توب الألعاب", callback_data="topmenu:games")],
         [
             InlineKeyboardButton("توب الحرامية", callback_data="topmenu:robbers"),
             InlineKeyboardButton("توب المتفاعلين", callback_data="topmenu:active"),
@@ -43,6 +44,16 @@ async def _build_top_text(kind: str, chat_id: int | None = None) -> str:
             name = row["first_name"] or row["username"] or "مستخدم"
             lines.append(f"{place} - {name} : {int(row['points'] or 0)} نقطة")
         return "\n".join(lines) if rows else "توب النقاط:\n\nلا يوجد ترتيب حتى الآن."
+
+    if kind in {"game_wins", "game_losses"}:
+        from database.game_stats import get_game_leaderboard
+        result = "win" if kind == "game_wins" else "loss"
+        rows = await get_game_leaderboard(result, 10)
+        title = "🏆 أكثر 10 لاعبين فوزًا في الألعاب:" if result == "win" else "💀 أكثر 10 لاعبين خسارة في الألعاب:"
+        lines = [title, ""]
+        for place, row in enumerate(rows, 1):
+            lines.append(f"{place}. {row['name']} — {int(row['total'])} مباراة")
+        return "\n".join(lines) if rows else f"{title}\n\nلا توجد نتائج مسجلة حتى الآن."
 
     if kind == "robbers":
         rows = await pool.fetch(
@@ -113,6 +124,15 @@ async def top_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     await query.answer()
     data = query.data or ""
 
+    if data == "topmenu:games":
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("🏆 الأكثر فوزًا", callback_data="topmenu:game_wins")],
+            [InlineKeyboardButton("💀 الأكثر خسارة", callback_data="topmenu:game_losses")],
+            [InlineKeyboardButton("↩️ رجوع لقائمة التوب", callback_data="topmenu:back")],
+        ])
+        await query.edit_message_text("🎮 <b>إحصائيات جميع الألعاب</b>\nاختر الترتيب:", parse_mode=ParseMode.HTML, reply_markup=keyboard)
+        return
+
     if data == "topmenu:back":
         await query.edit_message_text(
             "<b>اختر زر التوب الي تبيه:</b>",
@@ -122,7 +142,7 @@ async def top_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         return
 
     kind = data.removeprefix("topmenu:")
-    if kind not in {"points", "robbers", "active"}:
+    if kind not in {"points", "robbers", "active", "game_wins", "game_losses"}:
         return
 
     chat = query.message.chat if query.message else None
