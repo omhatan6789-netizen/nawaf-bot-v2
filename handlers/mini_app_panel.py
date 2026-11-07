@@ -23,7 +23,8 @@ PALETTE = [
 
 def _menu():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🎨 تعديل لون زر بالميني", callback_data="minipanel:color")],\n        [InlineKeyboardButton("📋 الألوان المعدلة", callback_data="minipanel:colors")],
+        [InlineKeyboardButton("🎨 تعديل لون زر بالميني", callback_data="minipanel:color")],
+        [InlineKeyboardButton("📋 الألوان المعدلة", callback_data="minipanel:colors")],
         [InlineKeyboardButton("🔘 إدارة الأزرار", callback_data="minipanel:buttons"),
          InlineKeyboardButton("🎧 إدارة الأصوات", callback_data="minipanel:sounds")],
         [InlineKeyboardButton("🖼️ صورة الميني آب", callback_data="minipanel:banner")],
