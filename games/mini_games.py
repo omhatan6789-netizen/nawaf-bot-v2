@@ -651,6 +651,16 @@ async def _solo_update(conn, row, state, turn, status=None):
     )
 
 
+async def _record_solo_game_result(conn, row):
+    if row["status"] not in ("won", "lost"):
+        return
+    from database.game_stats import record_game_results
+    player = {"id": int(row["user_id"]), "name": str(row["user_id"])}
+    winners = [player] if row["status"] == "won" else []
+    losers = [player] if row["status"] == "lost" else []
+    await record_game_results(f"mini-solo:{row['id']}", str(row["game_type"]), winners, losers, conn=conn)
+
+
 async def play_mini_game_solo_action(user_id: int, raw_id: str, action: dict):
     try:
         game_id = uuid.UUID(hex=raw_id.replace("-", ""))
@@ -711,6 +721,7 @@ async def play_mini_game_solo_action(user_id: int, raw_id: str, action: dict):
                                 state["level"] = int(state["level"]) + 1
                                 state["sequence"].append(random.randrange(4))
                                 row = await _solo_update(conn, row, state, int(user_id))
+            await _record_solo_game_result(conn, row)
             return _solo_public(row)
 
 
@@ -740,4 +751,5 @@ async def play_mini_game_solo_bot_move(user_id: int, raw_id: str):
                         row = await _solo_update(conn, row, state, -1, status)
                     else:
                         row = await _solo_update(conn, row, state, -1 if completed else int(user_id))
+            await _record_solo_game_result(conn, row)
             return _solo_public(row)
