@@ -364,6 +364,13 @@ async def play_move(user_id: int, game_id: str, col: int):
                         json.dumps(winning_cells or []), user_id if status == "won" else None,
                         next_player,
                     )
+                    if status in ("won", "draw") and row["player2_id"] is not None:
+                        from database.game_stats import record_game_results
+                        first = {"id": int(row["user_id"]), "name": row.get("player1_name") or "اللاعب الأول"}
+                        second = {"id": int(row["player2_id"]), "name": row.get("player2_name") or "اللاعب الثاني"}
+                        winners = [first if int(user_id) == int(row["user_id"]) else second] if status == "won" else []
+                        losers = [second if winners and winners[0]["id"] == first["id"] else first] if status == "won" else []
+                        await record_game_results(f"connect4:{row['id']}", "connect", winners, losers, conn=conn)
                     return public_state(updated, user_id)
             else:
                 if int(row["user_id"]) != int(user_id):
