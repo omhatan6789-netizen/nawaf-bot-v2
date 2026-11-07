@@ -957,6 +957,19 @@ async def _finish_win(
         points, winner_id=winner.id,
     )
 
+    try:
+        from database.game_stats import record_game_results
+        loser = get_symbol_user(game, O if winner_symbol == X else X)
+        await record_game_results(
+            f"xo:{game.get('game_id') or game.get('message_id') or game['x_player_id']}",
+            "xo",
+            [{"id": int(winner.id), "name": winner.full_name or winner.first_name}],
+            [{"id": int(loser.id), "name": loser.full_name or loser.first_name}],
+        )
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception("Failed to record XO results")
+
     # --------------------------------------------------------
     # حذفها من الألعاب النشطة بعد تعديل الرسالة
     # --------------------------------------------------------
