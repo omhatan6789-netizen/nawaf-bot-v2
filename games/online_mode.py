@@ -22,7 +22,7 @@ GAME_INFO = {
 def _safe_player_name(value, fallback: str) -> str:
     if isinstance(value, str):
         name = value.strip()
-        if name and "InlineKeyboardButton" not in name and not name.startswith("اللاعب "):
+        if name and "InlineKeyboardButton" not in name and not name.startswith(("اللاعب ", "لاعب ")):
             return name
     return fallback
 
