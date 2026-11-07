@@ -36,6 +36,7 @@ async def _payload(top=None):
     online_images = await pool.fetch(
         "SELECT game_type,photo_file_id FROM online_game_images"
     )
+    button_colors = await pool.fetch("SELECT button_text,color_hex FROM mini_app_button_colors")
     leaderboard = None
     if top == "points":
         from database.points import get_points_leaderboard
@@ -95,6 +96,7 @@ async def _payload(top=None):
              "image": ("/tg-file/" + r["image_file_id"]) if r["image_file_id"] else None}
             for r in buttons
         ],
+        "button_colors": {r["button_text"]: r["color_hex"] for r in button_colors},
         "sounds": [
             {"id": r["id"], "title": r["title"], "type": r["media_kind"],
              "mime_type": r["mime_type"], "url": f"/mini-app/sound/{r['id']}"}
