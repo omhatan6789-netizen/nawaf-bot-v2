@@ -33,6 +33,10 @@ def _menu():
 def _back():
     return InlineKeyboardMarkup([[InlineKeyboardButton("↩️ لوحة الميني", callback_data="minipanel:menu")]])
 
+def _normalize_button_text(value: str) -> str:
+    value = " ".join(str(value or "").split())
+    return re.sub(r"^[^\\w\\u0600-\\u06FF]+", "", value).strip()
+
 def _palette():
     rows = []
     for i in range(0, len(PALETTE), 3):
@@ -132,11 +136,14 @@ async def mini_app_panel_callback(update: Update, context: ContextTypes.DEFAULT_
             return
         session["step"] = "custom"
         await q.edit_message_text("ارسل كود اللون بصيغة HEX مثل #12a4ff:", reply_markup=_back())
+    elif data == "minipanel:reset":
+        SESSIONS[uid] = {"action": "resetcolor", "step": "button"}
+        await q.edit_message_text("ارسل اسم الزر اللي تبي ترجع لونه الافتراضي:", reply_markup=_back())
     elif data == "minipanel:colors":
         rows = await pool.fetch("SELECT button_text,color_hex FROM mini_app_button_colors ORDER BY button_text")
         lines = ["🎨 الألوان المخصصة", "━━━━━━━━━━━━"]
         lines += [f"• {html.escape(r['button_text'])}: <code>{r['color_hex']}</code>" for r in rows] or ["ما عدلت ألوان أي أزرار حتى الآن."]
-        keys = [[InlineKeyboardButton(f"↩️ لوحة الميني", callback_data="minipanel:menu")]]
+        keys = [[InlineKeyboardButton("🗑️ حذف لون زر", callback_data="minipanel:reset")], [InlineKeyboardButton("↩️ لوحة الميني", callback_data="minipanel:menu")]]
         await q.edit_message_text("\n".join(lines), parse_mode="HTML", reply_markup=InlineKeyboardMarkup(keys))
 
 async def _save_color(q, uid: int, button: str, color: str):
@@ -147,7 +154,7 @@ async def _save_color(q, uid: int, button: str, color: str):
         """INSERT INTO mini_app_button_colors(button_text,color_hex,updated_by,updated_at)
            VALUES($1,$2,$3,NOW()) ON CONFLICT(button_text) DO UPDATE
            SET color_hex=EXCLUDED.color_hex,updated_by=EXCLUDED.updated_by,updated_at=NOW()""",
-        button, color.lower(), uid,
+        _normalize_button_text(button), color.lower(), uid,
     )
     SESSIONS.pop(uid, None)
     await q.edit_message_text(f"تم تغيير لون زر «{html.escape(button)}» إلى <code>{color.lower()}</code> ✅\nافتح الميني آب من جديد لتطبيق اللون.", parse_mode="HTML", reply_markup=_back())
@@ -173,7 +180,7 @@ async def mini_app_panel_message(update: Update, context: ContextTypes.DEFAULT_T
             if not text:
                 await msg.reply_text("ارسل اسم الزر كنص.")
                 raise ApplicationHandlerStop
-            session["button"] = " ".join(text.split())
+            session["button"] = _normalize_button_text(text)
             session["step"] = "palette"
             await msg.reply_text(f"اختر لون زر «{session['button']}» أو أدخل لونًا مخصصًا:", reply_markup=_palette())
             raise ApplicationHandlerStop
@@ -185,11 +192,20 @@ async def mini_app_panel_message(update: Update, context: ContextTypes.DEFAULT_T
                 """INSERT INTO mini_app_button_colors(button_text,color_hex,updated_by,updated_at)
                    VALUES($1,$2,$3,NOW()) ON CONFLICT(button_text) DO UPDATE
                    SET color_hex=EXCLUDED.color_hex,updated_by=EXCLUDED.updated_by,updated_at=NOW()""",
-                session["button"], text.lower(), user.id,
+                _normalize_button_text(session["button"]), text.lower(), user.id,
             )
             SESSIONS.pop(user.id, None)
             await msg.reply_text(f"تم تغيير لون زر «{session['button']}» إلى {text.lower()} ✅\nافتح الميني آب من جديد لتطبيق اللون.", reply_markup=_back())
             raise ApplicationHandlerStop
+
+    if action == "resetcolor" and step == "button":
+        if not text:
+            await msg.reply_text("ارسل اسم الزر.")
+            raise ApplicationHandlerStop
+        result = await get_pool().execute("DELETE FROM mini_app_button_colors WHERE button_text=$1", _normalize_button_text(text))
+        SESSIONS.pop(user.id, None)
+        await msg.reply_text("تم إرجاع لون الزر الافتراضي ✅" if result.endswith("1") else "ما لقيت لونًا مخصصًا لهذا الزر.", reply_markup=_back())
+        raise ApplicationHandlerStop
 
     if action == "banner":
         if not msg.photo:
