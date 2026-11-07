@@ -399,6 +399,13 @@ async def play_move(user_id: int, game_id: str, col: int):
                     parsed_id, json.dumps(board), status, chosen,
                     json.dumps(winning_cells or []), status == "playing",
                 )
+                if status == "won":
+                    from database.game_stats import record_game_results
+                    await record_game_results(
+                        f"connect4-bot:{row['id']}", "connect",
+                        [{"id": int(user_id), "name": row.get("player1_name") or "اللاعب"}], [],
+                        conn=conn,
+                    )
                 return public_state(updated, user_id)
 
 
@@ -438,4 +445,11 @@ async def play_bot_move(user_id: int, game_id: str):
                 parsed_id, json.dumps(board), status, bot_col,
                 json.dumps(winning_cells),
             )
+            if status == "lost":
+                from database.game_stats import record_game_results
+                await record_game_results(
+                    f"connect4-bot:{row['id']}", "connect",
+                    [], [{"id": int(user_id), "name": row.get("player1_name") or "اللاعب"}],
+                    conn=conn,
+                )
             return public_state(updated, user_id)
