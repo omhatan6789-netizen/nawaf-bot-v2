@@ -63,7 +63,7 @@ def _public_word(row, user_id):
         "word_length": row["word_length"], "round_seconds": row["round_seconds"],
         "my_guesses": my_guesses,
         "current_index": idx, "total": row["word_limit"],
-        "players": [{"id": p["id"], "name": p["name"], "score": p.get("score", 0)} for p in players],
+        "players": [{"id": p["id"], "name": p["name"], "score": p.get("score", 0), "attempts_used": len(guesses_by_player.get(str(int(p["id"])), [])), "attempts_left": max(0, int(row["attempts_limit"]) - len(guesses_by_player.get(str(int(p["id"])), [])))} for p in players],
         "my_score": me.get("score", 0) if me else 0, "is_player": bool(me),
         "is_owner": int(row["owner_id"]) == int(user_id),
         "current_word_length": int(row["word_length"]) if row["status"] == "playing" else None,
