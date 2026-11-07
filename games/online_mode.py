@@ -138,7 +138,7 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
             from games.extra_mini_games import word_create
             game = await word_create(
                 inline.from_user.id,
-                inline.from_user.full_name or inline.from_user.first_name or "اللاعب الأول",
+                inline.from_user.full_name or inline.from_user.first_name or "مستخدم",
                 mode="online",
             )
             game_id = uuid.UUID(hex=game["id"])
@@ -156,7 +156,7 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
                    (id,game_type,creator_id,creator_name)
                    VALUES($1,$2,$3,$4)""",
                 lobby_id, game_type, inline.from_user.id,
-                inline.from_user.full_name or inline.from_user.first_name or "اللاعب الأول",
+                inline.from_user.full_name or inline.from_user.first_name or "مستخدم",
             )
             room_url = f"https://t.me/{me.username}?startapp=online_lobby_{lobby_id.hex}"
             lobby_text = (
@@ -314,7 +314,7 @@ async def online_lobby_callback(update: Update, context: ContextTypes.DEFAULT_TY
             player2_name = _safe_player_name(lobby["player2_name"], "مستخدم")
             players = [
                 (lobby["creator_id"], _safe_player_name(lobby["creator_name"], "مستخدم"), bool(lobby["creator_joined"])),
-                (lobby["player2_id"], _safe_player_name(lobby["player2_name"], "اللاعب الثاني"), bool(lobby["player2_id"])),
+                (lobby["player2_id"], _safe_player_name(lobby["player2_name"], "مستخدم"), bool(lobby["player2_id"])),
                 (lobby["player3_id"], _safe_player_name(lobby["player3_name"], "مستخدم"), bool(lobby["player3_id"])),
                 (lobby["player4_id"], _safe_player_name(lobby["player4_name"], "مستخدم"), bool(lobby["player4_id"])),
             ][:int(lobby["player_count"])]
@@ -505,7 +505,7 @@ async def online_lobby_api(user_id: int, action: str, raw_lobby_id: str, setting
                 if any(x is None for x in ids):
                     raise ValueError("لا يمكن البدء قبل اكتمال عدد اللاعبين")
                 names = [
-                    _safe_player_name(lobby["creator_name"], "اللاعب الأول"),
+                    _safe_player_name(lobby["creator_name"], "مستخدم"),
                     *[_safe_player_name(lobby[f"player{i}_name"], "مستخدم") for i in range(2, count+1)]
                 ]
                 game_id = uuid.uuid4()
@@ -571,7 +571,7 @@ async def online_lobby_api(user_id: int, action: str, raw_lobby_id: str, setting
     for i in range(2, count + 1):
         pid = lobby[f"player{i}_id"]
         if pid is not None:
-            player_rows.append({"id": int(pid), "name": _safe_player_name(lobby[f"player{i}_name"], f"اللاعب {i}")})
+            player_rows.append({"id": int(pid), "name": _safe_player_name(lobby[f"player{i}_name"], "مستخدم")})
     return {
         "id": lobby_id.hex, "game_type": lobby["game_type"], "status": lobby["status"],
         "creator_id": int(lobby["creator_id"]), "player_count": count,
