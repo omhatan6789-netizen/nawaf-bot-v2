@@ -786,10 +786,9 @@ async function confirmWordExit(){
  const leave=async()=>{
   const button=document.getElementById('word-exit');if(button)button.disabled=true;
   try{
-   const state=await extraGameRequest('leave','word');
-   extraGame=state;
-   if(state.status==='finished'){renderWordGame();return;}
-   stopExtraGame();if(tg?.close)tg.close();else showGames();
+   await extraGameRequest('leave','word');
+   stopExtraGame();
+   if(tg?.close)tg.close();else showGames();
   }catch(e){showExtraError(e);if(button)button.disabled=false;}
  };
  if(tg?.showConfirm){tg.showConfirm('هل أنت متأكد من الانسحاب من اللعبة؟',ok=>{if(ok)leave();});}
