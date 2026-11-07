@@ -59,6 +59,15 @@ async def _payload(top=None):
              "value": int(r["activity_messages"] or 0), "unit": "رسالة"}
             for r in rows
         ]
+    elif top in ("game_wins", "game_losses"):
+        from database.game_stats import get_game_leaderboard
+        result = "win" if top == "game_wins" else "loss"
+        rows = await get_game_leaderboard(result, 10)
+        leaderboard = [
+            {"name": r["name"], "value": int(r["total"]),
+             "unit": "فوز" if result == "win" else "خسارة"}
+            for r in rows
+        ]
     elif top == "robbers":
         rows = await pool.fetch(
             """SELECT u.first_name,u.username,b.robbery_balance
