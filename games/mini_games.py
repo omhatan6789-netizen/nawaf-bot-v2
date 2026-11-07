@@ -276,11 +276,34 @@ def _draw_dot_edge(state, edge, player):
 async def _finish_game(conn, row, winner_id):
     status = "draw" if winner_id is None else "won"
     await _settle_wager(conn, row, winner_id)
-    return await conn.fetchrow(
+    updated = await conn.fetchrow(
         """UPDATE mini_game_challenges SET status=$2,winner_id=$3,
            turn_started_at=NOW(),updated_at=NOW() WHERE id=$1 RETURNING *""",
         row["id"], status, winner_id,
     )
+    if winner_id is not None:
+        state = _decode_state(row["game_state"])
+        ids = [int(x) for x in (state.get("multi_player_ids") or [
+            row["player1_id"], row["player2_id"],
+            *([row["player3_id"]] if row["player3_id"] is not None else []),
+            *([row["player4_id"]] if row["player4_id"] is not None else []),
+        ])]
+        names = state.get("multi_player_names") or [
+            row["player1_name"], row["player2_name"],
+            *([row["player3_name"]] if row["player3_id"] is not None else []),
+            *([row["player4_name"]] if row["player4_id"] is not None else []),
+        ]
+        if state.get("team_mode") == "teams" and len(ids) == 4:
+            winning_team = 0 if int(winner_id) == ids[0] else 1
+            winning_indexes = (0, 2) if winning_team == 0 else (1, 3)
+        else:
+            winning_indexes = tuple(i for i, pid in enumerate(ids) if pid == int(winner_id))
+        winners = [{"id": ids[i], "name": names[i] if i < len(names) else "لاعب"} for i in winning_indexes]
+        losers = [{"id": pid, "name": names[i] if i < len(names) else "لاعب"}
+                  for i, pid in enumerate(ids) if i not in winning_indexes]
+        from database.game_stats import record_game_results
+        await record_game_results(f"mini:{row['id']}", str(row["game_type"]), winners, losers, conn=conn)
+    return updated
 
 
 async def get_mini_game_challenge_state(user_id: int, raw_id: str):
