@@ -137,6 +137,27 @@ const home=document.getElementById('home');
 const page=document.getElementById('page');
 const pageTitle=document.getElementById('page-title');
 const pageContent=document.getElementById('page-content');
+let miniAppColorMap={};
+function miniButtonText(el){return String(el.innerText||el.textContent||'').replace(/\\s+/g,' ').trim();}
+function miniButtonTextColor(hex){
+ const h=String(hex||'').replace('#','');if(!/^[0-9a-fA-F]{6}$/.test(h))return '#ffffff';
+ const n=parseInt(h,16),r=(n>>16)&255,g=(n>>8)&255,b=n&255;
+ return (0.299*r+0.587*g+0.114*b)>160?'#171717':'#ffffff';
+}
+function applyMiniAppButtonColors(map){
+ if(map)miniAppColorMap=map;
+ document.querySelectorAll('button,.back-button,.custom-card').forEach(el=>{
+  const key=miniButtonText(el),color=miniAppColorMap[key];
+  if(!color)return;
+  el.style.setProperty('background',color,'important');
+  el.style.setProperty('background-color',color,'important');
+  el.style.setProperty('border-color',color,'important');
+  el.style.setProperty('color',miniButtonTextColor(color),'important');
+  el.style.setProperty('box-shadow','0 4px 0 '+color+'88','important');
+ });
+}
+const miniButtonColorObserver=new MutationObserver(()=>applyMiniAppButtonColors());
+miniButtonColorObserver.observe(document.body,{childList:true,subtree:true,characterData:true});
 function showHome(){stopC4Timer();stopMiniGameTimers();stopExtraGame();document.body.classList.remove('c4-active');page.hidden=true;home.hidden=false;}
 function telegramDisplayName(){const u=tg?.initDataUnsafe?.user||{};return [u.first_name,u.last_name].filter(Boolean).join(' ').trim()||u.username||'أنت';}
 function winnerDisplayName(game){const status=String(game?.status||'');const botName=String(game?.bot_name||'').trim();if(botName&&(status==='won'||status==='lost'))return status==='lost'?botName:telegramDisplayName();const name=String(game?.winner_name||'').trim();return (!name||name==='أحد اللاعبين'||name==='أنت')?telegramDisplayName():name;}
@@ -891,7 +912,7 @@ document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>{
 document.getElementById('back-home').onclick=showHome;
 (async()=>{
  try{
-  const r=await fetch('/api/mini-app');const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error||('HTTP '+r.status));botUsername=data.bot_username||'';onlineGameImages=data.online_game_images||{};
+  const r=await fetch('/api/mini-app');const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error||('HTTP '+r.status));botUsername=data.bot_username||'';onlineGameImages=data.online_game_images||{};applyMiniAppButtonColors(data.button_colors||{});
   if(data.banner){const im=document.getElementById('banner');im.src=data.banner;im.style.display='block';}
   const root=document.getElementById('custom');
   for(const b of data.buttons||[]){
