@@ -1591,6 +1591,21 @@ async def finish_game(context, game):
         f"{winners_text}"
     )
 
+    try:
+        from database.game_stats import record_game_results
+        winner_ids = {int(pid) for pid in winners}
+        winner_rows = [{"id": int(pid), "name": user.get("name", "لاعب")}
+                       for pid, user in game["players"].items() if int(pid) in winner_ids]
+        loser_rows = [{"id": int(pid), "name": user.get("name", "لاعب")}
+                      for pid, user in game["players"].items() if int(pid) not in winner_ids]
+        await record_game_results(
+            f"liar:{game.get('game_id') or chat_id}:{game.get('started_at') or id(game)}",
+            "liar", winner_rows, loser_rows,
+        )
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception("Failed to record liar results")
+
     await context.bot.send_message(
         chat_id=chat_id,
         text=result_text,
