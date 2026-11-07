@@ -5,6 +5,7 @@ import io
 import os
 import random
 import re
+import uuid
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Set, Tuple
 
@@ -129,6 +130,7 @@ class RaceState:
     action_message_id: Optional[int] = None
     action_timeout_task: Optional[asyncio.Task] = field(default=None, repr=False, compare=False)
     distribution_message_id: Optional[int] = None
+    stats_game_key: str = field(default_factory=lambda: uuid.uuid4().hex)
 
 
 RACES: Dict[int, RaceState] = {}
@@ -1633,6 +1635,20 @@ async def _declare_winner(
     )
 
     await _send_or_edit_board(state, context)
+
+    try:
+        from database.game_stats import record_game_results
+        winner_ids = {int(p.user_id) for p in winners}
+        winner_rows = [{"id": int(p.user_id), "name": p.name} for p in winners]
+        loser_rows = [{"id": int(p.user_id), "name": p.name}
+                      for p in state.players.values() if int(p.user_id) not in winner_ids]
+        await record_game_results(
+            f"word-race:{state.stats_game_key}", "word_race",
+            winner_rows, loser_rows,
+        )
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception("Failed to record word-race results")
 
     # كل فائز +70، والحكم +70 حتى لو لم يكن مشاركًا.
     awarded: List[Tuple[str, int]] = []
