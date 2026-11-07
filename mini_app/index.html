@@ -162,7 +162,7 @@ const miniButtonColorObserver=new MutationObserver(()=>applyMiniAppButtonColors(
 miniButtonColorObserver.observe(document.body,{childList:true,subtree:true,characterData:true});
 function showHome(){stopC4Timer();stopMiniGameTimers();stopExtraGame();document.body.classList.remove('c4-active');page.hidden=true;home.hidden=false;}
 function telegramDisplayName(){const u=tg?.initDataUnsafe?.user||{};return [u.first_name,u.last_name].filter(Boolean).join(' ').trim()||u.username||'أنت';}
-function winnerDisplayName(game){const status=String(game?.status||'');const botName=String(game?.bot_name||'').trim();if(botName&&(status==='won'||status==='lost'))return status==='lost'?botName:telegramDisplayName();const name=String(game?.winner_name||'').trim();return (!name||name==='أحد اللاعبين'||name==='أنت')?telegramDisplayName():name;}
+function winnerDisplayName(game){const status=String(game?.status||'');const botName=String(game?.bot_name||'').trim();if(botName&&(status==='won'||status==='lost'))return status==='lost'?botName:telegramDisplayName();const name=String(game?.winner_name||'').trim();return (!name||name==='أحد اللاعبين'||name==='أنت'||name.startsWith('اللاعب '))?'الفائز':name;}
 function openBot(startParam=''){if(!botUsername)return;const link='https://t.me/'+botUsername+(startParam?'?start='+encodeURIComponent(startParam):'');if(tg?.openTelegramLink)tg.openTelegramLink(link);else location.href=link;}
 function showTop(kind,title){
  home.hidden=true;page.hidden=false;pageTitle.textContent=title;pageContent.replaceChildren();
@@ -385,7 +385,7 @@ function renderMiniGameRps(state){
  stopMiniGameTimers();const shell=c4Shell();
  const choices={r:'حجر ✊',p:'ورقة ✋',s:'مقص ✌️'};
  shell.innerHTML='<div class="c4-heading"><h2>حجر ورقة مقص ✊</h2><p>اختاروا من يبدأ اللعبة</p></div><div class="c4-panel"><div class="c4-players"><div class="c4-player"><strong></strong><small>اللاعب الأول</small></div><span class="c4-vs">VS</span><div class="c4-player"><strong></strong><small>اللاعب الثاني</small></div></div><div class="c4-label" style="margin:18px 0 10px">اختر حركتك</div><div class="c4-levels" id="mg-rps"></div><div class="c4-result show" id="mg-rps-status"></div></div>';
- const players=shell.querySelectorAll('.c4-player');players[0].querySelector('strong').textContent=state.player1_name||'اللاعب الأول';players[1].querySelector('strong').textContent=state.player2_name||'اللاعب الثاني';
+ const players=shell.querySelectorAll('.c4-player');players[0].querySelector('strong').textContent=state.player1_name||'مستخدم';players[1].querySelector('strong').textContent=state.player2_name||'مستخدم';
  const controls=shell.querySelector('#mg-rps');
  [['r','✊ حجر'],['p','✋ ورقة'],['s','✌️ مقص']].forEach(([value,label])=>{const b=document.createElement('button');b.className='c4-level';b.textContent=label;b.disabled=!!state.my_choice;if(state.my_choice===value)b.classList.add('active');b.onclick=()=>submitMiniGameChoice(value);controls.appendChild(b);});
  shell.querySelector('#mg-rps-status').textContent=state.tie?'تعادل! اختاروا من جديد.':state.my_choice?'تم تسجيل اختيارك ('+choices[state.my_choice]+')، ننتظر اللاعب الآخر...':state.opponent_chosen?'اللاعب الآخر اختار، اختر حركتك.':'بانتظار اختيار اللاعبين...';
@@ -463,7 +463,7 @@ async function pollMiniGameChallenge(){miniGameChallengePollTimer=null;try{handl
 async function submitMiniGameChoice(choice){document.querySelectorAll('#mg-rps button').forEach(b=>b.disabled=true);try{handleMiniGameResult(await miniGameRequest('/api/minigames/challenge/choice',{challenge_id:miniGameChallengeIdFromStart,choice}));}catch(e){const el=document.getElementById('mg-rps-status');if(el)el.textContent=e.message;document.querySelectorAll('#mg-rps button').forEach(b=>b.disabled=false);}}
 function renderMiniGame(){
  clearOnlineEndOverlay();stopMiniGameTimers();const shell=c4Shell(),game=miniGame,state=game.state,humanTurn=!!game.your_turn;
- const p1=game.player1_name||'اللاعب الأول',p2=game.player2_name||'اللاعب الثاني';
+ const p1=game.player1_name||'مستخدم',p2=game.player2_name||'مستخدم';
  const playerLabel=(game.player_names||[p1,p2]).join(' • ');
  const heading=game.game_type==='dots'?'المربعات':'اختبر ذاكرتك';
  const cover=onlineMode&&onlineGameImages[game.game_type]?'<img class="online-game-cover" src="'+escapeLobbyText(onlineGameImages[game.game_type])+'" alt="صورة اللعبة">':'';
@@ -568,7 +568,7 @@ async function submitMiniGameAction(action){
 }
 function renderC4ChallengeRps(state){
  stopC4Timer();const shell=c4Shell();
- const names=[state.challenger_name||'اللاعب الأول',state.opponent_name||'اللاعب الثاني'];
+ const names=[state.challenger_name||'مستخدم',state.opponent_name||'مستخدم'];
  const choiceNames={r:'حجر ✊',p:'ورقة ✋',s:'مقص ✌️'};
  shell.innerHTML='<div class="c4-heading"><h2>حجر ورقة مقص ✊</h2><p>اختاروا من يبدأ مباراة كونكت 4</p></div><div class="c4-panel"><div class="c4-players"><div class="c4-player"><strong></strong><small>اللاعب الأول</small></div><span class="c4-vs">VS</span><div class="c4-player"><strong></strong><small>اللاعب الثاني</small></div></div><div class="c4-label" style="margin:18px 0 10px">اختر حركتك</div><div class="c4-levels" id="c4-challenge-rps"></div><div class="c4-result show" id="c4-rps-status"></div><div class="c4-hint">لا تظهر حركة أي لاعب للآخر حتى يختار الاثنان</div></div>';
  const players=shell.querySelectorAll('.c4-player');players[0].querySelector('strong').textContent=names[0];players[1].querySelector('strong').textContent=names[1];
