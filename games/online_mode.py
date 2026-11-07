@@ -455,7 +455,7 @@ async def online_lobby_api(user_id: int, action: str, raw_lobby_id: str, setting
                     slot = next((i for i in range(1, int(lobby["player_count"])) if ids[i] is None), -1)
                     if slot < 0:
                         raise ValueError("اكتمل عدد اللاعبين")
-                    name = str(settings.get("name") or f"لاعب {slot+1}")[:80]
+                    name = str(settings.get("name") or "مستخدم")[:80]
                     await conn.execute(
                         f"UPDATE online_game_lobbies SET player{slot+1}_id=$2,player{slot+1}_name=$3,updated_at=NOW() WHERE id=$1",
                         lobby_id, user_id, name,
@@ -567,7 +567,7 @@ async def online_lobby_api(user_id: int, action: str, raw_lobby_id: str, setting
         lobby["game_type"],
     )
     count = int(lobby["player_count"])
-    player_rows = [{"id": int(lobby["creator_id"]), "name": _safe_player_name(lobby["creator_name"], "صاحب الغرفة")}]
+    player_rows = [{"id": int(lobby["creator_id"]), "name": _safe_player_name(lobby["creator_name"], "مستخدم")}]
     for i in range(2, count + 1):
         pid = lobby[f"player{i}_id"]
         if pid is not None:
