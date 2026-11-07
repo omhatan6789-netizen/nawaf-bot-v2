@@ -57,13 +57,13 @@ async def mini_game_challenge_command(update: Update, context: ContextTypes.DEFA
         """INSERT INTO mini_game_challenges
            (id,game_type,chat_id,player1_id,player1_name,player2_id,player2_name,wager)
            VALUES($1,$2,$3,$4,$5,$6,$7,$8)""",
-        challenge_id, game_type, chat.id, user.id, user.first_name or "اللاعب الأول",
-        target.id, target.first_name or "اللاعب الثاني", wager,
+        challenge_id, game_type, chat.id, user.id, user.full_name or user.first_name or "مستخدم",
+        target.id, target.full_name or target.first_name or "مستخدم", wager,
     )
     body = (
         f"## تحدي ↢ {GAME_NAMES[game_type]}\n\n"
-        f"اللاعبين:\n• ↢ {user.first_name or 'اللاعب الأول'}\n"
-        f"• ↢ {target.first_name or 'اللاعب الثاني'}\n\n"
+        f"اللاعبين:\n• ↢ {user.full_name or user.first_name or 'مستخدم'}\n"
+        f"• ↢ {target.full_name or target.first_name or 'مستخدم'}\n\n"
         f"الرهان على كل لاعب: {wager:,} نقطة\n"
         f"جائزة الفوز: {wager * 2:,} نقطة🎖️\n\n"
         "(بانتظار قبول التحدي)"
