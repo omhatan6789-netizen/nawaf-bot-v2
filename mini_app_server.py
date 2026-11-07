@@ -308,12 +308,18 @@ def handle_connect4_post(handler):
             action = str(payload.get("action") or "")
             game_type = str(payload.get("game_type") or "")
             uid = int(user["id"])
-            profile = user.get("first_name") or user.get("username") or "لاعب"
+            profile = " ".join(x for x in (user.get("first_name"), user.get("last_name")) if x) or user.get("username") or "مستخدم"
             if game_type == "word":
                 if action == "create":
                     result = _run(extra.word_create(uid, profile, payload.get("mode","online"), payload.get("word_count",5), payload.get("win_target"), payload.get("attempts_limit",6), payload.get("word_length",5), payload.get("round_seconds",180)))
                 elif action == "join":
                     result = _run(extra.word_join(uid, profile, payload.get("game_id","")))
+                elif action == "configure":
+                    result = _run(extra.word_update_settings(
+                        uid, payload.get("game_id",""), payload.get("word_count",5),
+                        payload.get("win_target",3), payload.get("attempts_limit",6),
+                        payload.get("word_length",5), payload.get("round_seconds",180),
+                    ))
                 elif action == "start":
                     result = _run(extra.word_start(uid, payload.get("game_id","")))
                 elif action == "guess":
