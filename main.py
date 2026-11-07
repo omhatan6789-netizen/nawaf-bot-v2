@@ -6,7 +6,10 @@ from telegram.ext import Application, ApplicationBuilder, CallbackQueryHandler, 
 
 from config import load_settings
 from handlers.mini_app import mini_app_message, register_mini_app_menu
-from handlers.mini_app_panel import (\n    mini_app_panel_command, mini_app_panel_callback, mini_app_panel_message, mini_app_color_command,\n)\nfrom mini_app_server import configure_mini_app
+from handlers.mini_app_panel import (
+    mini_app_panel_command, mini_app_panel_callback, mini_app_panel_message, mini_app_color_command,
+)
+from mini_app_server import configure_mini_app
 from database.update_processor import ChatSerialUpdateProcessor
 from database import close_pool, init_pool
 from database.pool import get_pool
