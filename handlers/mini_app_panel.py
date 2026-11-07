@@ -23,7 +23,7 @@ PALETTE = [
 
 def _menu():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🎨 تعديل لون زر بالميني", callback_data="minipanel:color")],
+        [InlineKeyboardButton("🎨 تعديل لون زر بالميني", callback_data="minipanel:color")],\n        [InlineKeyboardButton("📋 الألوان المعدلة", callback_data="minipanel:colors")],
         [InlineKeyboardButton("🔘 إدارة الأزرار", callback_data="minipanel:buttons"),
          InlineKeyboardButton("🎧 إدارة الأصوات", callback_data="minipanel:sounds")],
         [InlineKeyboardButton("🖼️ صورة الميني آب", callback_data="minipanel:banner")],
@@ -39,6 +39,14 @@ def _palette():
     rows.append([InlineKeyboardButton("✏️ لون مخصص HEX", callback_data="minipanel:custom")])
     rows.append([InlineKeyboardButton("↩️ إلغاء", callback_data="minipanel:menu")])
     return InlineKeyboardMarkup(rows)
+
+async def mini_app_color_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg, user, chat = update.effective_message, update.effective_user, update.effective_chat
+    if not msg or not user or not chat or chat.type != "private" or user.id != OWNER_ID:
+        return
+    SESSIONS[user.id] = {"action": "color", "step": "button"}
+    await msg.reply_text("ارسل اسم الزر كما يظهر لك داخل الميني آب. تقدر تختار أي زر، حتى زر الرجوع أو أزرار الألعاب.")
+    raise ApplicationHandlerStop
 
 async def mini_app_panel_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg, user, chat = update.effective_message, update.effective_user, update.effective_chat
