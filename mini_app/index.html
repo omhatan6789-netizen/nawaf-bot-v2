@@ -162,7 +162,7 @@ const miniButtonColorObserver=new MutationObserver(()=>applyMiniAppButtonColors(
 miniButtonColorObserver.observe(document.body,{childList:true,subtree:true,characterData:true});
 function showHome(){stopC4Timer();stopMiniGameTimers();stopExtraGame();document.body.classList.remove('c4-active');page.hidden=true;home.hidden=false;}
 function telegramDisplayName(){const u=tg?.initDataUnsafe?.user||{};return [u.first_name,u.last_name].filter(Boolean).join(' ').trim()||u.username||'أنت';}
-function winnerDisplayName(game){const status=String(game?.status||'');const botName=String(game?.bot_name||'').trim();if(botName&&(status==='won'||status==='lost'))return status==='lost'?botName:telegramDisplayName();const name=String(game?.winner_name||'').trim();return (!name||name==='أحد اللاعبين'||name==='أنت'||name.startsWith('اللاعب '))?'الفائز':name;}
+function winnerDisplayName(game){const status=String(game?.status||'');const botName=String(game?.bot_name||'').trim();if(botName&&(status==='won'||status==='lost'))return status==='lost'?botName:telegramDisplayName();const name=String(game?.winner_name||'').trim();return (!name||name==='أحد اللاعبين'||name==='أنت'||(name.startsWith('اللاعب ')||name.startsWith('لاعب ')))?'الفائز':name;}
 function openBot(startParam=''){if(!botUsername)return;const link='https://t.me/'+botUsername+(startParam?'?start='+encodeURIComponent(startParam):'');if(tg?.openTelegramLink)tg.openTelegramLink(link);else location.href=link;}
 function showTop(kind,title){
  home.hidden=true;page.hidden=false;pageTitle.textContent=title;pageContent.replaceChildren();
