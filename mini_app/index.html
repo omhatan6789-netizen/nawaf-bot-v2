@@ -312,7 +312,7 @@ function renderOnlineLobby(state){
  const join=shell.querySelector('#online-join'),start=shell.querySelector('#online-start'),leave=shell.querySelector('#online-leave');
  join.disabled=state.status!=='pending'||state.is_joined||joined.length>=state.player_count;
  join.textContent=state.is_joined?'أنت منضم بالفعل ✓':'انضمام إلى الغرفة 👥';
- join.onclick=()=>onlineLobbyRequest('join',{name:tg?.initDataUnsafe?.user?.first_name||'لاعب'}).then(loadOnlineLobby).catch(showOnlineLobbyError);
+ join.onclick=()=>onlineLobbyRequest('join',{name:telegramDisplayName()}).then(loadOnlineLobby).catch(showOnlineLobbyError);
  start.hidden=!isCreator||state.status!=='pending';
  start.disabled=joined.length<state.player_count;
  start.onclick=()=>onlineLobbyRequest('start').then(result=>{onlineLobbyState=result;loadOnlineLobby();}).catch(showOnlineLobbyError);
