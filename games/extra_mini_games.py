@@ -65,6 +65,7 @@ def _public_word(row, user_id):
         "current_index": idx, "total": row["word_limit"],
         "players": [{"id": p["id"], "name": p["name"], "score": p.get("score", 0)} for p in players],
         "my_score": me.get("score", 0) if me else 0, "is_player": bool(me),
+        "is_owner": int(row["owner_id"]) == int(user_id),
         "current_word_length": int(row["word_length"]) if row["status"] == "playing" else None,
         "round_deadline": int(row["round_deadline"].timestamp() * 1000) if row["round_deadline"] else None,
         "round_until": int(row["round_until"].timestamp() * 1000) if row["round_until"] else None,
@@ -110,6 +111,48 @@ async def word_create(user_id, name, mode="online", word_count=5, win_target=Non
         word_count, target, json.dumps(words, ensure_ascii=False),
         json.dumps(players, ensure_ascii=False), attempts_limit, word_length, round_seconds
     )
+    return _public_word(row, user_id)
+
+
+async def word_update_settings(user_id, raw_id, word_count=5, win_target=3,
+                               attempts_limit=6, word_length=5, round_seconds=180):
+    try:
+        gid = uuid.UUID(hex=str(raw_id).replace("-", ""))
+    except Exception:
+        raise ValueError("رابط الغرفة غير صالح")
+    word_count = int(word_count)
+    win_target = int(win_target)
+    attempts_limit = int(attempts_limit)
+    word_length = int(word_length)
+    round_seconds = int(round_seconds)
+    if not 1 <= word_count <= 15:
+        raise ValueError("عدد الكلمات يجب أن يكون من 1 إلى 15")
+    if word_length not in WORDS_BY_LENGTH:
+        raise ValueError("اختر كلمات من 4 أو 5 أحرف")
+    if not 1 <= attempts_limit <= 12:
+        raise ValueError("عدد المحاولات يجب أن يكون من 1 إلى 12")
+    if not 15 <= round_seconds <= 3600:
+        raise ValueError("مدة الجولة يجب أن تكون بين 15 و3600 ثانية")
+    if not 1 <= win_target <= word_count:
+        raise ValueError("عدد الكلمات الصحيحة للفوز يجب ألا يتجاوز عدد كلمات اللعبة")
+    pool = get_pool()
+    async with pool.acquire() as c:
+        async with c.transaction():
+            row = await c.fetchrow("SELECT * FROM word_games WHERE id=$1 FOR UPDATE", gid)
+            if not row:
+                raise ValueError("الغرفة غير موجودة")
+            if int(row["owner_id"]) != int(user_id):
+                raise ValueError("تعديل الإعدادات لصاحب الغرفة فقط")
+            if row["status"] != "waiting":
+                raise ValueError("لا يمكن تعديل الإعدادات بعد بدء اللعبة")
+            words = _new_words(word_count, word_length)
+            row = await c.fetchrow(
+                """UPDATE word_games SET word_limit=$2,win_target=$3,words=$4::jsonb,
+                   attempts_limit=$5,word_length=$6,round_seconds=$7,updated_at=NOW()
+                   WHERE id=$1 RETURNING *""",
+                gid, word_count, win_target, json.dumps(words, ensure_ascii=False),
+                attempts_limit, word_length, round_seconds,
+            )
     return _public_word(row, user_id)
 
 async def word_join(user_id, name, raw_id):
