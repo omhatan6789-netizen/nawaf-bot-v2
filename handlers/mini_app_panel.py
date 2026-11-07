@@ -35,7 +35,7 @@ def _back():
 
 def _normalize_button_text(value: str) -> str:
     value = " ".join(str(value or "").split())
-    return re.sub(r"^[^\\w\\u0600-\\u06FF]+", "", value).strip()
+    return re.sub(r"^\W+", "", value).strip()
 
 def _palette():
     rows = []
