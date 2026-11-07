@@ -1596,9 +1596,9 @@ async def finish_game(context, game):
     try:
         from database.game_stats import record_game_results
         winner_id_set = set(winner_ids)
-        winner_rows = [{"id": int(pid), "name": user.get("name", "لاعب")}
+        winner_rows = [{"id": int(pid), "name": user.first_name or "لاعب"}
                        for pid, user in game["players"].items() if int(pid) in winner_id_set]
-        loser_rows = [{"id": int(pid), "name": user.get("name", "لاعب")}
+        loser_rows = [{"id": int(pid), "name": user.first_name or "لاعب"}
                       for pid, user in game["players"].items() if int(pid) not in winner_id_set]
         await record_game_results(
             f"liar:{game.get('game_id') or chat_id}:{game.get('started_at') or id(game)}",
