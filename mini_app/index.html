@@ -142,6 +142,14 @@ function winnerDisplayName(game){const status=String(game?.status||'');const bot
 function openBot(startParam=''){if(!botUsername)return;const link='https://t.me/'+botUsername+(startParam?'?start='+encodeURIComponent(startParam):'');if(tg?.openTelegramLink)tg.openTelegramLink(link);else location.href=link;}
 function showTop(kind,title){
  home.hidden=true;page.hidden=false;pageTitle.textContent=title;pageContent.replaceChildren();
+ if(kind==='games'){
+  const chooser=document.createElement('div');chooser.className='c4-panel';chooser.style.display='grid';chooser.style.gap='10px';
+  const wins=document.createElement('button');wins.className='c4-start';wins.textContent='🏆 الأكثر فوزًا';
+  wins.onclick=()=>showTop('game_wins','🏆 توب الأكثر فوزًا');
+  const losses=document.createElement('button');losses.className='c4-secondary';losses.textContent='💀 الأكثر خسارة';
+  losses.onclick=()=>showTop('game_losses','💀 توب الأكثر خسارة');
+  chooser.append(wins,losses);pageContent.appendChild(chooser);return;
+ }
  const loading=document.createElement('div');loading.className='empty';loading.textContent='جاري تحميل الترتيب...';pageContent.appendChild(loading);
  fetch('/api/mini-app?top='+encodeURIComponent(kind)).then(async r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}).then(data=>{
   pageContent.replaceChildren();
@@ -875,6 +883,7 @@ document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>{
   }
   return;
  }
+ if(a==='game-stats'){showTop('games','🏆 توب الألعاب');return;}
  const names={points:'توب النقاط',active:'توب المتفاعلين العام',robbers:'توب الحرامية'};
  showTop(a,names[a]||'التوب');
 });
