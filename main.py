@@ -406,7 +406,21 @@ def build_application() -> Application:
         filters.ChatType.PRIVATE & (filters.TEXT | filters.PHOTO | filters.AUDIO | filters.VOICE | filters.VIDEO | filters.Document.ALL) & ~filters.COMMAND,
         mini_app_message,
     ), group=-31)
-    application.add_handler(MessageHandler(\n        filters.ChatType.PRIVATE & filters.Regex(r"^(?:اوامر الميني|أوامر الميني|لوحة الميني)$"),\n        mini_app_panel_command,\n    ), group=-30)\n    application.add_handler(MessageHandler(\n        filters.ChatType.PRIVATE & filters.Regex(r"^تعديل لون زر الميني$"),\n        mini_app_color_command,\n    ), group=-30)\n    application.add_handler(CallbackQueryHandler(\n        mini_app_panel_callback, pattern=r"^minipanel:"\n    ))\n    application.add_handler(MessageHandler(\n        filters.ChatType.PRIVATE & ~filters.COMMAND, mini_app_panel_message,\n    ), group=-30)\n    application.add_handler(CommandHandler("start", start_command))
+    application.add_handler(MessageHandler(
+        filters.ChatType.PRIVATE & filters.Regex(r"^(?:اوامر الميني|أوامر الميني|لوحة الميني)$"),
+        mini_app_panel_command,
+    ), group=-30)
+    application.add_handler(MessageHandler(
+        filters.ChatType.PRIVATE & filters.Regex(r"^تعديل لون زر الميني$"),
+        mini_app_color_command,
+    ), group=-30)
+    application.add_handler(CallbackQueryHandler(
+        mini_app_panel_callback, pattern=r"^minipanel:"
+    ))
+    application.add_handler(MessageHandler(
+        filters.ChatType.PRIVATE & ~filters.COMMAND, mini_app_panel_message,
+    ), group=-30)
+    application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("health", health_command))
     application.add_handler(CommandHandler("send", send_command))
     application.add_handler(MessageHandler(
