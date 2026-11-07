@@ -138,7 +138,7 @@ const page=document.getElementById('page');
 const pageTitle=document.getElementById('page-title');
 const pageContent=document.getElementById('page-content');
 let miniAppColorMap={};
-function miniButtonText(el){return String(el.innerText||el.textContent||'').replace(/\\s+/g,' ').trim();}
+function miniButtonText(el){const label=el.querySelector?.('.label');return String(label?.innerText||el.innerText||el.textContent||'').replace(/^[^\\p{L}\\p{N}]+/u,'').replace(/\\s+/g,' ').trim();}
 function miniButtonTextColor(hex){
  const h=String(hex||'').replace('#','');if(!/^[0-9a-fA-F]{6}$/.test(h))return '#ffffff';
  const n=parseInt(h,16),r=(n>>16)&255,g=(n>>8)&255,b=n&255;
