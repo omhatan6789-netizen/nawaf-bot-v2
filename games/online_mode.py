@@ -22,7 +22,7 @@ GAME_INFO = {
 def _safe_player_name(value, fallback: str) -> str:
     if isinstance(value, str):
         name = value.strip()
-        if name and "InlineKeyboardButton" not in name:
+        if name and "InlineKeyboardButton" not in name and not name.startswith("اللاعب "):
             return name
     return fallback
 
@@ -30,7 +30,7 @@ def _safe_player_name(value, fallback: str) -> str:
 def _lobby_text(game_type: str, count: int, mode: str, joined_players=None) -> str:
     joined_players = joined_players or {}
     lines = [
-        f"• {joined_players.get(i, f'بانتظار اللاعب {i + 1}')}"
+        f"• {joined_players.get(i, 'بانتظار لاعب')}"
         for i in range(count)
     ]
     mode_label = "فريقين (2 ضد 2)" if count == 4 and mode == "teams" else "كل لاعب لحاله"
@@ -303,20 +303,20 @@ async def online_lobby_callback(update: Update, context: ContextTypes.DEFAULT_TY
                 id_col, name_col = f"player{slot+1}_id", f"player{slot+1}_name"
                 await conn.execute(
                     f"UPDATE online_game_lobbies SET {id_col}=$2,{name_col}=$3,chat_id=COALESCE($4,chat_id),updated_at=NOW() WHERE id=$1",
-                    lobby_id, user.id, user.full_name or user.first_name or f"اللاعب {slot+1}", chat_id,
+                    lobby_id, user.id, user.full_name or user.username or "مستخدم", chat_id,
                 )
 
             lobby = await conn.fetchrow(
                 "SELECT * FROM online_game_lobbies WHERE id=$1 FOR UPDATE",
                 lobby_id,
             )
-            player1_name = _safe_player_name(lobby["creator_name"], "اللاعب الأول")
-            player2_name = _safe_player_name(lobby["player2_name"], "اللاعب الثاني")
+            player1_name = _safe_player_name(lobby["creator_name"], "مستخدم")
+            player2_name = _safe_player_name(lobby["player2_name"], "مستخدم")
             players = [
-                (lobby["creator_id"], _safe_player_name(lobby["creator_name"], "اللاعب الأول"), bool(lobby["creator_joined"])),
+                (lobby["creator_id"], _safe_player_name(lobby["creator_name"], "مستخدم"), bool(lobby["creator_joined"])),
                 (lobby["player2_id"], _safe_player_name(lobby["player2_name"], "اللاعب الثاني"), bool(lobby["player2_id"])),
-                (lobby["player3_id"], _safe_player_name(lobby["player3_name"], "اللاعب الثالث"), bool(lobby["player3_id"])),
-                (lobby["player4_id"], _safe_player_name(lobby["player4_name"], "اللاعب الرابع"), bool(lobby["player4_id"])),
+                (lobby["player3_id"], _safe_player_name(lobby["player3_name"], "مستخدم"), bool(lobby["player3_id"])),
+                (lobby["player4_id"], _safe_player_name(lobby["player4_name"], "مستخدم"), bool(lobby["player4_id"])),
             ][:int(lobby["player_count"])]
             joined_count = sum(1 for pid, name, joined in players if pid is not None and joined)
             if joined_count < int(lobby["player_count"]):
@@ -358,7 +358,7 @@ async def online_lobby_callback(update: Update, context: ContextTypes.DEFAULT_TY
                         count = int(lobby["player_count"])
                         size = 4 if count == 2 else 6
                         ids_for_game = [int(x[0]) for x in players]
-                        names_for_game = [x[1] or f"اللاعب {i+1}" for i, x in enumerate(players)]
+                        names_for_game = [x[1] or "مستخدم" for i, x in enumerate(players)]
                         state = {
                             "h": [[0 for _ in range(size)] for _ in range(size + 1)],
                             "v": [[0 for _ in range(size + 1)] for _ in range(size)],
@@ -506,7 +506,7 @@ async def online_lobby_api(user_id: int, action: str, raw_lobby_id: str, setting
                     raise ValueError("لا يمكن البدء قبل اكتمال عدد اللاعبين")
                 names = [
                     _safe_player_name(lobby["creator_name"], "اللاعب الأول"),
-                    *[_safe_player_name(lobby[f"player{i}_name"], f"اللاعب {i}") for i in range(2, count+1)]
+                    *[_safe_player_name(lobby[f"player{i}_name"], "مستخدم") for i in range(2, count+1)]
                 ]
                 game_id = uuid.uuid4()
                 if lobby["game_type"] == "connect":
