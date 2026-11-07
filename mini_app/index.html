@@ -877,27 +877,34 @@ async function advanceWord(){
  catch(e){showExtraError(e);}
  finally{extraAdvancing=false;}
 }
-function wordStateKey(g){
+function wordRoundKey(g){
  return [g?.status,g?.current_index,g?.round_winner,g?.round_until,g?.round_deadline,
-  g?.attempts_left,(g?.my_guesses||[]).map(x=>x.guess+':'+(x.feedback||[]).join(',')).join(';'),
-  (g?.players||[]).map(p=>p.id+':'+p.name+':'+p.score+':'+(p.attempts_used||0)+':'+(p.attempts_left??'')).join(',')].join('|');
+  g?.attempts_left,(g?.my_guesses||[]).map(x=>x.guess+':'+(x.feedback||[]).join(',')).join(';')].join('|');
+}
+function wordPlayerStatsKey(g){
+ return (g?.players||[]).map(p=>p.id+':'+p.name+':'+p.score+':'+(p.attempts_used||0)+':'+(p.attempts_left??'')).join(',');
+}
+function updateWordScoreboard(g){
+ const scores=document.querySelector('#c4-shell #word-scores');
+ if(!scores)return;
+ scores.innerHTML=(g.players||[]).map(p=>'<span>'+escapeLobbyText(p.name)+': '+p.score+' كلمة'+(g.mode==='online'?' · محاولات '+(p.attempts_used||0)+'/'+g.attempts_limit+' · باقي '+(p.attempts_left??g.attempts_limit):'')+'</span>').join('');
 }
 function scheduleExtraPoll(){
  if(extraPoll)clearTimeout(extraPoll);
  extraPoll=setTimeout(async()=>{
   try{
    if(extraGameType==='word'&&extraGame){
-    const previous=extraGame,before=wordStateKey(previous),next=await extraGameRequest('state','word'),changed=wordStateKey(next)!==before;
+    const previous=extraGame,roundBefore=wordRoundKey(previous),statsBefore=wordPlayerStatsKey(previous),next=await extraGameRequest('state','word');
+    const roundChanged=wordRoundKey(next)!==roundBefore,statsChanged=wordPlayerStatsKey(next)!==statsBefore;
     const previousIds=new Set((previous.players||[]).map(p=>String(p.id)));
     const joined=(next.players||[]).filter(p=>!previousIds.has(String(p.id)));
     joined.forEach(p=>showWordJoinToast(p.name));
     extraGame=next;
-    if(next.status==='finished'){if(changed)renderWordGame();extraPoll=null;return;}
+    if(next.status==='finished'){if(roundChanged||statsChanged)renderWordGame();extraPoll=null;return;}
     if(next.round_until&&Date.now()>=next.round_until&&next.is_player){await advanceWord();return;}
-    if(changed){
-     if(next.status==='waiting')renderWordLobby();
-     else renderWordGame();
-    }
+    if(next.status==='waiting'&&joined.length){renderWordLobby();}
+    else if(roundChanged){renderWordGame();}
+    else if(statsChanged){updateWordScoreboard(next);}
    }
   }catch(e){}
   if(extraGame&&extraGame.status!=='finished')scheduleExtraPoll();
