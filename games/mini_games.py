@@ -149,6 +149,13 @@ def _decode_state(value):
     return json.loads(value) if isinstance(value, str) else value
 
 
+def _safe_display_name(value):
+    name = str(value or "").strip()
+    if not name or name in ("أحد اللاعبين", "أنت") or name.startswith("اللاعب "):
+        return "مستخدم"
+    return name
+
+
 def _public_state(row, user_id: int):
     game_type = row["game_type"]
     state = _decode_state(row["game_state"]) or {}
@@ -162,6 +169,7 @@ def _public_state(row, user_id: int):
         *([row["player3_name"]] if row["player3_id"] is not None else []),
         *([row["player4_name"]] if row["player4_id"] is not None else []),
     ]
+    names = [_safe_display_name(name) for name in names]
     winner = row["winner_id"]
     status = row["status"]
     if status == "won":
@@ -298,7 +306,7 @@ async def _finish_game(conn, row, winner_id):
             winning_indexes = (0, 2) if winning_team == 0 else (1, 3)
         else:
             winning_indexes = tuple(i for i, pid in enumerate(ids) if pid == int(winner_id))
-        winners = [{"id": ids[i], "name": names[i] if i < len(names) else "لاعب"} for i in winning_indexes]
+        winners = [{"id": ids[i], "name": names[i] if i < len(names) else "مستخدم"} for i in winning_indexes]
         losers = [{"id": pid, "name": names[i] if i < len(names) else "لاعب"}
                   for i, pid in enumerate(ids) if i not in winning_indexes]
         from database.game_stats import record_game_results
