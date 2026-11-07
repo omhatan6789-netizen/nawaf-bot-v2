@@ -288,6 +288,9 @@ async def start_game(message, game_name, context):
         "question_id": question["id"],
         "game": matched_game,
         "answers": answers,
+        "normalized_answers": {
+            normalize_text(answer) for answer in answers if answer
+        },
         "started_at": started_at,
         "expires_at": started_at + QUESTION_TIMEOUT,
         "winner": None,
@@ -357,6 +360,11 @@ async def check_answer(message):
     if not text:
         return False
 
+    # أغلب رسائل القروب لا تكون إجابات؛ تجاوز الفحص بالكامل إذا ما فيه
+    # أي لعبة نشطة في هذا القروب.
+    if not any(key[0] == chat_id for key in active_games):
+        return False
+
     # البحث عن اللعبة التي تطابق إجابتها الرسالة.
     # إذا تطابقت الإجابة مع أكثر من لعبة، نعتمد السؤال الأحدث.
     matching_games = []
@@ -371,11 +379,13 @@ async def check_answer(message):
         if game.get("winner"):
             continue
 
-        answers = [
-            normalize_text(answer)
-            for answer in game["answers"]
-            if answer
-        ]
+        answers = game.get("normalized_answers")
+        if answers is None:
+            answers = {
+                normalize_text(answer)
+                for answer in game["answers"]
+                if answer
+            }
 
         if text in answers:
             matching_games.append((key, game))
