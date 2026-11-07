@@ -66,14 +66,14 @@ async def connect4_challenge_command(update: Update, context: ContextTypes.DEFAU
         """INSERT INTO connect4_challenges
            (id,chat_id,challenger_id,challenger_name,opponent_id,opponent_name,wager)
            VALUES($1,$2,$3,$4,$5,$6,$7)""",
-        challenge_id, chat.id, user.id, user.first_name or "اللاعب الأول",
-        target.id, target.first_name or "اللاعب الثاني", wager,
+        challenge_id, chat.id, user.id, user.full_name or user.first_name or "مستخدم",
+        target.id, target.full_name or target.first_name or "مستخدم", wager,
     )
     text = (
         "## اللعبة شغالة ↢ كونكت 4\n\n"
         "اللاعبين:\n"
-        f"• ↢ {user.first_name or 'اللاعب الأول'}\n"
-        f"• ↢ {target.first_name or 'اللاعب الثاني'}\n\n"
+        f"• ↢ {user.full_name or user.first_name or 'مستخدم'}\n"
+        f"• ↢ {target.full_name or target.first_name or 'مستخدم'}\n\n"
         f"الرهان على كل لاعب: {wager:,} نقطة\n"
         f"جائزة الفوز: {wager * 2:,} نقطة🎖️\n\n"
         "(بانتظار قبول التحدي)"
