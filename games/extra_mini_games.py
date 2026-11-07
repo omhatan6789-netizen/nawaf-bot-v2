@@ -272,4 +272,23 @@ async def word_next(user_id, raw_id):
                 updated_at=NOW(),finished_at=CASE WHEN $3='finished' THEN NOW() ELSE finished_at END
                 WHERE id=$1 RETURNING *""", gid, nxt, status
             )
+            if status == "finished":
+                players = _decode(row["players"])
+                if row["mode"] == "training":
+                    player = players[0] if players else None
+                    if player:
+                        won = int(player.get("score", 0)) >= int(row["win_target"])
+                        winners = [player] if won else []
+                        losers = [player] if not won else []
+                        from database.game_stats import record_game_results
+                        await record_game_results(f"mini-word:{gid}", "word_guess", winners, losers, conn=c)
+                elif players:
+                    high = max(int(p.get("score", 0)) for p in players)
+                    leaders = [p for p in players if int(p.get("score", 0)) == high]
+                    if len(leaders) == 1:
+                        winner_id = int(leaders[0]["id"])
+                        winners = [p for p in players if int(p["id"]) == winner_id]
+                        losers = [p for p in players if int(p["id"]) != winner_id]
+                        from database.game_stats import record_game_results
+                        await record_game_results(f"mini-word:{gid}", "word_guess", winners, losers, conn=c)
     return _public_word(row, user_id)
