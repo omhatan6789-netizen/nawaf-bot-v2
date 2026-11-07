@@ -127,7 +127,7 @@ async def top_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     if data == "topmenu:games":
         keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton("🏆 الأكثر فوزًا", callback_data="topmenu:game_wins")],
-            [InlineKeyboardButton("💀 الأكثر خسارة", callback_data="topmenu:game_losses")],
+            [InlineKeyboardButton("💀 الأكثر خسارة", callback_data="topmenu:game_losses", style="danger")],
             [InlineKeyboardButton("↩️ رجوع لقائمة التوب", callback_data="topmenu:back")],
         ])
         await query.edit_message_text("🎮 <b>إحصائيات جميع الألعاب</b>\nاختر الترتيب:", parse_mode=ParseMode.HTML, reply_markup=keyboard)
