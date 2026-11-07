@@ -322,6 +322,8 @@ def handle_connect4_post(handler):
                     ))
                 elif action == "start":
                     result = _run(extra.word_start(uid, payload.get("game_id","")))
+                elif action == "leave":
+                    result = _run(extra.word_leave(uid, payload.get("game_id","")))
                 elif action == "guess":
                     result = _run(extra.word_guess(uid, payload.get("game_id",""), payload.get("guess","")))
                 elif action == "next":
