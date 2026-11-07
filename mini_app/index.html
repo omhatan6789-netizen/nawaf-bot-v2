@@ -704,7 +704,7 @@ async function pollConnect4State(){
 let extraStartParam=tg?.initDataUnsafe?.start_param||'';
 let extraGameId=extraStartParam.startsWith('word_')?extraStartParam.slice(5):'';
 let extraGameType=extraStartParam.startsWith('word_')?'word':'';
-let extraGame=null,extraPoll=null,extraBusy=false,extraStartedAt=0,extraElapsedTimer=null,extraLastRevealKey='',extraAdvancing=false,extraKnownPlayerIds=null,wordJoinToastTimer=null;
+let extraGame=null,extraPoll=null,extraBusy=false,extraStartedAt=0,extraElapsedTimer=null,extraLastRevealKey='',extraAdvancing=false,extraKnownPlayerIds=null,wordJoinToastTimer=null,extraLastWithdrawalKey='';
 async function extraGameRequest(action,game_type,extra={}){
  const initData=tg?.initData||'';
  if(!initData)throw new Error('افتح اللعبة من داخل تيليجرام');
@@ -748,6 +748,14 @@ function showWordJoinToast(name){
  document.body.appendChild(toast);
  wordJoinToastTimer=setTimeout(()=>{toast.remove();wordJoinToastTimer=null;},2500);
 }
+function showWordWithdrawToast(name){
+ const old=document.querySelector('.word-join-toast');if(old)old.remove();
+ if(wordJoinToastTimer)clearTimeout(wordJoinToastTimer);
+ const toast=document.createElement('div');toast.className='word-join-toast';
+ toast.textContent='انسحب اللاعب ~ '+(name||'مستخدم');
+ document.body.appendChild(toast);
+ wordJoinToastTimer=setTimeout(()=>{toast.remove();wordJoinToastTimer=null;},2500);
+}
 function renderWordLobby(){
  const g=extraGame,shell=c4Shell(),players=g.players||[],owner=!!g.is_owner;
  if(extraKnownPlayerIds===null)extraKnownPlayerIds=new Set(players.map(p=>String(p.id)));
@@ -774,10 +782,18 @@ function formatWordTime(seconds){
  const n=Math.max(0,Number(seconds)||0);
  return n>=60?Math.floor(n/60)+' دقيقة'+(n%60?' و'+(n%60)+' ثانية':''):n+' ثانية';
 }
-function confirmWordExit(){
- const leave=()=>{stopExtraGame();if(tg?.close)tg.close();else showGames();};
- if(tg?.showConfirm){tg.showConfirm('هل أنت متأكد من الانسحاب والخروج من اللعبة؟',ok=>{if(ok)leave();});}
- else if(window.confirm('هل أنت متأكد من الانسحاب والخروج من اللعبة؟'))leave();
+async function confirmWordExit(){
+ const leave=async()=>{
+  const button=document.getElementById('word-exit');if(button)button.disabled=true;
+  try{
+   const state=await extraGameRequest('leave','word');
+   extraGame=state;
+   if(state.status==='finished'){renderWordGame();return;}
+   stopExtraGame();if(tg?.close)tg.close();else showGames();
+  }catch(e){showExtraError(e);if(button)button.disabled=false;}
+ };
+ if(tg?.showConfirm){tg.showConfirm('هل أنت متأكد من الانسحاب من اللعبة؟',ok=>{if(ok)leave();});}
+ else if(window.confirm('هل أنت متأكد من الانسحاب من اللعبة؟'))leave();
 }
 function renderWordGame(){
  if(extraElapsedTimer)clearInterval(extraElapsedTimer);
@@ -897,8 +913,17 @@ function scheduleExtraPoll(){
     const previous=extraGame,roundBefore=wordRoundKey(previous),statsBefore=wordPlayerStatsKey(previous),next=await extraGameRequest('state','word');
     const roundChanged=wordRoundKey(next)!==roundBefore,statsChanged=wordPlayerStatsKey(next)!==statsBefore;
     const previousIds=new Set((previous.players||[]).map(p=>String(p.id)));
+    const nextIds=new Set((next.players||[]).map(p=>String(p.id)));
     const joined=(next.players||[]).filter(p=>!previousIds.has(String(p.id)));
+    const left=(previous.players||[]).filter(p=>!nextIds.has(String(p.id)));
     joined.forEach(p=>showWordJoinToast(p.name));
+    left.forEach(p=>showWordWithdrawToast(p.name));
+    const withdrawal=next.last_withdrawal;
+    if(withdrawal&&String(withdrawal.id)!==String(tg?.initDataUnsafe?.user?.id||'')&&
+       !left.some(p=>String(p.id)===String(withdrawal.id))&&
+       extraLastWithdrawalKey!==String(withdrawal.at)){
+      extraLastWithdrawalKey=String(withdrawal.at);showWordWithdrawToast(withdrawal.name);
+    }
     extraGame=next;
     if(next.status==='finished'){if(roundChanged||statsChanged)renderWordGame();extraPoll=null;return;}
     if(next.round_until&&Date.now()>=next.round_until&&next.is_player){await advanceWord();return;}
