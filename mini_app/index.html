@@ -116,6 +116,19 @@ body.c4-active #page{padding-left:10px;padding-right:10px}
 .music-widget{position:fixed;z-index:1000;top:12px;left:12px;direction:rtl}.music-toggle{width:43px;height:43px;border:1px solid #ffffff55;border-radius:50%;background:#16090dcc;color:#fff;font-size:19px;box-shadow:0 4px 18px #0008}.music-panel{display:none;position:absolute;top:51px;left:0;width:min(260px,calc(100vw - 28px));padding:13px;border:1px solid #ffffff35;border-radius:17px;background:#18090df2;box-shadow:0 12px 32px #0009;backdrop-filter:blur(14px)}.music-panel.open{display:block}.music-title{font-size:13px;font-weight:900;margin-bottom:9px}.music-choice{display:block;width:100%;padding:10px;margin:6px 0;border:1px solid #ffffff24;border-radius:11px;background:#ffffff10;color:#fff;text-align:right;font:700 13px inherit}.music-choice.active{border-color:#ff9ba3;background:#8f172455}.music-row{display:flex;align-items:center;gap:9px;margin-top:10px;font-size:12px;color:#ffffffc9}.music-row button{border:1px solid #ffffff35;border-radius:10px;background:#ffffff15;color:#fff;padding:8px 11px;font:700 12px inherit}.music-row input{width:100%;accent-color:#ff7d87}.music-search{display:flex;gap:6px;margin:8px 0}.music-search input{min-width:0;flex:1;border:1px solid #ffffff30;border-radius:9px;background:#ffffff12;color:#fff;padding:9px;font:12px inherit;outline:none}.music-search button{border:1px solid #ffffff35;border-radius:9px;background:#8f172455;color:#fff;padding:8px 10px;font:700 12px inherit}.music-results{max-height:190px;overflow:auto}.music-results .music-choice{font-size:12px}
 .online-end-overlay{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:22px;background:#080307ed;backdrop-filter:blur(16px)}.online-end-card{width:min(100%,440px);padding:24px 18px;border:1px solid #ffffff35;border-radius:26px;background:linear-gradient(145deg,#351018,#10080d);box-shadow:0 18px 70px #000b;text-align:center}.online-end-card h2{font-size:25px;margin:0 0 9px}.online-end-card p{color:#ffffffb8;margin:0 0 22px}.online-end-actions{display:grid;gap:13px}.online-end-actions button{width:100%;min-height:68px;border:0;border-radius:18px;font-size:20px;font-weight:950;color:#fff;background:linear-gradient(135deg,#f04455,#9e1428);box-shadow:0 8px 24px #0006}.online-end-actions button:last-child{background:linear-gradient(135deg,#45404a,#211d25)}.online-end-actions button:disabled{opacity:.6}
 .word-join-toast{position:fixed;z-index:100000;top:calc(env(safe-area-inset-top,0px) + 12px);left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100vw - 28px);padding:12px 20px;border:1px solid #ffffff28;border-radius:13px;background:#080808;color:#fff;text-align:center;font-size:14px;font-weight:850;box-shadow:0 8px 28px #0009;pointer-events:none;animation:word-toast-in .18s ease-out}@keyframes word-toast-in{from{opacity:0;transform:translate(-50%,-8px)}to{opacity:1;transform:translate(-50%,0)}}
+
+/* Air hockey */
+.ah-shell{width:100%;max-width:520px;margin:0 auto;padding:8px 0 18px}
+.ah-panel{background:linear-gradient(155deg,#172d3b,#08141e);border:1px solid #ffffff22;border-radius:22px;padding:14px;box-shadow:0 14px 34px #0005}
+.ah-score{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;text-align:center;margin:4px 0 12px}
+.ah-player{min-width:0}.ah-player strong{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ah-player small{display:block;color:#ffffff88;font-size:11px;margin-top:3px}
+.ah-points{font-size:30px;font-weight:950;letter-spacing:2px;color:#fff}.ah-vs{font-size:11px;color:#ffffff66;font-weight:900}
+#ah-canvas{display:block;width:min(100%,430px);height:auto;max-height:68dvh;aspect-ratio:600/960;margin:0 auto;border-radius:19px;border:2px solid #ffffff35;touch-action:none;background:#0b2635;box-shadow:0 8px 24px #0006}
+.ah-status{text-align:center;min-height:30px;padding:9px 4px 2px;color:#ffffffc9;font-size:13px;font-weight:750}
+.ah-actions{display:grid;gap:9px;margin-top:10px}.ah-actions button{width:100%;min-height:48px;border:0;border-radius:14px;font:inherit;font-weight:850;cursor:pointer}
+.ah-primary{background:linear-gradient(100deg,#13a8b4,#087b8e);color:white}.ah-secondary{background:#ffffff12;color:#fff;border:1px solid #ffffff28!important}
+.ah-wait{padding:22px 15px;text-align:center}.ah-wait .ah-icon{font-size:64px;margin:6px 0 14px}.ah-wait h3{font-size:22px;margin:0 0 8px}.ah-wait p{color:#ffffffb5;line-height:1.7;margin:0 0 16px;font-size:14px}
+.ah-end{position:fixed;inset:0;z-index:9999;background:#000b;display:grid;place-items:center;padding:22px}.ah-end-card{width:min(100%,360px);background:#152532;border:1px solid #ffffff2a;border-radius:22px;padding:24px;text-align:center;box-shadow:0 18px 55px #0009}.ah-end-card h2{font-size:25px;margin:0 0 8px}.ah-end-card p{color:#ffffffb9;margin:0 0 18px}
 </style></head>
 <body><div class="music-widget"><button class="music-toggle" id="music-toggle" aria-label="الموسيقى">♪</button><div class="music-panel" id="music-panel"><div class="music-title">اصوات الميني آب 🎧</div><div class="music-search"><input id="youtube-music-query" type="search" placeholder="ابحث في يوتيوب عن أغنية..."><button id="youtube-music-search">بحث</button></div><div id="youtube-music-results" class="music-results"></div><div id="custom-sound-player" style="margin-top:9px"></div><div id="custom-sound-choices"></div><div class="music-row"><button id="music-play">تشغيل</button><span id="music-state">متوقفة</span></div><div class="music-row" id="music-volume-row"><label for="music-volume">الصوت</label><input id="music-volume" type="range" min="0" max="1" step="0.01" value="0.5"></div><div style="font-size:10px;color:#ffffff70;margin-top:8px">الأصوات التي تضيفها من البوت تظهر هنا تلقائيًا.</div></div></div><main class="wrap">
 <div class="hero"><img id="banner" alt=""></div>
@@ -160,7 +173,7 @@ function applyMiniAppButtonColors(map){
 }
 const miniButtonColorObserver=new MutationObserver(()=>applyMiniAppButtonColors());
 miniButtonColorObserver.observe(document.body,{childList:true,subtree:true,characterData:true});
-function showHome(){stopC4Timer();stopMiniGameTimers();stopExtraGame();document.body.classList.remove('c4-active');page.hidden=true;home.hidden=false;}
+function showHome(){stopC4Timer();stopMiniGameTimers();stopExtraGame();stopAirHockey();document.body.classList.remove('c4-active');page.hidden=true;home.hidden=false;}
 function telegramDisplayName(){const u=tg?.initDataUnsafe?.user||{};return [u.first_name,u.last_name].filter(Boolean).join(' ').trim()||u.username||'أنت';}
 function winnerDisplayName(game){const status=String(game?.status||'');const botName=String(game?.bot_name||'').trim();if(game?.game_mode!=='human'&&botName&&(status==='won'||status==='lost'))return status==='lost'?botName:telegramDisplayName();const name=String(game?.winner_name||'').trim();return (!name||name==='أحد اللاعبين'||name==='أنت'||(name.startsWith('اللاعب ')||name.startsWith('لاعب ')))?'الفائز':name;}
 function openBot(startParam=''){if(!botUsername)return;const link='https://t.me/'+botUsername+(startParam?'?start='+encodeURIComponent(startParam):'');if(tg?.openTelegramLink)tg.openTelegramLink(link);else location.href=link;}
@@ -186,6 +199,7 @@ function showTop(kind,title){
 function showGames(){
  stopC4Timer();stopMiniGameTimers();stopExtraGame();document.body.classList.remove('c4-active');home.hidden=true;page.hidden=false;pageTitle.textContent='الألعاب 🎮';pageContent.replaceChildren();
  const games=[
+  ['🏒','هوكي الطاولة','تحدَّ لاعبًا مباشرًا في مباراة هوكي','hockey'],
   ['🔴','كونكت 4','العب ضد البوت أو تحدَّ لاعبًا','connect'],
   ['🟦','المربعات','ارسم الخطوط واجمع المربعات','dots'],
   ['🧠','اختبر ذاكرتك','احفظ التسلسل وتحدَّ لاعبًا آخر','memory'],
@@ -202,7 +216,7 @@ function showGames(){
    const placeholder=document.createElement('div');placeholder.className='game-cover-placeholder';placeholder.textContent=emoji;card.appendChild(placeholder);
   }
   const label=document.createElement('span');label.className='label';label.textContent=name;card.appendChild(label);
-  card.onclick=()=>{if(type==='connect'){showConnect4Setup();return;}if(type==='word'){showWordSetup();return;}showMiniGameInstructions(type);};
+  card.onclick=()=>{if(type==='hockey'){showAirHockeySetup();return;}if(type==='connect'){showConnect4Setup();return;}if(type==='word'){showWordSetup();return;}showMiniGameInstructions(type);};
   pageContent.appendChild(card);
  });
 }
@@ -233,6 +247,7 @@ const c4StartParam=tg?.initDataUnsafe?.start_param||'';
 const onlineConnectId=c4StartParam.startsWith('online_c4_')?c4StartParam.slice(10):'';
 const onlineMiniGameId=c4StartParam.startsWith('online_mg_')?c4StartParam.slice(10):'';
 const onlineLobbyId=c4StartParam.startsWith('online_lobby_')?c4StartParam.slice(13):'';
+const airHockeyStartId=c4StartParam.startsWith('airhockey_')?c4StartParam.slice(10):'';
 const onlineMode=!!(onlineConnectId||onlineMiniGameId);
 let c4GameIdFromUrl=onlineConnectId||new URLSearchParams(window.location.search).get('game_id');
 const c4ChallengeIdFromStart=c4StartParam.startsWith('c4c_')?c4StartParam.slice(4):new URLSearchParams(window.location.search).get('challenge_id');
@@ -982,10 +997,140 @@ document.getElementById('back-home').onclick=showHome;
     home.hidden=true;page.hidden=false;pageTitle.textContent='خمن الكلمة';
     extraGame=await extraGameRequest('join','word');if(extraGame.status==='waiting')renderWordLobby();else renderWordGame();
   }
+  else if(airHockeyStartId){home.hidden=true;page.hidden=false;pageTitle.textContent='هوكي الطاولة';startAirHockey(airHockeyStartId);}
   else if(onlineLobbyId){startOnlineLobby();}
   else if(miniGameChallengeIdFromStart){home.hidden=true;page.hidden=false;pageTitle.textContent='الألعاب';startMiniGameChallenge();}
   else if(c4ChallengeIdFromStart){home.hidden=true;page.hidden=false;pageTitle.textContent='كونكت 4';startConnect4Challenge();}
   else if(c4GameIdFromUrl){home.hidden=true;page.hidden=false;pageTitle.textContent='كونكت 4';startConnect4();}
  }catch(e){console.error('Mini App extensions load failed:',e);const box=document.createElement('div');box.className='empty';box.textContent='تعذر تحميل الإضافات: '+(e?.message||'خطأ غير معروف');document.getElementById('custom').replaceChildren(box);}
+
+let airHockeyGame=null,airHockeyPollTimer=null,airHockeyMoveTimer=null,airHockeyMovePending=null,airHockeyMoveBusy=false,airHockeyCanvas=null,airHockeyContext=null,airHockeyFrame=0,airHockeyViewMode='',airHockeyLastMove=0,airHockeyPointerDown=false;
+function stopAirHockey(){
+ if(airHockeyPollTimer)clearTimeout(airHockeyPollTimer);
+ if(airHockeyMoveTimer)clearTimeout(airHockeyMoveTimer);
+ if(airHockeyFrame)cancelAnimationFrame(airHockeyFrame);
+ airHockeyPollTimer=airHockeyMoveTimer=airHockeyFrame=null;
+ airHockeyMovePending=null;airHockeyMoveBusy=false;airHockeyPointerDown=false;
+ airHockeyCanvas=airHockeyContext=null;airHockeyViewMode='';
+}
+async function airHockeyRequest(action,extra={}){
+ const initData=tg?.initData||'';
+ if(!initData)throw new Error('افتح اللعبة من داخل تيليجرام حتى نتحقق من حسابك');
+ const response=await fetch('/api/air-hockey',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData,action,game_id:airHockeyGame?.id||'',...extra})});
+ const data=await response.json().catch(()=>({}));
+ if(!response.ok||!data.ok)throw new Error(data.error||'تعذر الاتصال بمباراة الهوكي');
+ return data.result;
+}
+function showAirHockeySetup(){
+ stopAirHockey();airHockeyGame=null;const shell=c4Shell();airHockeyViewMode='setup';
+ shell.innerHTML='<div class="ah-shell"><div class="c4-heading"><h2>هوكي الطاولة 🏒</h2><p>واجه لاعبًا آخر في مباراة مباشرة</p></div><div class="ah-panel ah-wait"><div class="ah-icon">🏒</div><h3>مستعد للمباراة؟</h3><p>أنشئ غرفة وشارك رابطها مع صديقك. كل لاعب يتحكم بمضربه في نصف الطاولة، وأول من يسجل 5 أهداف يفوز.</p><div class="ah-actions"><button class="ah-primary" id="ah-create">إنشاء غرفة جديدة</button><button class="ah-secondary" id="ah-back">رجوع للألعاب</button></div></div></div>';
+ shell.querySelector('#ah-create').onclick=createAirHockeyRoom;shell.querySelector('#ah-back').onclick=showGames;
+}
+async function createAirHockeyRoom(){
+ const b=document.getElementById('ah-create');if(b){b.disabled=true;b.textContent='جاري إنشاء الغرفة...';}
+ try{airHockeyGame=await airHockeyRequest('create',{name:telegramDisplayName()});airHockeyViewMode='';renderAirHockey();scheduleAirHockeyPoll(900);}
+ catch(e){if(b){b.disabled=false;b.textContent='إنشاء غرفة جديدة';}const p=document.querySelector('.ah-wait p');if(p)p.textContent=e.message;}
+}
+async function startAirHockey(gameId){
+ stopAirHockey();airHockeyGame={id:gameId};airHockeyViewMode='';
+ try{airHockeyGame=await airHockeyRequest('join',{game_id:gameId,name:telegramDisplayName()});renderAirHockey();scheduleAirHockeyPoll(150);}
+ catch(e){const shell=c4Shell();shell.innerHTML='<div class="ah-shell"><div class="c4-heading"><h2>هوكي الطاولة 🏒</h2></div><div class="ah-panel ah-wait"><h3>تعذر فتح المباراة</h3><p id="ah-error"></p><button class="ah-secondary" id="ah-back">رجوع للألعاب</button></div></div>';shell.querySelector('#ah-error').textContent=e.message;shell.querySelector('#ah-back').onclick=showGames;}
+}
+function shareAirHockeyRoom(){
+ if(!airHockeyGame?.id)return;
+ const url='https://t.me/'+botUsername+'?startapp=airhockey_'+airHockeyGame.id;
+ const share='https://t.me/share/url?url='+encodeURIComponent(url)+'&text='+encodeURIComponent('تعال نلعب هوكي الطاولة معي 🏒');
+ if(tg?.openTelegramLink)tg.openTelegramLink(share);else if(navigator.clipboard)navigator.clipboard.writeText(url).then(()=>alert('تم نسخ رابط الغرفة'));
+}
+function scheduleAirHockeyPoll(delay=160){
+ if(airHockeyPollTimer)clearTimeout(airHockeyPollTimer);
+ airHockeyPollTimer=setTimeout(async()=>{
+  try{if(!airHockeyGame?.id)return;airHockeyGame=await airHockeyRequest('state',{game_id:airHockeyGame.id});renderAirHockey();}
+  catch(e){const s=document.getElementById('ah-status');if(s)s.textContent=e.message;}
+  if(airHockeyGame?.status==='pending'||airHockeyGame?.status==='playing')scheduleAirHockeyPoll(airHockeyGame.status==='pending'?900:150);
+ },delay);
+}
+function renderAirHockey(){
+ if(!airHockeyGame)return;
+ const mode=airHockeyGame.status==='pending'?'pending':airHockeyGame.status==='finished'?'finished':'playing';
+ if(mode!==airHockeyViewMode){airHockeyViewMode=mode;buildAirHockeyView(mode);}
+ if(mode==='pending'){
+  const p=document.getElementById('ah-wait-status');if(p)p.textContent='بانتظار انضمام لاعب آخر...';
+  const n=document.getElementById('ah-player1-wait');if(n)n.textContent=airHockeyGame.player1?.name||'اللاعب الأول';
+  return;
+ }
+ if(mode==='playing'){
+  const p1=document.getElementById('ah-player1'),p2=document.getElementById('ah-player2');
+  if(p1)p1.textContent=airHockeyGame.player1?.name||'اللاعب الأول';
+  if(p2)p2.textContent=airHockeyGame.player2?.name||'بانتظار لاعب';
+  const scores=airHockeyGame.state?.scores||[0,0];
+  const score=document.getElementById('ah-score');if(score)score.textContent=scores[0]+' : '+scores[1];
+  const status=document.getElementById('ah-status');
+  if(status)status.textContent=airHockeyGame.role==='spectator'?'👁 أنت تشاهد المباراة — لا يمكنك تحريك المضارب':'اسحب مضربك داخل نصف ملعبك وحاول تسجيل 5 أهداف';
+  drawAirHockey();
+ }
+ if(mode==='finished'){
+  const winner=airHockeyGame.winner_name||'أحد اللاعبين';
+  const overlay=document.getElementById('ah-end');if(overlay){overlay.querySelector('h2').textContent='🏆 فاز '+winner+'!';overlay.querySelector('p').textContent='النتيجة النهائية: '+(airHockeyGame.state?.scores||[0,0]).join(' : ');}
+ }
+}
+function buildAirHockeyView(mode){
+ const shell=c4Shell();
+ if(mode==='pending'){
+  shell.innerHTML='<div class="ah-shell"><div class="c4-heading"><h2>هوكي الطاولة 🏒</h2><p>غرفة المباراة</p></div><div class="ah-panel ah-wait"><div class="ah-icon">🏒</div><h3>الغرفة جاهزة!</h3><p>أرسل رابط الدعوة لصديقك حتى ينضم إلى المباراة.</p><div class="c4-result show" id="ah-wait-status">بانتظار انضمام لاعب آخر...</div><p style="margin-top:14px"><b id="ah-player1-wait"></b></p><div class="ah-actions"><button class="ah-primary" id="ah-share">مشاركة رابط الغرفة</button><button class="ah-secondary" id="ah-back">رجوع للألعاب</button></div></div></div>';
+  shell.querySelector('#ah-share').onclick=shareAirHockeyRoom;shell.querySelector('#ah-back').onclick=showGames;
+  return;
+ }
+ if(mode==='playing'){
+  shell.innerHTML='<div class="ah-shell"><div class="ah-score"><div class="ah-player"><strong id="ah-player2">اللاعب الثاني</strong><small>🔵 جهة الأعلى</small></div><div class="ah-vs">VS</div><div class="ah-player"><strong id="ah-player1">أنت</strong><small>🔴 جهتك بالأسفل</small></div></div><div class="ah-panel"><div class="ah-score"><div class="ah-points" id="ah-score">0 : 0</div><div class="ah-vs">الهدف 5</div><div class="ah-vs">🏒</div></div><canvas id="ah-canvas" width="600" height="960"></canvas><div class="ah-status" id="ah-status"></div><div class="ah-actions"><button class="ah-secondary" id="ah-back">رجوع للألعاب</button></div></div></div>';
+  airHockeyCanvas=shell.querySelector('#ah-canvas');airHockeyContext=airHockeyCanvas.getContext('2d');
+  airHockeyCanvas.addEventListener('pointerdown',e=>{if(airHockeyGame?.role==='spectator')return;airHockeyPointerDown=true;airHockeyCanvas.setPointerCapture?.(e.pointerId);handleAirHockeyPointer(e);});
+  airHockeyCanvas.addEventListener('pointermove',e=>{if(airHockeyPointerDown)handleAirHockeyPointer(e);});
+  airHockeyCanvas.addEventListener('pointerup',()=>{airHockeyPointerDown=false;});
+  airHockeyCanvas.addEventListener('pointercancel',()=>{airHockeyPointerDown=false;});
+  shell.querySelector('#ah-back').onclick=showGames;
+  animateAirHockey();
+  return;
+ }
+ if(mode==='finished'){
+  shell.innerHTML='<div class="ah-shell"><div class="c4-heading"><h2>هوكي الطاولة 🏒</h2></div><div class="ah-panel ah-wait"><div class="ah-icon">🏆</div><h3>انتهت المباراة</h3><p></p><div class="ah-actions"><button class="ah-primary" id="ah-again">إنشاء مباراة جديدة</button><button class="ah-secondary" id="ah-back">رجوع للألعاب</button></div></div></div>';
+  shell.querySelector('#ah-again').onclick=showAirHockeySetup;shell.querySelector('#ah-back').onclick=showGames;
+  return;
+ }
+}
+function handleAirHockeyPointer(e){
+ if(!airHockeyCanvas||airHockeyGame?.role==='spectator'||airHockeyGame?.status!=='playing')return;
+ const rect=airHockeyCanvas.getBoundingClientRect();
+ const x=(e.clientX-rect.left)/rect.width,y=(e.clientY-rect.top)/rect.height;
+ const role=airHockeyGame.role;
+ airHockeyMovePending={x:Math.max(.08,Math.min(.92,x)),y:role==='player1'?Math.max(.53,Math.min(.93,y)):Math.max(.07,Math.min(.47,y))};
+ if(!airHockeyMoveTimer&&!airHockeyMoveBusy)airHockeyMoveTimer=setTimeout(flushAirHockeyMove,75);
+}
+async function flushAirHockeyMove(){
+ airHockeyMoveTimer=null;if(!airHockeyMovePending||airHockeyMoveBusy||!airHockeyGame?.id)return;
+ const move=airHockeyMovePending;airHockeyMovePending=null;airHockeyMoveBusy=true;
+ try{airHockeyGame=await airHockeyRequest('move',{game_id:airHockeyGame.id,x:move.x,y:move.y});renderAirHockey();}
+ catch(e){const s=document.getElementById('ah-status');if(s)s.textContent=e.message;}
+ finally{airHockeyMoveBusy=false;if(airHockeyMovePending&&!airHockeyMoveTimer)airHockeyMoveTimer=setTimeout(flushAirHockeyMove,70);}
+}
+function animateAirHockey(){
+ if(!airHockeyCanvas||!airHockeyContext)return;
+ drawAirHockey();airHockeyFrame=requestAnimationFrame(animateAirHockey);
+}
+function drawAirHockey(){
+ const ctx=airHockeyContext,canvas=airHockeyCanvas,game=airHockeyGame;if(!ctx||!canvas||!game?.state)return;
+ const W=600,H=960,s=game.state,p=s.puck;
+ ctx.clearRect(0,0,W,H);
+ const grad=ctx.createLinearGradient(0,0,W,H);grad.addColorStop(0,'#12394b');grad.addColorStop(.5,'#0a2636');grad.addColorStop(1,'#102f40');ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
+ ctx.lineWidth=12;ctx.strokeStyle='#b9edf0';ctx.strokeRect(8,8,W-16,H-16);
+ ctx.strokeStyle='#9dd9df88';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(12,H/2);ctx.lineTo(W-12,H/2);ctx.stroke();
+ ctx.beginPath();ctx.arc(W/2,H/2,105,0,Math.PI*2);ctx.stroke();
+ ctx.fillStyle='#051a25';ctx.fillRect(W*.35,0,W*.30,17);ctx.fillRect(W*.35,H-17,W*.30,17);
+ ctx.strokeStyle='#58d7e0';ctx.lineWidth=7;ctx.beginPath();ctx.moveTo(W*.35,14);ctx.lineTo(W*.65,14);ctx.moveTo(W*.35,H-14);ctx.lineTo(W*.65,H-14);ctx.stroke();
+ function puckCircle(obj,r,color,glow){ctx.save();ctx.shadowColor=glow;ctx.shadowBlur=18;ctx.fillStyle=color;ctx.beginPath();ctx.arc(obj.x*W,obj.y*H,r,0,Math.PI*2);ctx.fill();ctx.restore();}
+ puckCircle(s.p2,PADDLE_R*W,'#258de0','#168bff');puckCircle(s.p1,PADDLE_R*W,'#ed4554','#ff334f');puckCircle(p,PUCK_R*W,'#f7fbff','#ffffff');
+ ctx.fillStyle='#07131b';ctx.beginPath();ctx.arc(p.x*W,p.y*H,PUCK_R*W*.35,0,Math.PI*2);ctx.fill();
+}
+
 })();
 </script></body></html>
