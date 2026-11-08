@@ -310,6 +310,8 @@ def handle_connect4_post(handler):
                 int(user["id"]), str(payload.get("action") or ""),
                 payload.get("game_id", ""), profile,
                 payload.get("x"), payload.get("y"),
+                str(payload.get("mode") or "online"),
+                str(payload.get("difficulty") or "medium"),
             ))
             body = json.dumps({"ok": True, "result": result}, ensure_ascii=False).encode()
             handler.send_response(200)
