@@ -1,3 +1,5 @@
+from html import escape
+
 from telegram import Update
 from telegram.ext import ContextTypes
 
@@ -17,9 +19,10 @@ async def owner_photo_file_id(update: Update, context: ContextTypes.DEFAULT_TYPE
     photo = message.photo[-1]
     await message.reply_text(
         "🖼️ معرّف الصورة (file_id):\n\n"
-        f"{photo.file_id}\n\n"
-        "لاستعراضها لاحقًا، اكتب: اعرض الصورة\n"
-        "ثم أرسل هذا المعرّف."
+        f"<code>{escape(photo.file_id)}</code>\n\n"
+        "اضغط على المعرّف لنسخه.\n"
+        "لاستعراضها لاحقًا، اكتب: اعرض الصورة ثم أرسل المعرّف.",
+        parse_mode="HTML",
     )
 
 
