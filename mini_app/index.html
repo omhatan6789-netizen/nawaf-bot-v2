@@ -1020,6 +1020,7 @@ async function airHockeyRequest(action,extra={}){
  const response=await fetch('/api/air-hockey',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData,action,game_id:airHockeyGame?.id||'',...extra})});
  const data=await response.json().catch(()=>({}));
  if(!response.ok||!data.ok)throw new Error(data.error||'تعذر الاتصال بمباراة الهوكي');
+ data.result._receivedAt=performance.now();
  return data.result;
 }
 function showAirHockeySetup(){
@@ -1122,6 +1123,8 @@ function animateAirHockey(){
 function drawAirHockey(){
  const ctx=airHockeyContext,canvas=airHockeyCanvas,game=airHockeyGame;if(!ctx||!canvas||!game?.state)return;
  const W=600,H=960,s=game.state,p=s.puck;
+ const elapsed=Number(game.goal_pause_remaining||0)>0?0:Math.min(.14,Math.max(0,(performance.now()-(game._receivedAt||performance.now()))/1000));
+ const smoothPuck={x:Math.max(AH_PUCK_R,Math.min(1-AH_PUCK_R,p.x+p.vx*elapsed)),y:Math.max(AH_PUCK_R/1.6,Math.min(1-AH_PUCK_R/1.6,p.y+p.vy*elapsed))};
  ctx.clearRect(0,0,W,H);
  const grad=ctx.createLinearGradient(0,0,W,H);grad.addColorStop(0,'#12394b');grad.addColorStop(.5,'#0a2636');grad.addColorStop(1,'#102f40');ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
  ctx.lineWidth=12;ctx.strokeStyle='#b9edf0';ctx.strokeRect(8,8,W-16,H-16);
@@ -1130,8 +1133,8 @@ function drawAirHockey(){
  ctx.fillStyle='#051a25';ctx.fillRect(W*.35,0,W*.30,17);ctx.fillRect(W*.35,H-17,W*.30,17);
  ctx.strokeStyle='#58d7e0';ctx.lineWidth=7;ctx.beginPath();ctx.moveTo(W*.35,14);ctx.lineTo(W*.65,14);ctx.moveTo(W*.35,H-14);ctx.lineTo(W*.65,H-14);ctx.stroke();
  function puckCircle(obj,r,color,glow){ctx.save();ctx.shadowColor=glow;ctx.shadowBlur=18;ctx.fillStyle=color;ctx.beginPath();ctx.arc(obj.x*W,obj.y*H,r,0,Math.PI*2);ctx.fill();ctx.restore();}
- puckCircle(s.p2,AH_PADDLE_R*W,'#258de0','#168bff');puckCircle(s.p1,AH_PADDLE_R*W,'#ed4554','#ff334f');puckCircle(p,AH_PUCK_R*W,'#f7fbff','#ffffff');
- ctx.fillStyle='#07131b';ctx.beginPath();ctx.arc(p.x*W,p.y*H,AH_PUCK_R*W*.35,0,Math.PI*2);ctx.fill();
+ puckCircle(s.p2,AH_PADDLE_R*W,'#258de0','#168bff');puckCircle(s.p1,AH_PADDLE_R*W,'#ed4554','#ff334f');puckCircle(smoothPuck,AH_PUCK_R*W,'#f7fbff','#ffffff');
+ ctx.fillStyle='#07131b';ctx.beginPath();ctx.arc(smoothPuck.x*W,smoothPuck.y*H,AH_PUCK_R*W*.35,0,Math.PI*2);ctx.fill();
 }
 
 })();
