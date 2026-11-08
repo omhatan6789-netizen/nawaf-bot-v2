@@ -278,7 +278,7 @@ def handle_connect4_post(handler):
         "/api/minigames/solo/state", "/api/minigames/solo/action",
         "/api/minigames/solo/bot-move",
         "/api/online/restart", "/api/online/spectate", "/api/online/lobby", "/api/online/withdraw",
-        "/api/extra-games", "/api/air-hockey",
+        "/api/extra-games",
     ):
         return False
     try:
@@ -302,20 +302,8 @@ def handle_connect4_post(handler):
             raise RuntimeError("البوت ما زال يستعد، حاول بعد قليل")
         user = verify_init_data(payload.get("initData", ""), _bot.token)
         is_challenge_api = path.startswith("/api/connect4/challenge/") or path.startswith("/api/minigames/") or path == "/api/extra-games"
-        is_online_api = path in ("/api/online/restart", "/api/online/spectate", "/api/online/lobby", "/api/online/withdraw", "/api/air-hockey")
-        if path == "/api/air-hockey":
-            from games.air_hockey import air_hockey_api
-            profile = " ".join(x for x in (user.get("first_name"), user.get("last_name")) if x) or user.get("username") or "لاعب"
-            result = _run(air_hockey_api(
-                int(user["id"]), str(payload.get("action") or ""),
-                payload.get("game_id", ""), profile,
-                payload.get("x"), payload.get("y"),
-                str(payload.get("mode") or "online"),
-                str(payload.get("difficulty") or "medium"),
-            ))
-            body = json.dumps({"ok": True, "result": result}, ensure_ascii=False).encode()
-            handler.send_response(200)
-        elif path == "/api/extra-games":
+        is_online_api = path in ("/api/online/restart", "/api/online/spectate", "/api/online/lobby", "/api/online/withdraw")
+        if path == "/api/extra-games":
             from games import extra_mini_games as extra
             action = str(payload.get("action") or "")
             game_type = str(payload.get("game_type") or "")
