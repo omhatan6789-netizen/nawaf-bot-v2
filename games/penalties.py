@@ -30,7 +30,7 @@ WIN_POINTS = 50
 # ==================================================
 
 READY_IMAGES = {
-    "red": "AgACAgQAAxkBAAICx2qXXRF_tg0mysuxrFyg-TzQFOFWAAJvEmsbkuPAUDW0ZFs8Jpp0AQADAgADeQADPQQ",
+    "red": "AgACAgQAAxkBAAICQWrwgQ9V5SFgbCr0TH5yBUIvliGdAAIyD2sb8AyJU1PPTkWK9jLnAQADAgADeQADPQQ",
     "blue": "AgACAgQAAxkBAAICzWqXXSelWf1kB8pPZa_v_tT75xNZAAJwEmsbkuPAUAaqxmTbcl6BAQADAgADeQADPQQ",
 }
 
@@ -52,63 +52,63 @@ RESULT_IMAGES = {
         "يسار",
         "يسار"
     ):
-        "AgACAgQAAxkBAAIC2mqXXi2MCyP1bavd0hR1Z7qzHoCAAAJ0EmsbkuPAUKVIWnY0MYkOAQADAgADeQADPQQ",
+        "AgACAgQAAxkBAAICOWrwgJFDFWLLOHPGbGa6GgrOem7dAAIuD2sb8AyJU2xsgzSzxPWOAQADAgADeQADPQQ",
 
     (
         "red",
         "يسار",
         "وسط"
     ):
-        "AgACAgQAAxkBAAIC5GqXXw7IjhzegXCjpRcxZwqjVS6WAAJ5EmsbkuPAUFp8zcXUDTg5AQADAgADeQADPQQ",
+        "AgACAgQAAxkBAAICIGrwfdQVvp6bmLLOdwPD8v0m6QPNAAInD2sb8AyJU4KjQ3TdZr2yAQADAgADeQADPQQ",
 
     (
         "red",
         "يسار",
         "يمين"
     ):
-        "AgACAgQAAxkBAAIC2GqXXd6JOsmKg6XY4QmjioYpY6JBAAJzEmsbkuPAUN2RFOQM76ZjAQADAgADeQADPQQ",
+        "AgACAgQAAxkBAAICO2rwgLJpryqOc3jv6QteQRD4hju7AAIvD2sb8AyJU9fLR0mO06krAQADAgADeQADPQQ",
 
     (
         "red",
         "وسط",
         "يسار"
     ):
-        "AgACAgQAAxkBAAIC4GqXXq47KtcOgOu_X2FaUbKinv5bAAJ3EmsbkuPAUM6TlGij3IEHAQADAgADeQADPQQ",
+        "AgACAgQAAxkBAAICM2rwf-9dlLzv7EAadoTGqDBdbb8CAAIrD2sb8AyJU4vgHB_slYWsAQADAgADeQADPQQ",
 
     (
         "red",
         "وسط",
         "وسط"
     ):
-        "AgACAgQAAxkBAAIC1mqXXaAJP0tj2fHk37IEYyLojq8-AAJyEmsbkuPAUMnwQohZeWMRAQADAgADeQADPQQ",
+        "AgACAgQAAxkBAAICPWrwgM3V_GOgOeq-4J8ssvSunAxwAAIwD2sb8AyJU4mAY58Qkck0AQADAgADeQADPQQ",
 
     (
         "red",
         "وسط",
         "يمين"
     ):
-        "AgACAgQAAxkBAAIC3GqXXk_YkocGUIQQLrUjVUsT6WFJAAJ1EmsbkuPAUKlvrIEsTFKiAQADAgADeQADPQQ",
+        "AgACAgQAAxkBAAICN2rwgENwpN4v_xJKP9vE1kj3-tPaAAItD2sb8AyJU5MRbaFHUW4pAQADAgADeQADPQQ",
 
     (
         "red",
         "يمين",
         "يسار"
     ):
-        "AgACAgQAAxkBAAIC4mqXXuc962m3PinFC3de9Cnd0yn9AAJ4EmsbkuPAUPPtWgmjylC3AQADAgADeQADPQQ",
+        "AgACAgQAAxkBAAICI2rwflgGWA7kAtS2GVfUPBqZ7uYfAAIoD2sb8AyJU37pfcFF22X8AQADAgADeQADPQQ",
 
     (
         "red",
         "يمين",
         "وسط"
     ):
-        "AgACAgQAAxkBAAIC3mqXXm9DsfMF7RKuGnjX0DZZCDElAAJ2EmsbkuPAUGcJXuHpNXeRAQADAgADeQADPQQ",
+        "AgACAgQAAxkBAAICNWrwgBXJ0U4PNc9C68jiaQkx6h-SAAIsD2sb8AyJU2m1tsd3W8o6AQADAgADeQADPQQ",
 
     (
         "red",
         "يمين",
         "يمين"
     ):
-        "AgACAgQAAyEFAATwGwEUAAJP-2qXQ8T5AtOCk6Tgh_lxF3uj8CLbAAIhE2sbtou5UESSt8Vei3-fAQADAgADeQADPQQ",
+        "AgACAgQAAxkBAAICP2rwgO7OPDhsTWXjh0WDP0TvPSoEAAIxD2sb8AyJU7Q_0aiuTBIMAQADAgADeQADPQQ",
 
     # ==============================================
     # الحارس الأزرق
