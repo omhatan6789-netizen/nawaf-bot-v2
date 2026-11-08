@@ -87,7 +87,7 @@ async def user_id_command(
         f"🖥️ USER 𖦹 {escape(str(username_text))}\n"
         f"💬 MSG 𖦹 {int(profile.get('messages') or 0)}\n"
         f"🛡 STA 𖦹 {rank_text}\n"
-        f"ℹ️ ID 𖦹 {user_id}\n"
+        f"ℹ️ ID 𖦹 <code>{user_id}</code>\n"
         f"🗒 BIO 𖦹 {escape(str(bio))}\n"
         f"📅 Joined Group 𖦹 {escape(str(joined_date))}"
     )
