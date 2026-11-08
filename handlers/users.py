@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 from html import escape
+from io import BytesIO
 
-from telegram import Update
+from PIL import Image, ImageFilter
+
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
 from database.points import get_points
@@ -97,10 +100,31 @@ async def user_id_command(
         photos = await context.bot.get_user_profile_photos(user_id, limit=1)
         if photos.total_count:
             photo_id = photos.photos[0][-1].file_id
+            profile_photo = await context.bot.get_file(photo_id)
+            photo_bytes = await profile_photo.download_as_bytearray()
+
+            # Blur the profile photo before sending it in the ID card.
+            with Image.open(BytesIO(photo_bytes)) as source_image:
+                blurred_image = source_image.convert("RGB").filter(
+                    ImageFilter.GaussianBlur(radius=14)
+                )
+                output = BytesIO()
+                blurred_image.save(output, format="JPEG", quality=88)
+                output.seek(0)
+                output.name = "profile_blurred.jpg"
+
+            keyboard = InlineKeyboardMarkup([[
+                InlineKeyboardButton(
+                    "🌷",
+                    url="https://t.me/lnll0bot",
+                )
+            ]])
+
             await message.reply_photo(
-                photo=photo_id,
+                photo=output,
                 caption=caption,
                 parse_mode="HTML",
+                reply_markup=keyboard,
             )
             return
     except Exception:
