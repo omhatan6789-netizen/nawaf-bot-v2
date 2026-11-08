@@ -1026,14 +1026,26 @@ async function airHockeyRequest(action,extra={}){
  return data.result;
 }
 function showAirHockeySetup(){
- stopAirHockey();airHockeyGame=null;const shell=c4Shell();airHockeyViewMode='setup';
- shell.innerHTML='<div class="ah-shell"><div class="c4-heading"><h2>هوكي الطاولة 🏒</h2><p>واجه لاعبًا آخر في مباراة مباشرة</p></div><div class="ah-panel ah-wait"><div class="ah-icon">🏒</div><h3>مستعد للمباراة؟</h3><p>أنشئ غرفة وشارك رابطها مع صديقك. كل لاعب يتحكم بمضربه في نصف الطاولة، وأول من يسجل 5 أهداف يفوز.</p><div class="ah-actions"><button class="ah-primary" id="ah-create">إنشاء غرفة جديدة</button><button class="ah-secondary" id="ah-back">رجوع للألعاب</button></div></div></div>';
- shell.querySelector('#ah-create').onclick=createAirHockeyRoom;shell.querySelector('#ah-back').onclick=showGames;
+ stopAirHockey();airHockeyGame=null;const shell=c4Shell();airHockeyViewMode="setup";
+ shell.innerHTML='<div class="ah-shell"><div class="c4-heading"><h2>هوكي الطاولة 🏒</h2><p>اختر طريقة اللعب</p></div><div class="ah-panel ah-wait"><div class="ah-icon">🏒</div><h3>كيف تبي تلعب؟</h3><div class="ah-actions"><button class="ah-primary" id="ah-online">👥 لعب أونلاين</button><button class="ah-secondary" id="ah-vsbot">🤖 العب ضد البوت</button><button class="ah-secondary" id="ah-back">رجوع للألعاب</button></div><div id="ah-levels" hidden style="margin-top:14px"><p>اختر مستوى البوت</p><div class="ah-actions" id="ah-level-list"></div></div></div></div>';
+ shell.querySelector("#ah-online").onclick=()=>createAirHockeyRoom("online");
+ shell.querySelector("#ah-vsbot").onclick=()=>{shell.querySelector("#ah-levels").hidden=false;};
+ const levels=[["easy","سهل"],["medium","متوسط"],["hard","صعب"],["impossible","مستحيل"]];
+ const list=shell.querySelector("#ah-level-list");
+ levels.forEach(([id,label])=>{const button=document.createElement("button");button.className="ah-secondary";button.textContent=label;button.onclick=()=>createAirHockeyRoom("bot",id);list.appendChild(button);});
+ shell.querySelector("#ah-back").onclick=showGames;
 }
-async function createAirHockeyRoom(){
- const b=document.getElementById('ah-create');if(b){b.disabled=true;b.textContent='جاري إنشاء الغرفة...';}
- try{airHockeyGame=await airHockeyRequest('create',{name:telegramDisplayName()});airHockeyViewMode='';renderAirHockey();scheduleAirHockeyPoll(900);}
- catch(e){if(b){b.disabled=false;b.textContent='إنشاء غرفة جديدة';}const p=document.querySelector('.ah-wait p');if(p)p.textContent=e.message;}
+async function createAirHockeyRoom(mode="online",difficulty="medium"){
+ const button=document.getElementById(mode==="bot"?"ah-vsbot":"ah-online");
+ if(button){button.disabled=true;button.textContent="جاري تجهيز المباراة...";}
+ try{
+  airHockeyGame=await airHockeyRequest("create",{mode,difficulty,name:telegramDisplayName()});
+  airHockeyViewMode="";renderAirHockey();
+  scheduleAirHockeyPoll(airHockeyGame.status==="pending"?600:150);
+ }catch(error){
+  if(button){button.disabled=false;button.textContent=mode==="bot"?"🤖 العب ضد البوت":"👥 لعب أونلاين";}
+  const message=document.querySelector(".ah-wait p");if(message)message.textContent=error.message||"تعذر إنشاء المباراة";
+ }
 }
 async function startAirHockey(gameId){
  stopAirHockey();airHockeyGame={id:gameId};airHockeyViewMode='';
@@ -1070,7 +1082,8 @@ function renderAirHockey(){
   const scores=airHockeyGame.state?.scores||[0,0];
   const score=document.getElementById('ah-score');if(score)score.textContent=scores[0]+' : '+scores[1];
   const status=document.getElementById('ah-status');
-  if(status)status.textContent=airHockeyGame.role==='spectator'?'👁 أنت تشاهد المباراة — لا يمكنك تحريك المضارب':(airHockeyGame.role==='player1'?'أنت بالأسفل 🔴 — اسحب مضربك وحاول التسجيل':'أنت بالأعلى 🔵 — اسحب مضربك وحاول التسجيل');
+  if(status)status.textContent=airHockeyGame.role==='spectator'?'👁 أنت تشاهد المباراة — لا يمكنك تحريك المضارب':(airHockeyGame.mode==='bot'?'🤖 تلعب ضد بوت نواف — اسحب مضربك وحاول التسجيل':(airHockeyGame.role==='player1'?'أنت بالأسفل 🔴 — اسحب مضربك وحاول التسجيل':'أنت بالأعلى 🔵 — اسحب مضربك وحاول التسجيل'));
+  const botLabel=document.getElementById('ah-player2');if(botLabel&&airHockeyGame.mode==='bot')botLabel.textContent='بوت نواف';
   drawAirHockey();
  }
  if(mode==='finished'){
