@@ -46,6 +46,7 @@ def _download(url: str, directory: str):
     except ImportError as exc:
         raise RuntimeError("مكتبة استخراج الفيديو غير مثبتة.") from exc
 
+    host = (urlparse(url).hostname or "").lower()
     options = {
         "format": "best[ext=mp4]/best",
         "outtmpl": str(Path(directory) / "media.%(ext)s"),
@@ -60,6 +61,10 @@ def _download(url: str, directory: str):
         "cachedir": False,
         "overwrites": True,
     }
+    # Use a public YouTube player client that does not depend on browser cookies.
+    # This can help with public videos when the default web client is challenged.
+    if host == "youtube.com" or host.endswith(".youtube.com") or host == "youtu.be":
+        options["extractor_args"] = {"youtube": {"player_client": ["android_vr"]}}
     with yt_dlp.YoutubeDL(options) as ydl:
         info = ydl.extract_info(url, download=True)
         files = [
