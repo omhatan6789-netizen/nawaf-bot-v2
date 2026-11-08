@@ -17,10 +17,9 @@ async def owner_photo_file_id(update: Update, context: ContextTypes.DEFAULT_TYPE
     photo = message.photo[-1]
     await message.reply_text(
         "🖼️ معرّف الصورة (file_id):\n\n"
-        f"`{photo.file_id}`\n\n"
+        f"{photo.file_id}\n\n"
         "لاستعراضها لاحقًا، اكتب: اعرض الصورة\n"
-        "ثم أرسل هذا المعرّف.",
-        parse_mode="Markdown",
+        "ثم أرسل هذا المعرّف."
     )
 
 
