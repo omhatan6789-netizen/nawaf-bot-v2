@@ -142,12 +142,40 @@ def _view(row, user_id):
         "winner_id": int(row["winner_id"]) if row["winner_id"] is not None else None,
         "winner_name": winner_name,
         "win_score": WIN_SCORE,
+        "mode": "bot" if state.get("vs_bot") else "online",
+        "difficulty": state.get("difficulty", "medium"),
         "server_time": time.time(),
         "goal_pause_remaining": max(0.0, float(state.get("goal_pause_until", 0)) - time.time()),
     }
 
 
-async def air_hockey_api(user_id: int, action: str, raw_game_id: str = "", name: str = "", x=None, y=None):
+def _move_bot(state, now):
+    if not state.get("vs_bot"):
+        return
+    difficulty = state.get("difficulty", "medium")
+    speeds = {"easy": 0.48, "medium": 0.78, "hard": 1.12, "impossible": 1.55}
+    reaction = {"easy": 0.42, "medium": 0.25, "hard": 0.13, "impossible": 0.06}
+    previous = float(state.get("bot_last_tick", now))
+    dt = _clamp(now - previous, 0.0, 0.25)
+    state["bot_last_tick"] = now
+    puck = state["puck"]
+    paddle = state["p2"]
+    target_x = 0.5
+    if puck["vy"] < 0 or puck["y"] < 0.42:
+        travel = max(0.0, (puck["y"] - 0.20) / max(0.15, abs(puck["vy"])))
+        target_x = puck["x"] + puck["vx"] * travel * (1.0 - reaction[difficulty])
+    target_x = _clamp(target_x, 0.10, 0.90)
+    target_y = 0.17 if puck["y"] > 0.34 else 0.23
+    dx, dy = target_x - paddle["x"], target_y - paddle["y"]
+    distance = math.hypot(dx, dy)
+    step = speeds[difficulty] * dt
+    if distance > 0:
+        scale = min(1.0, step / distance)
+        paddle["x"] = _clamp(paddle["x"] + dx * scale, 0.10, 0.90)
+        paddle["y"] = _clamp(paddle["y"] + dy * scale, 0.07, 0.44)
+
+
+async def air_hockey_api(user_id: int, action: str, raw_game_id: str = "", name: str = "", x=None, y=None, mode: str = "online", difficulty: str = "medium"):
     pool = get_pool()
     user_id = int(user_id)
     name = (str(name or "لاعب").strip() or "لاعب")[:80]
@@ -158,12 +186,25 @@ async def air_hockey_api(user_id: int, action: str, raw_game_id: str = "", name:
         )
         game_id = uuid.uuid4()
         state = _initial_state()
-        await pool.execute(
-            """INSERT INTO air_hockey_games
-               (id, player1_id, player1_name, status, game_state)
-               VALUES($1,$2,$3,'pending',$4::jsonb)""",
-            game_id, user_id, name, json.dumps(state),
-        )
+        mode = "bot" if str(mode).lower() == "bot" else "online"
+        difficulty = str(difficulty).lower()
+        if difficulty not in ("easy", "medium", "hard", "impossible"):
+            difficulty = "medium"
+        if mode == "bot":
+            state.update({"vs_bot": True, "difficulty": difficulty, "bot_last_tick": time.time()})
+            await pool.execute(
+                """INSERT INTO air_hockey_games
+                   (id, player1_id, player1_name, player2_id, player2_name, status, game_state)
+                   VALUES($1,$2,$3,0,$4,'playing',$5::jsonb)""",
+                game_id, user_id, name, "بوت نواف", json.dumps(state),
+            )
+        else:
+            await pool.execute(
+                """INSERT INTO air_hockey_games
+                   (id, player1_id, player1_name, status, game_state)
+                   VALUES($1,$2,$3,'pending',$4::jsonb)""",
+                game_id, user_id, name, json.dumps(state),
+            )
         row = await pool.fetchrow("SELECT * FROM air_hockey_games WHERE id=$1", game_id)
         return _view(row, user_id)
 
@@ -204,6 +245,7 @@ async def air_hockey_api(user_id: int, action: str, raw_game_id: str = "", name:
                 state = _decode_state(row["game_state"])
                 now = time.time()
                 _advance(state, now)
+                _move_bot(state, now)
                 px = _clamp(x, 0.08, 0.92)
                 py = _clamp(y, 0.06, 0.94)
                 if role == "player1":
@@ -227,7 +269,9 @@ async def air_hockey_api(user_id: int, action: str, raw_game_id: str = "", name:
             elif action == "state":
                 if row["status"] == "playing":
                     state = _decode_state(row["game_state"])
-                    _advance(state, time.time())
+                    now = time.time()
+                    _advance(state, now)
+                    _move_bot(state, now)
                     winner_id = None
                     if max(state["scores"]) >= WIN_SCORE:
                         winner_index = 0 if state["scores"][0] > state["scores"][1] else 1
