@@ -111,9 +111,7 @@ async def online_image_receive(update: Update, context: ContextTypes.DEFAULT_TYP
 
 def _select_games(query: str):
     value = (query or "").strip().lower()
-    # Hockey rooms are created and shared from inside the Mini App; they do
-    # not use the legacy inline-lobby table.
-    supported_inline = ["connect", "dots", "memory", "word"]
+    supported_inline = ["connect", "dots", "memory", "word", "hockey"]
     if not value:
         return supported_inline
     if any(word in value for word in ("كونكت", "connect", "4")):
@@ -124,6 +122,8 @@ def _select_games(query: str):
         return ["memory"]
     if any(word in value for word in ("خمن", "كلمة", "word")):
         return ["word"]
+    if any(word in value for word in ("هوكي", "طاولة", "hockey", "air")):
+        return ["hockey"]
     return supported_inline
 
 
@@ -139,7 +139,21 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
     me = await context.bot.get_me()
     for game_type in _select_games(inline.query):
         title, description = GAME_INFO[game_type]
-        if game_type == "word":
+        if game_type == "hockey":
+            from games.air_hockey import air_hockey_api
+            game = await air_hockey_api(
+                inline.from_user.id, "create",
+                name=inline.from_user.full_name or inline.from_user.first_name or "مستخدم",
+            )
+            game_id = uuid.UUID(hex=game["id"])
+            room_url = f"https://t.me/{me.username}?startapp=airhockey_{game_id.hex}"
+            lobby_text = (
+                f"🏒 غرفة هوكي الطاولة\\n\\n"
+                f"أنشأ {inline.from_user.full_name or inline.from_user.first_name or 'لاعب'} غرفة جديدة.\\n"
+                "اضغطوا «فتح غرفة اللعبة» للانضمام إلى المباراة. يمكن للآخرين المشاهدة أيضًا."
+            )
+            result_id = game_id.hex
+        elif game_type == "word":
             from games.extra_mini_games import word_create
             game = await word_create(
                 inline.from_user.id,
