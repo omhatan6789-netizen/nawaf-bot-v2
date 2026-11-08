@@ -14,6 +14,7 @@ PADDLE_R = 0.062
 GOAL_LEFT = 0.35
 GOAL_RIGHT = 0.65
 WIN_SCORE = 5
+TABLE_ASPECT = 1.6  # height / width; keeps circular collisions proportional to the rendered table
 
 
 def _initial_state():
@@ -65,34 +66,34 @@ def _advance(state, now):
 
         # End walls have a goal opening in the middle.
         in_goal = GOAL_LEFT <= puck["x"] <= GOAL_RIGHT
-        if puck["y"] < PUCK_R and not in_goal:
-            puck["y"] = PUCK_R
+        if puck["y"] < PUCK_R / TABLE_ASPECT and not in_goal:
+            puck["y"] = PUCK_R / TABLE_ASPECT
             puck["vy"] = abs(puck["vy"]) * 0.94
-        elif puck["y"] > 1 - PUCK_R and not in_goal:
-            puck["y"] = 1 - PUCK_R
+        elif puck["y"] > 1 - PUCK_R / TABLE_ASPECT and not in_goal:
+            puck["y"] = 1 - PUCK_R / TABLE_ASPECT
             puck["vy"] = -abs(puck["vy"]) * 0.94
 
         # Paddle collisions.
         for key in ("p1", "p2"):
             paddle = state[key]
             dx = puck["x"] - paddle["x"]
-            dy = puck["y"] - paddle["y"]
+            dy = (puck["y"] - paddle["y"]) * TABLE_ASPECT
             distance = math.hypot(dx, dy)
             minimum = PUCK_R + PADDLE_R
             if 0 < distance < minimum:
                 nx, ny = dx / distance, dy / distance
                 puck["x"] = paddle["x"] + nx * (minimum + 0.002)
-                puck["y"] = paddle["y"] + ny * (minimum + 0.002)
-                speed = math.hypot(puck["vx"], puck["vy"])
+                puck["y"] = paddle["y"] + ny * (minimum + 0.002) / TABLE_ASPECT
+                speed = math.hypot(puck["vx"], puck["vy"] * TABLE_ASPECT)
                 speed = max(0.78, min(1.65, speed + 0.12))
                 puck["vx"] = nx * speed
-                puck["vy"] = ny * speed
+                puck["vy"] = ny * speed / TABLE_ASPECT
 
         # Goal detection after the puck crosses the end line.
-        if in_goal and puck["y"] < -PUCK_R:
+        if in_goal and puck["y"] < -PUCK_R / TABLE_ASPECT:
             goal = 0
             break
-        if in_goal and puck["y"] > 1 + PUCK_R:
+        if in_goal and puck["y"] > 1 + PUCK_R / TABLE_ASPECT:
             goal = 1
             break
 
