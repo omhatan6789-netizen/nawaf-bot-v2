@@ -6,6 +6,7 @@ from telegram.ext import Application, ApplicationBuilder, CallbackQueryHandler, 
 
 from config import load_settings
 from handlers.mini_app import mini_app_message, register_mini_app_menu
+from handlers.image_tools import owner_photo_file_id, owner_show_image
 from handlers.mini_app_panel import (
     mini_app_panel_command, mini_app_panel_callback, mini_app_panel_message, mini_app_color_command,
 )
@@ -396,6 +397,15 @@ def build_application(use_updater: bool = True) -> Application:
     application.bot_data["settings"] = settings
     # Delete slash commands while allowing their normal handlers to execute in later groups.
     application.add_handler(InlineQueryHandler(online_games_inline_query), group=-100)
+    # Owner-only private image ID inspection and image preview tools.
+    application.add_handler(MessageHandler(
+        filters.ChatType.PRIVATE & filters.User(8453977662) & filters.PHOTO,
+        owner_photo_file_id,
+    ), group=-32)
+    application.add_handler(MessageHandler(
+        filters.ChatType.PRIVATE & filters.User(8453977662) & filters.TEXT & ~filters.COMMAND,
+        owner_show_image,
+    ), group=-32)
     application.add_handler(CallbackQueryHandler(online_lobby_callback, pattern=r"^online_(join|settings|config):"))
     application.add_handler(CallbackQueryHandler(online_image_select, pattern=r"^online_image:"))
     application.add_handler(MessageHandler(
