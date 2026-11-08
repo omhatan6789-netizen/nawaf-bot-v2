@@ -173,6 +173,8 @@ function applyMiniAppButtonColors(map){
 }
 const miniButtonColorObserver=new MutationObserver(()=>applyMiniAppButtonColors());
 miniButtonColorObserver.observe(document.body,{childList:true,subtree:true,characterData:true});
+function stopAirHockey(){window.__stopAirHockey?.();}
+function showAirHockeySetup(){if(window.__showAirHockeySetup){window.__showAirHockeySetup();return;}const box=document.createElement('div');box.className='empty';box.textContent='جاري تجهيز هوكي الطاولة، حاول مرة ثانية بعد لحظات';pageContent.replaceChildren(box);}
 function showHome(){stopC4Timer();stopMiniGameTimers();stopExtraGame();stopAirHockey();document.body.classList.remove('c4-active');page.hidden=true;home.hidden=false;}
 function telegramDisplayName(){const u=tg?.initDataUnsafe?.user||{};return [u.first_name,u.last_name].filter(Boolean).join(' ').trim()||u.username||'أنت';}
 function winnerDisplayName(game){const status=String(game?.status||'');const botName=String(game?.bot_name||'').trim();if(game?.game_mode!=='human'&&botName&&(status==='won'||status==='lost'))return status==='lost'?botName:telegramDisplayName();const name=String(game?.winner_name||'').trim();return (!name||name==='أحد اللاعبين'||name==='أنت'||(name.startsWith('اللاعب ')||name.startsWith('لاعب ')))?'الفائز':name;}
@@ -1138,5 +1140,7 @@ function drawAirHockey(){
  ctx.fillStyle='#07131b';ctx.beginPath();ctx.arc(smoothPuck.x*W,smoothPuck.y*H,AH_PUCK_R*W*.35,0,Math.PI*2);ctx.fill();
 }
 
+window.__stopAirHockey=stopAirHockey;
+window.__showAirHockeySetup=showAirHockeySetup;
 })();
 </script></body></html>
