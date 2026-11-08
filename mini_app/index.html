@@ -1096,8 +1096,9 @@ function buildAirHockeyView(mode){
   return;
  }
  if(mode==='finished'){
-  shell.innerHTML='<div class="ah-shell"><div class="c4-heading"><h2>هوكي الطاولة 🏒</h2></div><div class="ah-panel ah-wait"><div class="ah-icon">🏆</div><h3 id="ah-winner">انتهت المباراة</h3><p id="ah-final-score"></p><div class="ah-actions"><button class="ah-primary" id="ah-again">إنشاء مباراة جديدة</button><button class="ah-secondary" id="ah-back">رجوع للألعاب</button></div></div></div>';
-  shell.querySelector('#ah-again').onclick=showAirHockeySetup;shell.querySelector('#ah-back').onclick=showGames;
+  shell.innerHTML='<div class="ah-shell"><div class="c4-heading"><h2>هوكي الطاولة 🏒</h2></div><div class="ah-panel ah-wait"><div class="ah-icon">🏆</div><h3 id="ah-winner">انتهت المباراة</h3><p id="ah-final-score"></p><div class="ah-actions"><button class="ah-primary" id="ah-close">قفل الصفحة</button><button class="ah-secondary" id="ah-home">الرجوع للقائمة الرئيسية</button></div></div></div>';
+  shell.querySelector('#ah-close').onclick=()=>{if(tg&&typeof tg.close==='function')tg.close();else{try{window.close();}catch(e){}showHome();}};
+  shell.querySelector('#ah-home').onclick=showHome;
   return;
  }
 }
