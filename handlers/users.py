@@ -99,7 +99,7 @@ async def user_id_command(
             keyboard = InlineKeyboardMarkup([[
                 InlineKeyboardButton(
                     "🌷",
-                    url="https://t.me/lnll0bot",
+                    url="https://t.me/Lewadbot",
                 )
             ]])
 
