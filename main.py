@@ -156,7 +156,6 @@ from handlers.music import (
     music_message_handler, music_callback, voice_chat_started, voice_chat_ended,
 )
 from handlers.youtube_audio import youtube_audio_search, youtube_audio_callback
-from handlers.social_downloader import handle_social_link
 
 from handlers.games_menu import games_menu_command, games_menu_callback
 from handlers.games_help import games_help
@@ -446,11 +445,6 @@ def build_application(use_updater: bool = True) -> Application:
     application.add_handler(CallbackQueryHandler(
         youtube_audio_callback, pattern=r"^ytpick:"
     ))
-    application.add_handler(MessageHandler(
-        (filters.ChatType.PRIVATE | filters.ChatType.GROUPS)
-        & filters.TEXT & ~filters.COMMAND,
-        handle_social_link,
-    ), group=-1000)
     application.add_handler(MessageHandler(
         filters.StatusUpdate.VIDEO_CHAT_STARTED, voice_chat_started
     ))
