@@ -31,7 +31,7 @@ WIN_POINTS = 50
 
 READY_IMAGES = {
     "red": "AgACAgQAAxkBAAICQWrwgQ9V5SFgbCr0TH5yBUIvliGdAAIyD2sb8AyJU1PPTkWK9jLnAQADAgADeQADPQQ",
-    "blue": "AgACAgQAAxkBAAICzWqXXSelWf1kB8pPZa_v_tT75xNZAAJwEmsbkuPAUAaqxmTbcl6BAQADAgADeQADPQQ",
+    "blue": "AgACAgQAAxkBAAICRGrwggKPr3jUz2UoWcR4QZhWkDwpAAIzD2sb8AyJU_E_9KsKbdRWAQADAgADeQADPQQ",
 }
 
 # ==================================================
@@ -119,63 +119,63 @@ RESULT_IMAGES = {
         "يسار",
         "يسار"
     ):
-        "AgACAgQAAxkBAAIC5mqXX1YLbKkPxyFAuXt4GIyWpwr0AAJ6EmsbkuPAUJauXBMfrdsmAQADAgADeQADPQQ",
+        "AgACAgQAAxkBAAICVmrwg9BMZo_O0klQKpfYe4pgYbSsAAI-D2sb8AyJU-djiS1xQl0NAQADAgADeQADPQQ",
 
     (
         "blue",
         "يسار",
         "وسط"
     ):
-        "AgACAgQAAxkBAAIC-2qXY5T0b_X374-vZzZGl0HLQEEYAAKIEmsbkuPAUFT-iD8IXTJ6AQADAgADeQADPQQ",
+        "AgACAgQAAxkBAAICRmrwgh4laErQZu_e5KmifBPqzMfnAAI0D2sb8AyJU4ttGXMOHnDMAQADAgADeQADPQQ",
 
     (
         "blue",
         "يسار",
         "يمين"
     ):
-        "AgACAgQAAxkBAAIC6mqXX5umjMZgl8QvHQ9cWVE7OBkrAAJ8EmsbkuPAUETvi9lxwAABoAEAAwIAA3kAAz0E",
+        "AgACAgQAAxkBAAICUmrwguS9B65vj44ETcKYdi6moApRAAI8D2sb8AyJUzwlwJDUwM2LAQADAgADeQADPQQ",
 
     (
         "blue",
         "وسط",
         "يسار"
     ):
-        "AgACAgQAAxkBAAIC8mqXYJiHXfglNwRGoIhIfxfC8bjdAAKCEmsbkuPAUGkJ2VH7L0tAAQADAgADeQADPQQ",
+        "AgACAgQAAxkBAAICSmrwgmfnxwHmi4rKsuvO_DDOQLDPAAI3D2sb8AyJU3XNYMaiGWcLAQADAgADeQADPQQ",
 
     (
         "blue",
         "وسط",
         "وسط"
     ):
-        "AgACAgQAAxkBAAIC8GqXYHN9_lRYWV7MQ-2ViZNxESDxAAKAEmsbkuPAUBIAAa6Cdmoz2AEAAwIAA3kAAz0E",
+        "AgACAgQAAxkBAAICTGrwgocMxm30RugYetJwrMszfRlHAAI4D2sb8AyJU72uLyf9KzHxAQADAgADeQADPQQ",
 
     (
         "blue",
         "وسط",
         "يمين"
     ):
-        "AgACAgQAAxkBAAIC9GqXYNPEKxVz0lKOSKIvI8jMwlTPAAKFEmsbkuPAUMilU52EcjlsAQADAgADeQADPQQ",
+        "AgACAgQAAxkBAAICSGrwgj1IpJWoTlKRdmqjLkqf7-SRAAI1D2sb8AyJU-AmXmZDBgF4AQADAgADeQADPQQ",
 
     (
         "blue",
         "يمين",
         "يسار"
     ):
-        "AgACAgQAAxkBAAIC6GqXX3Rokn49gwNhssRA_Jr5Mim6AAJ7EmsbkuPAUBloAjhQo03mAQADAgADeQADPQQ",
+        "AgACAgQAAxkBAAICVGrwgwnaKG8Ed9befVTpVzGdKOKGAAI9D2sb8AyJU-6mtQ86bc-JAQADAgADeQADPQQ",
 
     (
         "blue",
         "يمين",
         "وسط"
     ):
-        "AgACAgQAAxkBAAIC7GqXX81g1Ntcm7CbDJFBr4XBTj0nAAJ9EmsbkuPAUC1szPgbscpJAQADAgADeQADPQQ",
+        "AgACAgQAAxkBAAICUGrwgsRQf-zMwtHFL8T6ZS0s3OXfAAI6D2sb8AyJUw-G9XNNIM9CAQADAgADeQADPQQ",
 
     (
         "blue",
         "يمين",
         "يمين"
     ):
-        "AgACAgQAAxkBAAIC7mqXX_UXpeFNif4tcrDWx1_KUoeSAAJ_EmsbkuPAUIc2qNsrW-HMAQADAgADeQADPQQ",
+        "AgACAgQAAxkBAAICTmrwgqb7CI5ZudMxHUTS4Na-aBn5AAI5D2sb8AyJUwqMG_1k73adAQADAgADeQADPQQ",
 }
 
 # ==================================================
