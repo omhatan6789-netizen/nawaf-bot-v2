@@ -152,6 +152,9 @@ async def air_hockey_api(user_id: int, action: str, raw_game_id: str = "", name:
     name = (str(name or "لاعب").strip() or "لاعب")[:80]
 
     if action == "create":
+        await pool.execute(
+            "DELETE FROM air_hockey_games WHERE created_at < NOW() - INTERVAL '2 days'"
+        )
         game_id = uuid.uuid4()
         state = _initial_state()
         await pool.execute(
