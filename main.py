@@ -375,11 +375,13 @@ async def delete_slash_command_message(update: Update, context: ContextTypes.DEF
         logger.debug("Could not delete slash command message", exc_info=True)
 
 
-def build_application() -> Application:
+def build_application(use_updater: bool = True) -> Application:
     settings = load_settings()
+    builder = ApplicationBuilder().token(settings.bot_token)
+    if not use_updater:
+        builder = builder.updater(None)
     application = (
-        ApplicationBuilder()
-        .token(settings.bot_token)
+        builder
         # Keep Telegram's long-poll request alive longer than its 10s server wait.
         .get_updates_read_timeout(15)
         # Give regular Bot API calls room to complete during brief network jitter.
