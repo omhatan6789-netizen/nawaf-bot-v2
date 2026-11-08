@@ -1067,7 +1067,7 @@ function renderAirHockey(){
   const scores=airHockeyGame.state?.scores||[0,0];
   const score=document.getElementById('ah-score');if(score)score.textContent=scores[0]+' : '+scores[1];
   const status=document.getElementById('ah-status');
-  if(status)status.textContent=airHockeyGame.role==='spectator'?'👁 أنت تشاهد المباراة — لا يمكنك تحريك المضارب':'اسحب مضربك داخل نصف ملعبك وحاول تسجيل 5 أهداف';
+  if(status)status.textContent=airHockeyGame.role==='spectator'?'👁 أنت تشاهد المباراة — لا يمكنك تحريك المضارب':(airHockeyGame.role==='player1'?'أنت بالأسفل 🔴 — اسحب مضربك وحاول التسجيل':'أنت بالأعلى 🔵 — اسحب مضربك وحاول التسجيل');
   drawAirHockey();
  }
  if(mode==='finished'){
@@ -1084,7 +1084,7 @@ function buildAirHockeyView(mode){
   return;
  }
  if(mode==='playing'){
-  shell.innerHTML='<div class="ah-shell"><div class="ah-score"><div class="ah-player"><strong id="ah-player2">اللاعب الثاني</strong><small>🔵 جهة الأعلى</small></div><div class="ah-vs">VS</div><div class="ah-player"><strong id="ah-player1">أنت</strong><small>🔴 جهتك بالأسفل</small></div></div><div class="ah-panel"><div class="ah-score"><div class="ah-points" id="ah-score">0 : 0</div><div class="ah-vs">الهدف 5</div><div class="ah-vs">🏒</div></div><canvas id="ah-canvas" width="600" height="960"></canvas><div class="ah-status" id="ah-status"></div><div class="ah-actions"><button class="ah-secondary" id="ah-back">رجوع للألعاب</button></div></div></div>';
+  shell.innerHTML='<div class="ah-shell"><div class="ah-score"><div class="ah-player"><strong id="ah-player2">اللاعب الثاني</strong><small>🔵 اللاعب الثاني · جهة الأعلى</small></div><div class="ah-vs">VS</div><div class="ah-player"><strong id="ah-player1">أنت</strong><small>🔴 اللاعب الأول · جهة الأسفل</small></div></div><div class="ah-panel"><div class="ah-score"><div class="ah-points" id="ah-score">0 : 0</div><div class="ah-vs">الهدف 5</div><div class="ah-vs">🏒</div></div><canvas id="ah-canvas" width="600" height="960"></canvas><div class="ah-status" id="ah-status"></div><div class="ah-actions"><button class="ah-secondary" id="ah-back">رجوع للألعاب</button></div></div></div>';
   airHockeyCanvas=shell.querySelector('#ah-canvas');airHockeyContext=airHockeyCanvas.getContext('2d');
   airHockeyCanvas.addEventListener('pointerdown',e=>{if(airHockeyGame?.role==='spectator')return;airHockeyPointerDown=true;airHockeyCanvas.setPointerCapture?.(e.pointerId);handleAirHockeyPointer(e);});
   airHockeyCanvas.addEventListener('pointermove',e=>{if(airHockeyPointerDown)handleAirHockeyPointer(e);});
