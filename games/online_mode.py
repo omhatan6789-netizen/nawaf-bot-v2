@@ -17,6 +17,7 @@ GAME_INFO = {
     "dots": ("Dots and Boxes 🟦", "ارسم الخطوط واجمع أكبر عدد من المربعات"),
     "memory": ("Memory Match 🧠", "اختبر ذاكرتك وطابق الألوان والتسلسل"),
     "word": ("خمن الكلمة 🔤", "تحدَّ حتى 10 لاعبين واكتشفوا الكلمة قبل انتهاء الوقت"),
+    "hockey": ("هوكي الطاولة 🏒", "مباراة هوكي مباشرة بين لاعبين داخل الميني آب"),
 }
 
 def _safe_player_name(value, fallback: str) -> str:
@@ -60,6 +61,7 @@ async def online_image_add_start(update: Update, context: ContextTypes.DEFAULT_T
         [InlineKeyboardButton("المربعات 🟦", callback_data="online_image:dots")],
         [InlineKeyboardButton("اختبر ذاكرتك 🧠", callback_data="online_image:memory")],
         [InlineKeyboardButton("خمن الكلمة 🔤", callback_data="online_image:word")],
+        [InlineKeyboardButton("هوكي الطاولة 🏒", callback_data="online_image:hockey")],
     ])
     await message.reply_text("اختر اللعبة التي تريد إضافة صورتها، وبعدها أرسل الصورة:", reply_markup=keyboard)
 
@@ -109,8 +111,11 @@ async def online_image_receive(update: Update, context: ContextTypes.DEFAULT_TYP
 
 def _select_games(query: str):
     value = (query or "").strip().lower()
+    # Hockey rooms are created and shared from inside the Mini App; they do
+    # not use the legacy inline-lobby table.
+    supported_inline = ["connect", "dots", "memory", "word"]
     if not value:
-        return list(GAME_INFO)
+        return supported_inline
     if any(word in value for word in ("كونكت", "connect", "4")):
         return ["connect"]
     if any(word in value for word in ("مربع", "المربعات", "dots", "dot")):
@@ -119,7 +124,7 @@ def _select_games(query: str):
         return ["memory"]
     if any(word in value for word in ("خمن", "كلمة", "word")):
         return ["word"]
-    return list(GAME_INFO)
+    return supported_inline
 
 
 async def online_games_inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
