@@ -115,6 +115,7 @@ from games.hide_and_seek import (
 from games.penalties import (
     start_penalty_game, distribute_penalties, manual_team_command,
     distribution_callback, penalty_direction_callback,
+    penalty_direction_message,
 )
 from games.big_game_join import (
     join_big_game_router, begin_big_game_router,
@@ -841,6 +842,10 @@ def build_application(use_updater: bool = True) -> Application:
     application.add_handler(CallbackQueryHandler(
         penalty_direction_callback, pattern=r"^penalty:direction:"
     ))
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.TEXT & ~filters.COMMAND,
+        penalty_direction_message,
+    ), group=-98)
     application.add_handler(
         MessageHandler(
             filters.ChatType.GROUPS & filters.TEXT & ~filters.COMMAND,
