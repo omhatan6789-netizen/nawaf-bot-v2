@@ -380,6 +380,13 @@ def build_application() -> Application:
     application = (
         ApplicationBuilder()
         .token(settings.bot_token)
+        # Keep Telegram's long-poll request alive longer than its 10s server wait.
+        .get_updates_read_timeout(15)
+        # Give regular Bot API calls room to complete during brief network jitter.
+        .connect_timeout(10)
+        .read_timeout(15)
+        .write_timeout(15)
+        .pool_timeout(5)
         .post_init(post_init)
         .post_shutdown(post_shutdown)
         .concurrent_updates(ChatSerialUpdateProcessor(max_concurrent_updates=16))
