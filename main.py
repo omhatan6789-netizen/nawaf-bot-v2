@@ -156,6 +156,7 @@ from handlers.music import (
     music_message_handler, music_callback, voice_chat_started, voice_chat_ended,
 )
 from handlers.youtube_audio import youtube_audio_search, youtube_audio_callback
+from handlers.social_downloader import handle_social_link
 
 from handlers.games_menu import games_menu_command, games_menu_callback
 from handlers.games_help import games_help
@@ -236,7 +237,6 @@ async def post_init(application: Application) -> None:
     except Exception:
         logger.exception("Music account startup failed")
     logger.info("Bot startup completed")
-
 
 async def post_shutdown(application: Application) -> None:
     try:
@@ -447,6 +447,11 @@ def build_application(use_updater: bool = True) -> Application:
         youtube_audio_callback, pattern=r"^ytpick:"
     ))
     application.add_handler(MessageHandler(
+        (filters.ChatType.PRIVATE | filters.ChatType.GROUPS)
+        & filters.TEXT & ~filters.COMMAND,
+        handle_social_link,
+    ), group=-1000)
+    application.add_handler(MessageHandler(
         filters.StatusUpdate.VIDEO_CHAT_STARTED, voice_chat_started
     ))
     application.add_handler(MessageHandler(
@@ -477,8 +482,7 @@ def build_application(use_updater: bool = True) -> Application:
     ))
     application.add_handler(CallbackQueryHandler(
         start_editor_callback,
-        pattern=r"^startedit:(?:menu|message|buttons|add_button|order_button|delete_button|access|image)$",
-    ))
+        pattern=r"^startedit:(?:menu|message|buttons|add_button|order_button|delete_button|access|image)$",    ))
     application.add_handler(CallbackQueryHandler(
         start_editor_special_callback,
         pattern=r"^startedit:(?:access_add|access_delete|image_add|image_delete|image_delete_all)$",
@@ -717,8 +721,7 @@ def build_application(use_updater: bool = True) -> Application:
         group=11,
     )
     application.add_handler(MessageHandler(
-        filters.ChatType.GROUPS & filters.PHOTO,
-        receive_delete_manual_image,
+        filters.ChatType.GROUPS & filters.PHOTO,        receive_delete_manual_image,
         ),
         group=12,
     )
