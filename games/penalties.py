@@ -1770,7 +1770,71 @@ async def penalty_direction_callback(
 
 
 
-    
+
+
+async def penalty_direction_message(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+    """Accept direction choices typed by the active shooter or goalie."""
+
+    message = update.message
+    if not message or not message.text:
+        return
+
+    direction = message.text.strip()
+    if direction not in DIRECTIONS:
+        return
+
+    chat_id = update.effective_chat.id
+    game = active_penalty_games.get(chat_id)
+
+    # Ignore typed directions unless a penalty kick is currently active.
+    if not game or game.get("phase") != "shootout" or game.get("resolving"):
+        return
+
+    user_id = update.effective_user.id
+    shooter_id = game.get("current_shooter")
+    goalie_id = game.get("current_goalie")
+
+    # Players who are not taking this kick must be completely ignored.
+    if user_id != shooter_id and user_id != goalie_id:
+        return
+
+    if user_id == shooter_id:
+        if game.get("shooter_choice") is not None:
+            return
+        role = "shooter"
+        game["shooter_choice"] = direction
+        game["shooter_ready"] = True
+    else:
+        if game.get("goalie_choice") is not None:
+            return
+        role = "goalie"
+        game["goalie_choice"] = direction
+        game["goalie_ready"] = True
+
+    # A valid typed choice is consumed immediately and cannot be changed by
+    # pressing a button afterward (the callback checks the same stored choice).
+    try:
+        await message.delete()
+    except Exception:
+        pass
+
+    task_key = "shooter_task" if role == "shooter" else "goalie_task"
+    task = game.get(task_key)
+    if task:
+        task.cancel()
+    game[task_key] = None
+
+    await update_ready_message(context, chat_id)
+
+    if (
+        game.get("shooter_choice") is not None
+        and game.get("goalie_choice") is not None
+    ):
+        await resolve_kick(context, chat_id)
+
 async def resolve_kick(
     context,
     chat_id
