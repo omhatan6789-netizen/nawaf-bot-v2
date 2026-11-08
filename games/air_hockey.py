@@ -143,6 +143,7 @@ def _view(row, user_id):
         "winner_name": winner_name,
         "win_score": WIN_SCORE,
         "server_time": time.time(),
+        "goal_pause_remaining": max(0.0, float(state.get("goal_pause_until", 0)) - time.time()),
     }
 
 
