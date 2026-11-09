@@ -934,7 +934,7 @@ function updateWordHintButton(g){
 }
 function wordRoundKey(g){
  return [g?.status,g?.current_index,g?.round_winner,g?.round_until,g?.round_deadline,
-  g?.attempts_left,g?.hint_id,(g?.my_guesses||[]).map(x=>x.guess+':'+(x.feedback||[]).join(',')).join(';')].join('|');
+  g?.attempts_left,(g?.my_guesses||[]).map(x=>x.guess+':'+(x.feedback||[]).join(',')).join(';')].join('|');
 }
 function wordPlayerStatsKey(g){
  return (g?.players||[]).map(p=>p.id+':'+p.name+':'+p.score+':'+(p.attempts_used||0)+':'+(p.attempts_left??'')).join(',');
