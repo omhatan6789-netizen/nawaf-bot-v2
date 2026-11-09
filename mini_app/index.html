@@ -114,7 +114,7 @@ body.c4-active #page{padding-left:10px;padding-right:10px}
 @media(min-width:700px){.c4-board-wrap{max-width:760px}.c4-arrows{max-width:760px}}
 .mg-score{display:flex;justify-content:space-around;flex-wrap:wrap;gap:8px;margin:12px 0;font-size:12px;font-weight:800}.word-game-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0 12px}.word-exit{flex:none;min-height:34px;padding:6px 12px;border:1px solid #ff9aa2;border-radius:10px;background:#b71928;color:#fff;font-size:12px;font-weight:900;box-shadow:0 3px 0 #5d0911}.word-hint-button{display:block;width:min(54%,230px);min-height:46px;margin:4px auto 12px;padding:9px 16px;border:1.5px solid #ffffffa8;border-radius:13px;background:linear-gradient(135deg,#f4f4f4,#c9c9c9);color:#171717;font-size:16px;font-weight:950;box-shadow:0 4px 0 #777,0 7px 16px #0005;cursor:pointer}.word-hint-button:disabled{opacity:.58;cursor:default;box-shadow:0 2px 0 #555}.word-hint-toast{position:fixed;z-index:100010;top:16%;left:50%;transform:translateX(-50%);width:min(88%,440px);padding:17px 20px;border:2px solid #050505;border-radius:17px;background:#171717;color:#fff;text-align:center;font-size:clamp(20px,5.5vw,27px);font-weight:950;line-height:1.5;box-shadow:0 12px 34px #000b;animation:word-hint-in .22s ease-out;pointer-events:none}.word-hint-toast b{display:block;font-size:12px;color:#ffffffa8;margin-bottom:3px}@keyframes word-hint-in{from{opacity:0;translate:0 -12px}to{opacity:1;translate:0 0}}.word-game-title{font-weight:950;font-size:18px}.word-history{display:grid;gap:9px;margin:14px 0}.word-guess-row{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap}.word-tile{display:flex;align-items:center;justify-content:center;width:clamp(42px,11vw,52px);height:48px;border-radius:9px;font-size:21px;font-weight:950;color:#111;border:2px solid #ffffff55}.word-guess-number{width:100%;text-align:center;font-size:10px;color:#ffffff80;margin-bottom:-3px}.word-attempts{font-size:12px;font-weight:850;color:#ffe0e2;text-align:center;margin:8px 0}.mg-status{display:flex;justify-content:space-between;align-items:center;background:#ffffff12;padding:10px 12px;border-radius:12px;margin:8px 0}.mg-progress{height:6px;background:#ffffff1b;border-radius:9px;overflow:hidden;margin-bottom:12px}.mg-progress>div{height:100%;width:100%;background:linear-gradient(90deg,#ef4444,#3b82f6);transition:width .2s}.mg-board{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));grid-template-rows:repeat(9,minmax(0,1fr));gap:0;background:linear-gradient(145deg,#ffffff18,#070b16);padding:10px;border:1px solid #ffffff2b;border-radius:18px;max-width:min(92vw,520px);width:100%;margin:14px auto;aspect-ratio:1;box-shadow:inset 0 0 22px #0008,0 12px 28px #0005;overflow:hidden}.mg-board>div{display:flex;align-items:center;justify-content:center;min-width:0;min-height:0;width:100%;height:100%;position:relative}.mg-dot{width:clamp(6px,2.2vw,11px);height:clamp(6px,2.2vw,11px);border-radius:50%;background:#f8fafc;z-index:2;box-shadow:0 1px 5px #0008}.mg-edge{display:block;border:0;border-radius:999px;background:#ffffff24;padding:0;min-width:0;min-height:0;touch-action:manipulation;transition:background .15s,transform .15s}.mg-edge.horizontal{width:100%;height:clamp(5px,1.7vw,9px)}.mg-edge.vertical{height:100%;width:clamp(5px,1.7vw,9px)}.mg-edge:not(:disabled):active{transform:scale(.88);background:#ffffff70}.mg-edge.on.p1{background:#ef4444;box-shadow:0 0 8px #ef444477}.mg-edge.on.p2{background:#3b82f6;box-shadow:0 0 8px #3b82f677}.mg-box{border-radius:5px;transition:background .2s}.mg-box.p1{background:#ef444455;box-shadow:inset 0 0 12px #ef444433}.mg-box.p2{background:#3b82f655;box-shadow:inset 0 0 12px #3b82f433}.mg-edge.on.p3{background:#22c55e}.mg-edge.on.p4{background:#facc15}.mg-box.p3{background:#22c55e55}.mg-box.p4{background:#facc1555}.mg-memory{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;max-width:360px;margin:18px auto;position:relative}.mg-countdown{position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;border-radius:22px;background:#050814b8;backdrop-filter:blur(3px);color:#fff;font-size:clamp(58px,18vw,100px);font-weight:1000;text-shadow:0 0 18px #ffffffaa,0 0 42px #ffffff77;pointer-events:none;animation:mg-count-pop .35s ease-out}.mg-countdown.go{font-size:clamp(42px,13vw,76px);color:#fff;letter-spacing:2px}@keyframes mg-count-pop{from{opacity:.25;transform:scale(.72)}to{opacity:1;transform:scale(1)}}.mg-memory-tile{aspect-ratio:1;border:3px solid #ffffff55;border-radius:22px;opacity:.75;transition:transform .12s,opacity .12s,filter .12s}.mg-memory-tile:disabled{opacity:.65}.mg-memory-tile.flash{opacity:1;filter:brightness(1.8);transform:scale(.96);box-shadow:0 0 24px #fff8}.mg-memory-tile:disabled.flash{opacity:1}.mg-memory-tile.pick-flash{opacity:1;filter:brightness(2.2);transform:scale(.94);border-color:#fff;box-shadow:0 0 0 3px #fff9,0 0 28px 10px #fff, inset 0 0 18px #ffffffaa}
 .music-widget{position:fixed;z-index:1000;top:12px;left:12px;direction:rtl}.music-toggle{width:43px;height:43px;border:1px solid #ffffff55;border-radius:50%;background:#16090dcc;color:#fff;font-size:19px;box-shadow:0 4px 18px #0008}.music-panel{display:none;position:absolute;top:51px;left:0;width:min(260px,calc(100vw - 28px));padding:13px;border:1px solid #ffffff35;border-radius:17px;background:#18090df2;box-shadow:0 12px 32px #0009;backdrop-filter:blur(14px)}.music-panel.open{display:block}.music-title{font-size:13px;font-weight:900;margin-bottom:9px}.music-choice{display:block;width:100%;padding:10px;margin:6px 0;border:1px solid #ffffff24;border-radius:11px;background:#ffffff10;color:#fff;text-align:right;font:700 13px inherit}.music-choice.active{border-color:#ff9ba3;background:#8f172455}.music-row{display:flex;align-items:center;gap:9px;margin-top:10px;font-size:12px;color:#ffffffc9}.music-row button{border:1px solid #ffffff35;border-radius:10px;background:#ffffff15;color:#fff;padding:8px 11px;font:700 12px inherit}.music-row input{width:100%;accent-color:#ff7d87}.music-search{display:flex;gap:6px;margin:8px 0}.music-search input{min-width:0;flex:1;border:1px solid #ffffff30;border-radius:9px;background:#ffffff12;color:#fff;padding:9px;font:12px inherit;outline:none}.music-search button{border:1px solid #ffffff35;border-radius:9px;background:#8f172455;color:#fff;padding:8px 10px;font:700 12px inherit}.music-results{max-height:190px;overflow:auto}.music-results .music-choice{font-size:12px}
-.online-end-overlay{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:22px;background:#080307ed;backdrop-filter:blur(16px)}.online-end-card{width:min(100%,440px);padding:24px 18px;border:1px solid #ffffff35;border-radius:26px;background:linear-gradient(145deg,#351018,#10080d);box-shadow:0 18px 70px #000b;text-align:center}.online-end-card h2{font-size:25px;margin:0 0 9px}.online-end-card p{color:#ffffffb8;margin:0 0 22px}.online-end-actions{display:grid;gap:13px}.online-end-actions button{width:100%;min-height:68px;border:0;border-radius:18px;font-size:20px;font-weight:950;color:#fff;background:linear-gradient(135deg,#f04455,#9e1428);box-shadow:0 8px 24px #0006}.online-end-actions button:last-child{background:linear-gradient(135deg,#45404a,#211d25)}.online-end-actions button:disabled{opacity:.6}
+.online-end-overlay{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:22px;background:rgba(5,3,7,.68);backdrop-filter:blur(15px) saturate(.72);-webkit-backdrop-filter:blur(15px) saturate(.72);animation:game-end-fade .28s ease-out}.online-end-card{width:min(100%,440px);padding:30px 20px 22px;border:1px solid #ffffff35;border-radius:28px;background:radial-gradient(ellipse at 50% 0%,#721a2d 0%,transparent 58%),linear-gradient(145deg,#281018,#0d080d);box-shadow:0 22px 85px #000d,0 0 38px #b5122030;text-align:center;animation:game-end-pop .34s cubic-bezier(.2,.85,.25,1.15)}.online-end-card h2{font-size:clamp(25px,7vw,34px);line-height:1.25;margin:0 0 13px;color:#fff;font-weight:1000}.online-end-winner{margin:8px auto 12px;padding:12px 14px;border:1px solid #e94a5b70;border-radius:17px;background:#080508a8;color:#ff5264;font-size:clamp(23px,6vw,31px);font-weight:1000;text-shadow:0 2px 16px #e11d4855;overflow-wrap:anywhere}.online-end-card p{color:#ffffffd1;font-size:15px;line-height:1.8;margin:0 0 24px}.online-end-actions{display:grid;gap:11px}.online-end-actions button{width:100%;min-height:58px;border:1px solid #ffffff20;border-radius:17px;font-size:17px;font-weight:950;color:#fff;background:linear-gradient(135deg,#ed4054,#94152a);box-shadow:0 8px 24px #0007}.online-end-actions button:last-child{background:linear-gradient(135deg,#45404a,#211d25)}.online-end-actions button:disabled{opacity:.6}@keyframes game-end-fade{from{opacity:0}to{opacity:1}}@keyframes game-end-pop{from{opacity:0;transform:translateY(12px) scale(.94)}to{opacity:1;transform:translateY(0) scale(1)}}
 .word-join-toast{position:fixed;z-index:100000;top:calc(env(safe-area-inset-top,0px) + 12px);left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100vw - 28px);padding:12px 20px;border:1px solid #ffffff28;border-radius:13px;background:#080808;color:#fff;text-align:center;font-size:14px;font-weight:850;box-shadow:0 8px 28px #0009;pointer-events:none;animation:word-toast-in .18s ease-out}@keyframes word-toast-in{from{opacity:0;transform:translate(-50%,-8px)}to{opacity:1;transform:translate(-50%,0)}}
 
 .welcome-toast{position:fixed;z-index:100001;top:calc(env(safe-area-inset-top,0px) + 14px);left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100vw - 26px);padding:15px 22px;border:2px solid #000;border-radius:16px;background:#050505;color:#b51220;text-align:center;font-size:clamp(21px,6vw,27px);line-height:1.45;font-weight:1000;letter-spacing:.1px;text-shadow:0 1px 1px #ffffff40;box-shadow:0 8px 30px #000c;pointer-events:none;animation:welcome-toast-in .25s ease-out both}.welcome-toast[hidden]{display:none}@keyframes welcome-toast-in{from{opacity:0;transform:translate(-50%,-18px)}to{opacity:1;transform:translate(-50%,0)}}@keyframes welcome-toast-out{to{opacity:0;transform:translate(-50%,-12px)}}.welcome-toast.leaving{animation:welcome-toast-out .3s ease-in both}
@@ -373,16 +373,26 @@ async function withdrawOnlineGame(gameType,gameId,button){
    else{miniGame=data.result.game;renderMiniGame();}
   }catch(e){if(button){button.disabled=false;button.textContent='انسحاب';}const status=document.getElementById('c4-status');if(status)status.textContent=e.message;}
 }
-function showOnlineEndOverlay(gameType,gameId,resultText){
+function showGameEndOverlay({winnerName='',isDraw=false,title='',subtitle=''}={}){
+ const safeWinner=String(winnerName||'').trim();
+ const key=(isDraw?'draw':safeWinner||'winner')+'|'+String(title||'');
+ const existing=document.querySelector('.online-end-overlay');
+ if(existing&&existing.dataset.endKey===key)return;
  clearOnlineEndOverlay();
- const overlay=document.createElement('div');overlay.className='online-end-overlay';
+ const overlay=document.createElement('div');overlay.className='online-end-overlay';overlay.dataset.endKey=key;
  const card=document.createElement('div');card.className='online-end-card';
- const heading=document.createElement('h2');heading.textContent=resultText||'🏁 انتهت المباراة';
- const message=document.createElement('p');message.textContent='انتهت اللعبة. وش ودك تسوي؟';
+ const heading=document.createElement('h2');heading.textContent=title||(isDraw?'🤝 تعادل جميل!':'🎉 مبروك الفوز!');
+ const winner=document.createElement('div');winner.className='online-end-winner';winner.textContent=isDraw?'تعادل بين اللاعبين':(safeWinner||'الفائز');
+ const message=document.createElement('p');message.textContent=subtitle||(isDraw?'كانت مباراة حماسية! يعطيكم العافية على اللعب 👏':('أبدعت يا '+(safeWinner||'بطل')+'! تستاهل الفوز 🏆'));
  const actions=document.createElement('div');actions.className='online-end-actions';
  const close=document.createElement('button');close.textContent='قفل الصفحة';close.onclick=()=>{if(tg&&typeof tg.close==='function')tg.close();else{try{window.close();}catch(e){}showHome();}};
- const homeButton=document.createElement('button');homeButton.textContent='رجوع للقائمة الرئيسية';homeButton.onclick=()=>{clearOnlineEndOverlay();showHome();};
- actions.append(close,homeButton);card.append(heading,message,actions);overlay.appendChild(card);document.body.appendChild(overlay);
+ const homeButton=document.createElement('button');homeButton.textContent='الرجوع للقائمة الرئيسية';homeButton.onclick=()=>{clearOnlineEndOverlay();showHome();};
+ actions.append(close,homeButton);card.append(heading,winner,message,actions);overlay.appendChild(card);document.body.appendChild(overlay);
+}
+function showOnlineEndOverlay(gameType,gameId,resultText){
+ const draw=String(resultText||'').includes('تعادل');
+ const name=draw?'':String(resultText||'').replace(/^🏆\\s*فاز\\s*/,'').replace(/!$/,'');
+ showGameEndOverlay({winnerName:name,isDraw:draw});
 }
 async function miniGameRequest(path,payload={}){
  const initData=tg?.initData||'';
@@ -412,9 +422,11 @@ function renderMiniGameSolo(){
  shell.innerHTML='<div class="c4-heading"><h2>'+(isDots?'المربعات 🟦':'اختبر ذاكرتك 🧠')+'</h2><p>أنت × البوت · المستوى '+game.difficulty+'</p></div><div class="mg-score" id="mg-score"></div><div class="mg-status"><span id="mg-status"></span><b id="mg-clock"></b></div><div class="mg-progress"><div id="mg-progress-bar"></div></div><div id="mg-board"></div><div class="c4-result" id="mg-result"></div><button class="c4-secondary" id="mg-again">لعب مرة ثانية</button><button class="c4-secondary" id="mg-back">رجوع للألعاب</button>';
  shell.querySelector('#mg-back').onclick=showGames;shell.querySelector('#mg-again').onclick=()=>showMiniGameDifficulty(game.game_type);
  if(game.status!=='playing'){
-  const result=shell.querySelector('#mg-result');result.classList.add('show');
-  result.textContent=game.status==='won'?'🏆 فاز '+telegramDisplayName()+'! أحسنت':game.status==='lost'?'🤖 فاز '+(game.bot_name||'البوت')+'! حاول مرة ثانية':'🤝 انتهت المباراة بالتعادل';
-  shell.querySelector('#mg-status').textContent='انتهت اللعبة';shell.querySelector('#mg-clock').textContent='—';if(onlineMode){showOnlineEndOverlay(game.game_type,game.id);scheduleMiniGamePoll();}return;
+  shell.querySelector('#mg-status').textContent='انتهت اللعبة';shell.querySelector('#mg-clock').textContent='—';
+  const draw=game.status==='draw';
+  const winnerName=draw?'':game.status==='won'?telegramDisplayName():game.status==='lost'?(game.bot_name||'البوت'):winnerDisplayName(game);
+  showGameEndOverlay({winnerName,isDraw:draw,subtitle:draw?'كانت مباراة حماسية! يعطيكم العافية 👏':('مبروك '+winnerName+'! تستاهل الفوز 🏆')});
+  return;
  }
  if(isDots){
   const view={...game,player1_name:'أنت',player2_name:'البوت',my_player:1};
@@ -659,9 +671,9 @@ function renderConnect4(previousBoard=null){
   line.setAttribute('x1',a.x);line.setAttribute('y1',a.y);line.setAttribute('x2',b.x);line.setAttribute('y2',b.y);line.setAttribute('pathLength','1');svg.appendChild(line);
  }
  if(c4Game.status!=='playing'){
-  const result=shell.querySelector('#c4-result');result.classList.add('show');
-  result.textContent=c4Game.status==='draw'?'🤝 انتهت المباراة بالتعادل':'🏆 فاز '+winnerDisplayName(c4Game)+'!';
-  shell.querySelector('#c4-status').textContent='';shell.querySelector('#c4-clock').textContent='—';shell.querySelector('#c4-progress').style.width='0%';if(onlineMode){showOnlineEndOverlay('connect',c4Game.id,c4Game.status==='draw'?'🤝 انتهت المباراة بالتعادل':'🏆 فاز '+winnerDisplayName(c4Game)+'!');pollConnect4State();}
+  shell.querySelector('#c4-status').textContent='';shell.querySelector('#c4-clock').textContent='—';shell.querySelector('#c4-progress').style.width='0%';
+  const draw=c4Game.status==='draw',winnerName=draw?'':winnerDisplayName(c4Game);
+  showGameEndOverlay({winnerName,isDraw:draw,subtitle:draw?'كانت مباراة حماسية! يعطيكم العافية 👏':('مبروك '+winnerName+'! تستاهل الفوز 🏆')});
  }else if(!myTurn){
   if(c4Game.spectator){shell.querySelector('#c4-status').textContent='👁 وضع المشاهدة — تابع اللعب مباشرة';shell.querySelector('#c4-clock').textContent='مباشر';pollConnect4State();}
   else {
@@ -703,7 +715,7 @@ async function runC4BotMove(){
  catch(e){c4Busy=false;const s=document.getElementById('c4-status');if(s)s.textContent=e.message;c4BotTimer=setTimeout(runC4BotMove,1500);}
 }
 async function pollConnect4State(){
- if(c4PollTimer||!c4Game||c4Game.game_mode!=='human'||(!onlineMode&&c4Game.status!=='playing'))return;
+ if(c4PollTimer||!c4Game||c4Game.game_mode!=='human'||c4Game.status!=='playing')return;
  c4PollTimer=setTimeout(async()=>{
   c4PollTimer=null;
   try{const next=await c4Request('/api/connect4/state',{game_id:c4Game.id});
@@ -831,11 +843,13 @@ function renderWordGame(){
  if(finished){
   if(extraPoll)clearTimeout(extraPoll);extraPoll=null;
   input.remove();submit.remove();shell.querySelector('#word-attempts-left').remove();
-  message.textContent=training?(g.my_score>=g.win_target?'🏆 فزت على البوت! حققت '+g.my_score+' كلمات صحيحة':'انتهت اللعبة! حققت '+g.my_score+' من '+g.win_target+' كلمات مطلوبة'):(g.winner==='تعادل'?'🤝 انتهت اللعبة بالتعادل':'🏆 الفائز: '+(g.winner||'انتهت اللعبة'));
   shell.querySelector('#word-clock').textContent='انتهت '+g.total+' كلمات';
-  const result=document.createElement('div');result.className='c4-result show';result.style.marginTop='12px';result.textContent=(g.players||[]).map(p=>p.name+' — '+p.score+' كلمة').join(' | ');shell.querySelector('#word-end-actions').appendChild(result);
-  const back=document.createElement('button');back.className='c4-start';back.textContent='رجوع للألعاب';back.onclick=()=>{stopExtraGame();showGames();};shell.querySelector('#word-end-actions').appendChild(back);
-  const homeBtn=document.createElement('button');homeBtn.className='c4-secondary';homeBtn.textContent='القائمة الرئيسية';homeBtn.onclick=()=>{stopExtraGame();showHome();};shell.querySelector('#word-end-actions').appendChild(homeBtn);
+  const draw=!training&&g.winner==='تعادل';
+  const winnerName=training?(g.my_score>=g.win_target?telegramDisplayName():'البوت'):(draw?'':(g.winner||''));
+  const subtitle=training
+   ?(g.my_score>=g.win_target?'أحسنت! حققت '+g.my_score+' كلمات صحيحة وفزت على البوت 🎉':'انتهت اللعبة، حققت '+g.my_score+' من '+g.win_target+' كلمات. حاول مرة ثانية 💪')
+   :(draw?'نتيجة متقاربة! يعطيكم العافية على اللعب 👏':('مبروك '+(winnerName||'الفائز')+'! حصل على أعلى نتيجة 🏆'));
+  showGameEndOverlay({winnerName,isDraw:draw,subtitle});
   return;
  }
  const myOut=g.attempts_left<=0;
