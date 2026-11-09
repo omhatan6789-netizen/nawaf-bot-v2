@@ -219,25 +219,44 @@ async def mini_app_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             raise ApplicationHandlerStop
         session["color"] = color
         session["step"] = "image"
-        await msg.reply_text("ارسل صورة الزر الآن، أو اكتب تخطي إذا ما تبي صورة.")
+        await msg.reply_text("ارسل صورة أو GIF أو فيديو للزر الكبير (حتى 20 ميجابايت)، أو اكتب تخطي." if session["type"] == "large" else "ارسل صورة الزر الآن، أو اكتب تخطي إذا ما تبي صورة.")
     elif step == "image":
-        if text.lower() == "تخطي":
-            file_id = None
-        elif msg.photo:
-            file_id = msg.photo[-1].file_id
-        else:
-            await msg.reply_text("ارسل صورة أو اكتب تخطي.")
-            raise ApplicationHandlerStop
+        file_id = None
+        media_kind = "image"
+        mime_type = None
+        if text.lower() != "تخطي":
+            if session["type"] == "large":
+                media = msg.photo[-1] if msg.photo else (msg.video or msg.animation)
+                if msg.document and (msg.document.mime_type or "").startswith(("image/", "video/")):
+                    media = msg.document
+                if not media:
+                    await msg.reply_text("ارسل صورة أو GIF أو فيديو للزر الكبير، أو اكتب تخطي.")
+                    raise ApplicationHandlerStop
+                size = getattr(media, "file_size", 0) or 0
+                if size > 20 * 1024 * 1024:
+                    await msg.reply_text("حجم الملف أكبر من 20 ميجابايت. أرسل ملفًا أصغر.")
+                    raise ApplicationHandlerStop
+                file_id = media.file_id
+                mime_type = getattr(media, "mime_type", None)
+                if msg.video or (mime_type or "").startswith("video/"):
+                    media_kind = "video"
+                else:
+                    media_kind = "image"
+            elif msg.photo:
+                file_id = msg.photo[-1].file_id
+            else:
+                await msg.reply_text("ارسل صورة للزر الصغير أو اكتب تخطي.")
+                raise ApplicationHandlerStop
         order = await get_pool().fetchval(
             "SELECT COALESCE(MAX(button_order),0)+1 FROM mini_app_buttons WHERE button_type=$1",
             session["type"],
         )
         await get_pool().execute(
             """INSERT INTO mini_app_buttons
-               (title,target,button_type,color,image_file_id,button_order,created_by)
-               VALUES($1,$2,$3,$4,$5,$6,$7)""",
+               (title,target,button_type,color,image_file_id,button_order,created_by,media_kind,mime_type)
+               VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)""",
             session["title"], session["target"], session["type"],
-            session["color"], file_id, order, user.id,
+            session["color"], file_id, order, user.id, media_kind, mime_type,
         )
         _sessions.pop(user.id, None)
         await msg.reply_text("تمت إضافة الزر للميني آب بنجاح ✅")
