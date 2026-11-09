@@ -25,7 +25,9 @@ def configure_mini_app(loop, bot):
 
 async def _payload(top=None):
     pool = get_pool()
-    settings = await pool.fetchrow("SELECT banner_file_id FROM mini_app_settings WHERE id=1")
+    settings = await pool.fetchrow(
+        "SELECT banner_file_id,banner_media_kind,banner_mime_type FROM mini_app_settings WHERE id=1"
+    )
     buttons = await pool.fetch(
         """SELECT id,title,target,button_type,color,image_file_id
            FROM mini_app_buttons ORDER BY button_type DESC,button_order,id"""
@@ -90,6 +92,8 @@ async def _payload(top=None):
         "bot_username": me.username if me else None,
         "bot_name": me.first_name if me else "البوت",
         "banner": ("/tg-file/" + settings["banner_file_id"]) if settings and settings["banner_file_id"] else None,
+        "banner_type": settings["banner_media_kind"] if settings and settings["banner_media_kind"] else "image",
+        "banner_mime_type": settings["banner_mime_type"] if settings and settings["banner_mime_type"] else None,
         "buttons": [
             {"id": r["id"], "title": r["title"], "target": r["target"],
              "type": r["button_type"], "color": r["color"],
@@ -252,8 +256,12 @@ def handle_mini_app_request(handler):
                 content_type = "image/gif"
             elif body.startswith(b"RIFF") and body[8:12] == b"WEBP":
                 content_type = "image/webp"
+            elif len(body) >= 12 and body[4:8] == b"ftyp":
+                content_type = "video/mp4"
+            elif body.startswith(b"\x1a\x45\xdf\xa3"):
+                content_type = "video/webm"
             else:
-                raise ValueError("Unsupported image format returned by Telegram")
+                raise ValueError("Unsupported media format returned by Telegram")
             handler.send_response(200)
             handler.send_header("Content-Type", content_type)
             handler.send_header("Cache-Control", "public, max-age=3600")
