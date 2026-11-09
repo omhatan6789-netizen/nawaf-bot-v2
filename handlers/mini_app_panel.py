@@ -119,8 +119,8 @@ async def mini_app_panel_callback(update: Update, context: ContextTypes.DEFAULT_
         row = await pool.fetchrow("DELETE FROM mini_app_sounds WHERE id=$1 RETURNING title", sound_id)
         await q.edit_message_text(f"تم حذف الصوت «{html.escape(row['title'])}» ✅" if row else "الصوت غير موجود.", parse_mode="HTML", reply_markup=_back())
     elif data == "minipanel:banner":
-        SESSIONS[uid] = {"action": "banner", "step": "photo"}
-        await q.edit_message_text("ارسل الصورة الجديدة للميني آب:", reply_markup=_back())
+        SESSIONS[uid] = {"action": "banner", "step": "media"}
+        await q.edit_message_text("ارسل صورة أو فيديو أو GIF للميني آب (حتى 20 ميجابايت):", reply_markup=_back())
     elif data == "minipanel:color":
         SESSIONS[uid] = {"action": "color", "step": "button"}
         await q.edit_message_text("ارسل اسم الزر كما يظهر لك داخل الميني آب. تقدر تختار أي زر، حتى زر الرجوع أو أزرار الألعاب.", reply_markup=_back())
@@ -208,12 +208,26 @@ async def mini_app_panel_message(update: Update, context: ContextTypes.DEFAULT_T
         raise ApplicationHandlerStop
 
     if action == "banner":
-        if not msg.photo:
-            await msg.reply_text("ارسل صورة، أو اكتب إلغاء.")
+        media = msg.photo[-1] if msg.photo else (msg.video or msg.animation)
+        if msg.document and (msg.document.mime_type or "").startswith(("image/", "video/")):
+            media = msg.document
+        if not media:
+            await msg.reply_text("ارسل صورة أو فيديو أو GIF، أو اكتب إلغاء.")
             raise ApplicationHandlerStop
-        await get_pool().execute("UPDATE mini_app_settings SET banner_file_id=$1,updated_at=NOW() WHERE id=1", msg.photo[-1].file_id)
+        size = getattr(media, "file_size", 0) or 0
+        if size > 20 * 1024 * 1024:
+            await msg.reply_text("الملف أكبر من 20 ميجابايت. أرسل ملفًا أصغر.")
+            raise ApplicationHandlerStop
+        mime = getattr(media, "mime_type", None) or ("image/jpeg" if msg.photo else "video/mp4" if msg.video or msg.animation else "")
+        kind = "video" if mime.startswith("video/") else "image"
+        await get_pool().execute(
+            """UPDATE mini_app_settings
+               SET banner_file_id=$1,banner_media_kind=$2,banner_mime_type=$3,updated_at=NOW()
+               WHERE id=1""",
+            media.file_id, kind, mime or ("image/gif" if kind == "image" else "video/mp4"),
+        )
         SESSIONS.pop(user.id, None)
-        await msg.reply_text("تم تحديث صورة الميني آب ✅", reply_markup=_back())
+        await msg.reply_text("تم تحديث وسيط أعلى الميني آب بنجاح ✅", reply_markup=_back())
         raise ApplicationHandlerStop
 
     if action == "add_button":
