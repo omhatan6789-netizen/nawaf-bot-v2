@@ -375,6 +375,33 @@ async def delete_slash_command_message(update: Update, context: ContextTypes.DEF
         logger.debug("Could not delete slash command message", exc_info=True)
 
 
+def instrument_telegram_requests(request) -> None:
+    """Measure every outbound Telegram Bot API request without changing transport settings."""
+    original_do_request = request.do_request
+
+    async def timed_do_request(url, method, request_data=None, **kwargs):
+        started = asyncio.get_running_loop().time()
+        endpoint = str(url).rsplit("/", 1)[-1].split("?", 1)[0]
+        try:
+            result = await original_do_request(url, method, request_data, **kwargs)
+            status_code = result[0] if isinstance(result, tuple) and result else "unknown"
+            elapsed_ms = (asyncio.get_running_loop().time() - started) * 1000
+            logger.info(
+                "PERF telegram.api_request endpoint=%s method=%s status=%s duration_ms=%.1f",
+                endpoint, method, status_code, elapsed_ms,
+            )
+            return result
+        except Exception as exc:
+            elapsed_ms = (asyncio.get_running_loop().time() - started) * 1000
+            logger.warning(
+                "PERF telegram.api_request endpoint=%s method=%s error=%s duration_ms=%.1f",
+                endpoint, method, type(exc).__name__, elapsed_ms,
+            )
+            raise
+
+    request.do_request = timed_do_request
+
+
 def build_application(use_updater: bool = True) -> Application:
     settings = load_settings()
     builder = ApplicationBuilder().token(settings.bot_token)
@@ -396,6 +423,8 @@ def build_application(use_updater: bool = True) -> Application:
         .concurrent_updates(ChatSerialUpdateProcessor(max_concurrent_updates=16))
         .build()
     )
+    # Instrument outbound Telegram API calls while preserving the configured HTTP/2 transport.
+    instrument_telegram_requests(application.bot.request)
     application.bot_data["settings"] = settings
     # Delete slash commands while allowing their normal handlers to execute in later groups.
     application.add_handler(InlineQueryHandler(online_games_inline_query), group=-100)
