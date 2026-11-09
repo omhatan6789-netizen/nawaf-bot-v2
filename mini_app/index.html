@@ -117,8 +117,9 @@ body.c4-active #page{padding-left:10px;padding-right:10px}
 .online-end-overlay{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:22px;background:#080307ed;backdrop-filter:blur(16px)}.online-end-card{width:min(100%,440px);padding:24px 18px;border:1px solid #ffffff35;border-radius:26px;background:linear-gradient(145deg,#351018,#10080d);box-shadow:0 18px 70px #000b;text-align:center}.online-end-card h2{font-size:25px;margin:0 0 9px}.online-end-card p{color:#ffffffb8;margin:0 0 22px}.online-end-actions{display:grid;gap:13px}.online-end-actions button{width:100%;min-height:68px;border:0;border-radius:18px;font-size:20px;font-weight:950;color:#fff;background:linear-gradient(135deg,#f04455,#9e1428);box-shadow:0 8px 24px #0006}.online-end-actions button:last-child{background:linear-gradient(135deg,#45404a,#211d25)}.online-end-actions button:disabled{opacity:.6}
 .word-join-toast{position:fixed;z-index:100000;top:calc(env(safe-area-inset-top,0px) + 12px);left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100vw - 28px);padding:12px 20px;border:1px solid #ffffff28;border-radius:13px;background:#080808;color:#fff;text-align:center;font-size:14px;font-weight:850;box-shadow:0 8px 28px #0009;pointer-events:none;animation:word-toast-in .18s ease-out}@keyframes word-toast-in{from{opacity:0;transform:translate(-50%,-8px)}to{opacity:1;transform:translate(-50%,0)}}
 
+.welcome-toast{position:fixed;z-index:100001;top:calc(env(safe-area-inset-top,0px) + 14px);left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100vw - 26px);padding:15px 22px;border:2px solid #000;border-radius:16px;background:#050505;color:#b51220;text-align:center;font-size:clamp(21px,6vw,27px);line-height:1.45;font-weight:1000;letter-spacing:.1px;text-shadow:0 1px 1px #ffffff40;box-shadow:0 8px 30px #000c;pointer-events:none;animation:welcome-toast-in .25s ease-out both}.welcome-toast[hidden]{display:none}@keyframes welcome-toast-in{from{opacity:0;transform:translate(-50%,-18px)}to{opacity:1;transform:translate(-50%,0)}}@keyframes welcome-toast-out{to{opacity:0;transform:translate(-50%,-12px)}}.welcome-toast.leaving{animation:welcome-toast-out .3s ease-in both}
 </style></head>
-<body><div class="music-widget"><button class="music-toggle" id="music-toggle" aria-label="الموسيقى">♪</button><div class="music-panel" id="music-panel"><div class="music-title">اصوات الميني آب 🎧</div><div class="music-search"><input id="youtube-music-query" type="search" placeholder="ابحث في يوتيوب عن أغنية..."><button id="youtube-music-search">بحث</button></div><div id="youtube-music-results" class="music-results"></div><div id="custom-sound-player" style="margin-top:9px"></div><div id="custom-sound-choices"></div><div class="music-row"><button id="music-play">تشغيل</button><span id="music-state">متوقفة</span></div><div class="music-row" id="music-volume-row"><label for="music-volume">الصوت</label><input id="music-volume" type="range" min="0" max="1" step="0.01" value="0.5"></div><div style="font-size:10px;color:#ffffff70;margin-top:8px">الأصوات التي تضيفها من البوت تظهر هنا تلقائيًا.</div></div></div><main class="wrap">
+<body><div id="welcome-toast" class="welcome-toast" role="status" aria-live="polite" hidden></div><div class="music-widget"><button class="music-toggle" id="music-toggle" aria-label="الموسيقى">♪</button><div class="music-panel" id="music-panel"><div class="music-title">اصوات الميني آب 🎧</div><div class="music-search"><input id="youtube-music-query" type="search" placeholder="ابحث في يوتيوب عن أغنية..."><button id="youtube-music-search">بحث</button></div><div id="youtube-music-results" class="music-results"></div><div id="custom-sound-player" style="margin-top:9px"></div><div id="custom-sound-choices"></div><div class="music-row"><button id="music-play">تشغيل</button><span id="music-state">متوقفة</span></div><div class="music-row" id="music-volume-row"><label for="music-volume">الصوت</label><input id="music-volume" type="range" min="0" max="1" step="0.01" value="0.5"></div><div style="font-size:10px;color:#ffffff70;margin-top:8px">الأصوات التي تضيفها من البوت تظهر هنا تلقائيًا.</div></div></div><main class="wrap">
 <div class="hero"><img id="banner" alt=""><video id="banner-video" muted autoplay loop playsinline webkit-playsinline></video></div>
 <div class="brand">Dev bot ~ نواف</div>
 <div id="home">
@@ -135,6 +136,15 @@ body.c4-active #page{padding-left:10px;padding-right:10px}
 <script src="/mini_app/ambient.js?v=20261106-7"></script>
 <script>
 const tg=window.Telegram?.WebApp;tg?.ready();tg?.expand();
+(function showWelcomeToast(){
+ const toast=document.getElementById('welcome-toast');
+ const user=tg?.initDataUnsafe?.user||{};
+ const name=[user.first_name,user.last_name].filter(Boolean).join(' ').trim()||user.username||'';
+ if(!toast||!name)return;
+ toast.textContent='اهلًا بك بالمجتمع يـ '+name;
+ toast.hidden=false;
+ window.setTimeout(()=>{toast.classList.add('leaving');window.setTimeout(()=>{toast.hidden=true;toast.classList.remove('leaving');},320);},3700);
+})();
 let botUsername='';
 const home=document.getElementById('home');
 const page=document.getElementById('page');
