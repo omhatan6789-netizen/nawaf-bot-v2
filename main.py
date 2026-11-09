@@ -386,6 +386,8 @@ def build_application(use_updater: bool = True) -> Application:
         .get_updates_read_timeout(15)
         # Give regular Bot API calls room to complete during brief network jitter.
         .connect_timeout(10)
+        # Negotiate HTTP/2 with Telegram where supported to reduce request overhead.
+        .http_version("2")
         .read_timeout(15)
         .write_timeout(15)
         .pool_timeout(5)
