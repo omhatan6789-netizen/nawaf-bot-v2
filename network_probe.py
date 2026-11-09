@@ -54,9 +54,9 @@ async function run(){
     connect.textContent=x.connect_ms!==undefined?x.connect_ms+' ms':'—';
     connect.className='value '+(x.ok?'ok':'bad');
    }else{
-    if(x.duration_ms!==undefined){el.textContent=x.duration_ms+' ms';el.className='value '+(x.ok?'ok':'bad');}
+    if(x.avg_ms!==undefined){el.textContent=x.avg_ms+' ms';el.className='value '+(x.ok?'ok':'bad');}
     else{el.textContent='تعذر القياس';el.className='value bad';}
-    document.getElementById('telegram-note').textContent=x.error||('HTTP '+(x.http_status||'—')+(x.http_version?' • '+x.http_version:''));
+    document.getElementById('telegram-note').textContent=x.error||('10 طلبات متتالية • أقل '+x.min_ms+' ms • أعلى '+x.max_ms+' ms • HTTP '+(x.http_status||'—')+(x.http_version?' • '+x.http_version:''));
    }
   }
   status.textContent='اكتمل الاختبار. هذه أوقات الاتصال من فرانكفورت.';
@@ -70,20 +70,45 @@ async def run_probe():
     if not BOT_TOKEN:
         result["telegram"] = {"error": "BOT_TOKEN is not configured"}
     else:
-        started = time.perf_counter()
+        samples = []
         try:
+            # Reuse one HTTP/2 client like a persistent bot connection.
             async with httpx.AsyncClient(http2=True, timeout=12.0) as client:
-                response = await client.get(f"https://api.telegram.org/bot{BOT_TOKEN}/getMe")
-                result["telegram"] = {
-                    "http_status": response.status_code,
-                    "duration_ms": round((time.perf_counter() - started) * 1000, 1),
-                    "http_version": response.http_version,
-                    "ok": response.status_code == 200,
-                }
+                url = f"https://api.telegram.org/bot{BOT_TOKEN}/getMe"
+
+                # Warm up DNS/TLS/HTTP2 connection; exclude this first request.
+                warmup = await client.get(url)
+                if warmup.status_code != 200:
+                    raise RuntimeError(f"Telegram warm-up HTTP {warmup.status_code}")
+
+                statuses = []
+                versions = []
+                for _ in range(10):
+                    started = time.perf_counter()
+                    response = await client.get(url)
+                    samples.append(round((time.perf_counter() - started) * 1000, 2))
+                    statuses.append(response.status_code)
+                    versions.append(response.http_version)
+                    if response.status_code != 200:
+                        raise RuntimeError(f"Telegram HTTP {response.status_code}")
+
+            result["telegram"] = {
+                "ok": True,
+                "http_status": statuses[-1],
+                "http_version": versions[-1],
+                "avg_ms": round(sum(samples) / len(samples), 2),
+                "min_ms": round(min(samples), 2),
+                "max_ms": round(max(samples), 2),
+                "samples_ms": samples,
+                "request_count": len(samples),
+            }
         except Exception as exc:
             result["telegram"] = {
-                "error": type(exc).__name__,
-                "duration_ms": round((time.perf_counter() - started) * 1000, 1),
+                "ok": False,
+                "error": type(exc).__name__ + ": " + str(exc)[:120],
+                "avg_ms": round(sum(samples) / len(samples), 2) if samples else None,
+                "min_ms": round(min(samples), 2) if samples else None,
+                "max_ms": round(max(samples), 2) if samples else None,
             }
 
     if not DATABASE_URL:
