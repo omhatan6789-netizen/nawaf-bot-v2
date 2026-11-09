@@ -93,7 +93,7 @@ def _word_hint(word):
     folded = _fold(word)
     if folded == _fold("نواف"):
         return "القوت مسوي اللي مسوي البوت"
-    choices = WORD_HINTS.get(folded)
+    choices = next((value for key, value in WORD_HINTS.items() if _fold(key) == folded), None)
     if choices:
         return random.choice(choices)
     groups = [
