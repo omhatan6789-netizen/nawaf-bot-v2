@@ -82,7 +82,7 @@ async def mini_app_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         raise ApplicationHandlerStop
     if text == "تغيير صورة الميني":
         _sessions[user.id] = {"step": "banner_image"}
-        await msg.reply_text("ارسل الصورة اللي تبيها أعلى الميني آب، وبتغطي المساحة الفاضية بالكامل.")
+        await msg.reply_text("ارسل صورة أو فيديو أو GIF اللي تبيه أعلى الميني آب (حتى 20 ميجابايت).")
         raise ApplicationHandlerStop
 
     session = _sessions.get(user.id)
@@ -91,16 +91,26 @@ async def mini_app_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             _sessions.pop(user.id, None)
             await msg.reply_text("تم إلغاء تغيير الصورة.")
             raise ApplicationHandlerStop
-        if not msg.photo:
-            await msg.reply_text("ارسل صورة، أو اكتب إلغاء.")
+        media = msg.photo[-1] if msg.photo else (msg.video or msg.animation)
+        if msg.document and (msg.document.mime_type or "").startswith(("image/", "video/")):
+            media = msg.document
+        if not media:
+            await msg.reply_text("ارسل صورة أو فيديو أو GIF، أو اكتب إلغاء.")
             raise ApplicationHandlerStop
-        file_id = msg.photo[-1].file_id
+        size = getattr(media, "file_size", 0) or 0
+        if size > 20 * 1024 * 1024:
+            await msg.reply_text("الملف أكبر من 20 ميجابايت. أرسل ملفًا أصغر.")
+            raise ApplicationHandlerStop
+        mime = getattr(media, "mime_type", None) or ("image/jpeg" if msg.photo else "video/mp4" if msg.video or msg.animation else "")
+        kind = "video" if mime.startswith("video/") else "image"
         await get_pool().execute(
-            "UPDATE mini_app_settings SET banner_file_id=$1, updated_at=NOW() WHERE id=1",
-            file_id,
+            """UPDATE mini_app_settings
+               SET banner_file_id=$1,banner_media_kind=$2,banner_mime_type=$3,updated_at=NOW()
+               WHERE id=1""",
+            media.file_id, kind, mime or ("image/gif" if kind == "image" else "video/mp4"),
         )
         _sessions.pop(user.id, None)
-        await msg.reply_text("تم تحديث صورة أعلى الميني آب بنجاح ✅")
+        await msg.reply_text("تم تحديث وسيط أعلى الميني آب بنجاح ✅")
         raise ApplicationHandlerStop
 
     if text == "اضف صوت للميني":
