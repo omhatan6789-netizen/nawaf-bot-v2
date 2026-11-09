@@ -28,14 +28,17 @@ button{background:#a92f38;color:white;border:0;border-radius:10px;padding:12px 1
 <h2>اختبار سرعة سيرفر فرانكفورت</h2>
 <p id="status">جاري قياس الاتصال بتيليجرام وقاعدة البيانات... انتظر قليلًا</p>
 <div class="item"><div>اتصال Telegram API</div><div class="value" id="telegram">...</div><small id="telegram-note"></small></div>
-<div class="item"><div>اتصال قاعدة البيانات</div><div class="value" id="database">...</div><small id="database-note"></small></div>
+<div class="item"><div>متوسط الاستعلامات على اتصال ثابت (10 مرات)</div><div class="value" id="database">...</div><small id="database-note"></small></div>
+<div class="item"><div>وقت فتح اتصال قاعدة البيانات</div><div class="value" id="db-connect">...</div><small>يقاس منفصلًا ولا يدخل في متوسط الاستعلامات</small></div>
 <button onclick="run()">إعادة الاختبار</button>
 </main>
 <script>
 async function run(){
  const status=document.getElementById('status');
  status.textContent='جاري الاختبار...';
- for(const id of ['telegram','database']){document.getElementById(id).textContent='...';document.getElementById(id+'-note').textContent='';}
+ for(const id of ['telegram','database','db-connect']){document.getElementById(id).textContent='...';}
+ document.getElementById('telegram-note').textContent='';
+ document.getElementById('database-note').textContent='';
  try{
   const r=await fetch('/probe/data?ts='+Date.now(),{cache:'no-store'});
   if(!r.ok) throw new Error('HTTP '+r.status);
@@ -43,9 +46,18 @@ async function run(){
   for(const id of ['telegram','database']){
    const x=d[id]||{};
    const el=document.getElementById(id);
-   if(x.duration_ms!==undefined){el.textContent=x.duration_ms+' ms';el.className='value '+(x.ok?'ok':'bad');}
-   else{el.textContent='تعذر القياس';el.className='value bad';}
-   document.getElementById(id+'-note').textContent=x.error||('HTTP '+(x.http_status||'—')+(x.http_version?' • '+x.http_version:''));
+   if(id==='database'){
+    if(x.query_avg_ms!==undefined){el.textContent=x.query_avg_ms+' ms';el.className='value '+(x.ok?'ok':'bad');}
+    else{el.textContent='تعذر القياس';el.className='value bad';}
+    document.getElementById('database-note').textContent=x.error||('10 استعلامات • أقل '+x.query_min_ms+' ms • أعلى '+x.query_max_ms+' ms');
+    const connect=document.getElementById('db-connect');
+    connect.textContent=x.connect_ms!==undefined?x.connect_ms+' ms':'—';
+    connect.className='value '+(x.ok?'ok':'bad');
+   }else{
+    if(x.duration_ms!==undefined){el.textContent=x.duration_ms+' ms';el.className='value '+(x.ok?'ok':'bad');}
+    else{el.textContent='تعذر القياس';el.className='value bad';}
+    document.getElementById('telegram-note').textContent=x.error||('HTTP '+(x.http_status||'—')+(x.http_version?' • '+x.http_version:''));
+   }
   }
   status.textContent='اكتمل الاختبار. هذه أوقات الاتصال من فرانكفورت.';
  }catch(e){status.textContent='فشل تحميل نتيجة الاختبار: '+e.message;}
@@ -77,22 +89,42 @@ async def run_probe():
     if not DATABASE_URL:
         result["database"] = {"error": "DATABASE_URL is not configured"}
     else:
-        started = time.perf_counter()
         conn = None
+        connect_started = time.perf_counter()
         try:
-            async def db_check():
-                nonlocal conn
-                conn = await asyncpg.connect(DATABASE_URL, timeout=8)
-                return await conn.fetchval("SELECT 1")
-            await asyncio.wait_for(db_check(), timeout=10)
+            # Measure connection establishment separately from query latency.
+            conn = await asyncio.wait_for(
+                asyncpg.connect(DATABASE_URL, timeout=8),
+                timeout=10,
+            )
+            connect_ms = round((time.perf_counter() - connect_started) * 1000, 1)
+
+            # Warm up the connection once; exclude this first query from the samples.
+            await conn.fetchval("SELECT 1")
+
+            samples = []
+            for _ in range(10):
+                query_started = time.perf_counter()
+                value = await conn.fetchval("SELECT 1")
+                elapsed_ms = (time.perf_counter() - query_started) * 1000
+                if value != 1:
+                    raise RuntimeError("Unexpected database response")
+                samples.append(round(elapsed_ms, 2))
+
             result["database"] = {
                 "ok": True,
-                "duration_ms": round((time.perf_counter() - started) * 1000, 1),
+                "connect_ms": connect_ms,
+                "query_avg_ms": round(sum(samples) / len(samples), 2),
+                "query_min_ms": round(min(samples), 2),
+                "query_max_ms": round(max(samples), 2),
+                "query_samples_ms": samples,
+                "query_count": len(samples),
             }
         except Exception as exc:
             result["database"] = {
+                "ok": False,
                 "error": type(exc).__name__,
-                "duration_ms": round((time.perf_counter() - started) * 1000, 1),
+                "connect_ms": round((time.perf_counter() - connect_started) * 1000, 1),
             }
         finally:
             if conn is not None:
