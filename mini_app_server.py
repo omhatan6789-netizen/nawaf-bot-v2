@@ -29,7 +29,8 @@ async def _payload(top=None):
         "SELECT banner_file_id,banner_media_kind,banner_mime_type FROM mini_app_settings WHERE id=1"
     )
     buttons = await pool.fetch(
-        """SELECT id,title,target,button_type,color,image_file_id
+        """SELECT id,title,target,button_type,color,image_file_id,
+                  COALESCE(media_kind,'image') AS media_kind,mime_type
            FROM mini_app_buttons ORDER BY button_type DESC,button_order,id"""
     )
     sounds = await pool.fetch(
@@ -97,7 +98,8 @@ async def _payload(top=None):
         "buttons": [
             {"id": r["id"], "title": r["title"], "target": r["target"],
              "type": r["button_type"], "color": r["color"],
-             "image": ("/tg-file/" + r["image_file_id"]) if r["image_file_id"] else None}
+             "image": ("/tg-file/" + r["image_file_id"]) if r["image_file_id"] else None,
+             "media_kind": r["media_kind"], "mime_type": r["mime_type"]}
             for r in buttons
         ],
         "button_colors": {r["button_text"]: r["color_hex"] for r in button_colors},
