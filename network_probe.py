@@ -31,6 +31,12 @@ button{background:#a92f38;color:white;border:0;border-radius:10px;padding:12px 1
 <div class="item"><div>متوسط الاستعلامات على اتصال ثابت (10 مرات)</div><div class="value" id="database">...</div><small id="database-note"></small></div>
 <div class="item"><div>وقت فتح اتصال قاعدة البيانات</div><div class="value" id="db-connect">...</div><small>يقاس منفصلًا ولا يدخل في متوسط الاستعلامات</small></div>
 <button onclick="run()">إعادة الاختبار</button>
+<hr style="border:0;border-top:1px solid #393943;margin:22px 0">
+<h2 style="font-size:18px">نسخ قاعدة سنغافورة إلى فرانكفورت</h2>
+<p>هذه العملية تنسخ مخطط public وبياناته. لن تلمس قاعدة الإنتاج أو تغيّر اتصال البوت.</p>
+<input id="transfer-secret" type="password" autocomplete="off" placeholder="مفتاح النسخ الذي أضفته في Render" style="box-sizing:border-box;width:100%;padding:13px;border-radius:9px;border:1px solid #555;background:#111;color:white">
+<button onclick="transferDatabase()">بدء النسخ والتحقق</button>
+<p id="transfer-status" style="white-space:pre-wrap"></p>
 </main>
 <script>
 async function run(){
