@@ -375,15 +375,19 @@ async def delete_slash_command_message(update: Update, context: ContextTypes.DEF
         logger.debug("Could not delete slash command message", exc_info=True)
 
 
-def instrument_telegram_requests(request) -> None:
-    """Measure every outbound Telegram Bot API request without changing transport settings."""
-    original_do_request = request.do_request
+def instrument_telegram_requests() -> None:
+    """Measure HTTPXRequest calls by wrapping the class method, which is read-only per instance."""
+    from telegram.request import HTTPXRequest
 
-    async def timed_do_request(url, method, request_data=None, **kwargs):
+    original_do_request = HTTPXRequest.do_request
+    if getattr(original_do_request, "_telegram_perf_instrumented", False):
+        return
+
+    async def timed_do_request(self, url, method, request_data=None, **kwargs):
         started = asyncio.get_running_loop().time()
         endpoint = str(url).rsplit("/", 1)[-1].split("?", 1)[0]
         try:
-            result = await original_do_request(url, method, request_data, **kwargs)
+            result = await original_do_request(self, url, method, request_data, **kwargs)
             status_code = result[0] if isinstance(result, tuple) and result else "unknown"
             elapsed_ms = (asyncio.get_running_loop().time() - started) * 1000
             logger.info(
@@ -399,7 +403,8 @@ def instrument_telegram_requests(request) -> None:
             )
             raise
 
-    request.do_request = timed_do_request
+    timed_do_request._telegram_perf_instrumented = True
+    HTTPXRequest.do_request = timed_do_request
 
 
 def build_application(use_updater: bool = True) -> Application:
@@ -423,8 +428,8 @@ def build_application(use_updater: bool = True) -> Application:
         .concurrent_updates(ChatSerialUpdateProcessor(max_concurrent_updates=16))
         .build()
     )
-    # Instrument outbound Telegram API calls while preserving the configured HTTP/2 transport.
-    instrument_telegram_requests(application.bot.request)
+    # Instrument HTTPXRequest at class level; instance methods are read-only.
+    instrument_telegram_requests()
     application.bot_data["settings"] = settings
     # Delete slash commands while allowing their normal handlers to execute in later groups.
     application.add_handler(InlineQueryHandler(online_games_inline_query), group=-100)
