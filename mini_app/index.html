@@ -809,7 +809,7 @@ function renderWordGame(){
  if(extraElapsedTimer)clearInterval(extraElapsedTimer);
  const g=extraGame;if(!g)return;
  const shell=c4Shell(),finished=g.status==='finished',training=g.mode==='training';
- shell.innerHTML='<div class="word-game-top"><button class="word-exit" id="word-exit">انسحاب</button><span class="word-game-title">خمن الكلمة 🔤</span></div>'+(g.mode==='online'&&g.is_player?'<button class="word-hint-button" id="word-hint">هنت · '+(g.hint_votes_count||0)+'/'+(g.hint_votes_needed||2)+'</button>':'')+'<div class="c4-heading"><p id="word-round-label">الكلمة '+Math.min(g.current_index+1,g.total)+' من '+g.total+'</p></div><div class="mg-score" id="word-scores"></div><div class="c4-panel"><div class="c4-result show" id="word-message">'+(finished?'انتهت اللعبة!':'اكتب تخمينك')+'</div><div class="word-attempts" id="word-attempts-left"></div><div class="word-history" id="word-history"></div><input id="word-guess" autocomplete="off" maxlength="'+(g.current_word_length||g.word_length)+'" placeholder="الكلمة من '+(g.current_word_length||g.word_length)+' أحرف" style="width:100%;padding:15px;border-radius:12px;border:1px solid #ffffff45;background:#100709;color:white;font:700 20px inherit;text-align:center"><button class="c4-start" id="word-submit">تأكيد الإجابة</button><div class="c4-hint" id="word-clock"></div><div id="word-end-actions"></div></div>';
+ shell.innerHTML='<div class="word-game-top"><button class="word-exit" id="word-exit">انسحاب</button><span class="word-game-title">خمن الكلمة 🔤</span></div>'+(g.mode==='online'&&g.is_player&&g.status==='playing'?'<button class="word-hint-button" id="word-hint">هنت · '+(g.hint_votes_count||0)+'/'+(g.hint_votes_needed||2)+'</button>':'')+'<div class="c4-heading"><p id="word-round-label">الكلمة '+Math.min(g.current_index+1,g.total)+' من '+g.total+'</p></div><div class="mg-score" id="word-scores"></div><div class="c4-panel"><div class="c4-result show" id="word-message">'+(finished?'انتهت اللعبة!':'اكتب تخمينك')+'</div><div class="word-attempts" id="word-attempts-left"></div><div class="word-history" id="word-history"></div><input id="word-guess" autocomplete="off" maxlength="'+(g.current_word_length||g.word_length)+'" placeholder="الكلمة من '+(g.current_word_length||g.word_length)+' أحرف" style="width:100%;padding:15px;border-radius:12px;border:1px solid #ffffff45;background:#100709;color:white;font:700 20px inherit;text-align:center"><button class="c4-start" id="word-submit">تأكيد الإجابة</button><div class="c4-hint" id="word-clock"></div><div id="word-end-actions"></div></div>';
  shell.querySelector('#word-exit').onclick=confirmWordExit;
  const hintButton=shell.querySelector('#word-hint');
  if(hintButton)hintButton.onclick=async()=>{
@@ -930,7 +930,7 @@ function updateWordHintButton(g){
  if(!button)return;
  const count=Number(g.hint_votes_count)||0,needed=Number(g.hint_votes_needed)||2;
  button.textContent=g.hint?'تم استخدام الهنت':'هنت · '+count+'/'+needed;
- button.disabled=!!g.hint||!!g.my_hint_vote||!!g.round_until||!g.is_player;
+ button.disabled=g.status!=='playing'||!!g.hint||!!g.my_hint_vote||!!g.round_until||!g.is_player;
 }
 function wordRoundKey(g){
  return [g?.status,g?.current_index,g?.round_winner,g?.round_until,g?.round_deadline,
