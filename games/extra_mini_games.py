@@ -161,11 +161,12 @@ def _new_words(count, length):
         raise ValueError("اختر كلمات من 4 أو 5 أحرف أو كلهم")
     if count == 1:
         return random.sample(WORDS_BY_LENGTH[random.choice((4, 5))], 1)
-    four_count = random.randint(1, count - 1)
-    words = random.sample(WORDS_BY_LENGTH[4], four_count)
-    words += random.sample(WORDS_BY_LENGTH[5], count - four_count)
-    random.shuffle(words)
-    return words
+    # Mixed mode alternates predictably: 4 letters, then 5, then 4, then 5.
+    four_count = (count + 1) // 2
+    five_count = count // 2
+    four_words = iter(random.sample(WORDS_BY_LENGTH[4], four_count))
+    five_words = iter(random.sample(WORDS_BY_LENGTH[5], five_count))
+    return [next(four_words) if i % 2 == 0 else next(five_words) for i in range(count)]
 
 def _public_word(row, user_id):
     players = _decode(row["players"])
