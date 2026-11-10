@@ -94,7 +94,7 @@ def start_http_server():
 
 async def run_webhook_bot():
     global application, application_loop, webhook_secret
-    settings = __import__("config").load_settings()
+    __import__("config").load_settings()
     webhook_secret = os.environ.get("TELEGRAM_WEBHOOK_SECRET", "")
     if not webhook_secret:
         raise RuntimeError("TELEGRAM_WEBHOOK_SECRET is required for webhook mode")
@@ -107,7 +107,8 @@ async def run_webhook_bot():
         if application.post_init:
             await application.post_init(application)
 
-        webhook_url = "https://nawaf-bot-v2.onrender.com/telegram-webhook"
+        base_url = os.environ.get("PUBLIC_BASE_URL", "https://nawaf-bot-v2.onrender.com").rstrip("/")
+        webhook_url = f"{base_url}/telegram-webhook"
         await application.bot.set_webhook(
             url=webhook_url,
             secret_token=webhook_secret,
