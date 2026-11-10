@@ -189,18 +189,7 @@ def _format_duration(seconds):
     return f"{hours:02}:{minutes:02}:{seconds:02}" if hours else f"{minutes:02}:{seconds:02}"
 
 
-async def youtube_audio_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    message = update.effective_message
-    if not message or not message.text:
-        return
-    match = re.match(r"^(?:بحث|يوت)\s+(.+?)\s*$", message.text)
-    if not match:
-        return
-    search_text = match.group(1).strip()
-    if not search_text:
-        await message.reply_text("❌ اكتب اسم المقطع بعد كلمة بحث.")
-        return
-    status = await message.reply_text("🔎 ثواني قاعد ابحث...")
+async def _complete_youtube_search(message, context, search_text, status):
     try:
         started = time.perf_counter()
         results = await _search_youtube(search_text)
@@ -220,12 +209,65 @@ async def youtube_audio_search(update: Update, context: ContextTypes.DEFAULT_TYP
             label = f"{index + 1}. {title}" + (f" [{duration}]" if duration else "")
             keyboard.append([InlineKeyboardButton(label, callback_data=f"ytpick:{search_id}:{index}")])
         await status.edit_text(
-            f"🎵 نتائج البحث عن: {search_text}\\n\\nاختر المقطع:",
+            f"🎵 نتائج البحث عن: {search_text}\n\nاختر المقطع:",
             reply_markup=InlineKeyboardMarkup(keyboard),
         )
     except Exception:
         logger.exception("فشل البحث في يوتيوب")
-        await status.edit_text("❌ تعذّر البحث في يوتيوب.\\nراجع سجلات Render لمعرفة السبب.")
+        try:
+            await status.edit_text("❌ تعذّر البحث في يوتيوب.\nراجع سجلات Render لمعرفة السبب.")
+        except Exception:
+            logger.exception("تعذر تحديث رسالة حالة البحث")
+
+
+async def youtube_audio_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    message = update.effective_message
+    if not message or not message.text:
+        return
+    match = re.match(r"^(?:بحث|يوت)\s+(.+?)\s*$", message.text)
+    if not match:
+        return
+    search_text = match.group(1).strip()
+    if not search_text:
+        await message.reply_text("❌ اكتب اسم المقطع بعد كلمة بحث.")
+        return
+    status = await message.reply_text("🔎 ثواني قاعد ابحث...")
+    # Search runs outside the serial update processor so the group stays responsive.
+    context.application.create_task(
+        _complete_youtube_search(message, context, search_text, status),
+        update=update,
+    )
+
+
+async def _download_and_send_youtube_audio(context, chat_id, video, status, search_id, searches):
+    try:
+        with tempfile.TemporaryDirectory(prefix="yt_audio_") as folder:
+            file_path, info = await _download_audio(video["url"], folder)
+            title = info.get("title") or video["title"]
+            duration_value = info.get("duration") or video.get("duration") or 0
+            caption = "• Nawaf"
+            duration = _format_duration(duration_value)
+            if duration:
+                caption += f" . ↠ {duration}"
+            keyboard = InlineKeyboardMarkup([[
+                InlineKeyboardButton("🌷", url=f"https://t.me/{BOT_USERNAME}")
+            ]])
+            with open(file_path, "rb") as audio_file:
+                await context.bot.send_audio(
+                    chat_id=chat_id, audio=audio_file, title=title[:64],
+                    performer="Nawaf", duration=int(float(duration_value or 0)),
+                    caption=caption, reply_markup=keyboard,
+                    read_timeout=120, write_timeout=120, connect_timeout=30, pool_timeout=30,
+                )
+        await status.delete()
+    except Exception:
+        logger.exception("فشل تحميل أو إرسال مقطع يوتيوب عبر Samplecut: %s", video.get("url"))
+        try:
+            await status.edit_text("❌ تعذّر تحميل هذا المقطع أو إرساله.\nجرّب اختيار نتيجة ثانية أو راجع سجلات Render.")
+        except Exception:
+            logger.exception("تعذر تحديث رسالة حالة التحميل")
+    finally:
+        searches.pop(search_id, None)
 
 
 async def youtube_audio_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -250,31 +292,9 @@ async def youtube_audio_callback(update: Update, context: ContextTypes.DEFAULT_T
     except Exception:
         pass
     status = await context.bot.send_message(chat_id=chat_id, text="⏳ قاعد ابحث، انتظر...")
-    try:
-        with tempfile.TemporaryDirectory(prefix="yt_audio_") as folder:
-            file_path, info = await _download_audio(video["url"], folder)
-            title = info.get("title") or video["title"]
-            duration_value = info.get("duration") or video.get("duration") or 0
-            caption = "• Nawaf"
-            duration = _format_duration(duration_value)
-            if duration:
-                caption += f" . ↠ {duration}"
-            keyboard = InlineKeyboardMarkup([[
-                InlineKeyboardButton("🌷", url=f"https://t.me/{BOT_USERNAME}")
-            ]])
-            with open(file_path, "rb") as audio_file:
-                await context.bot.send_audio(
-                    chat_id=chat_id, audio=audio_file, title=title[:64],
-                    performer="Nawaf", duration=int(float(duration_value or 0)),
-                    caption=caption, reply_markup=keyboard,
-                    read_timeout=120, write_timeout=120, connect_timeout=30, pool_timeout=30,
-                )
-        await status.delete()
-    except Exception:
-        logger.exception("فشل تحميل أو إرسال مقطع يوتيوب عبر Samplecut: %s", video.get("url"))
-        try:
-            await status.edit_text("❌ تعذّر تحميل هذا المقطع أو إرساله.\\nجرّب اختيار نتيجة ثانية أو راجع سجلات Render.")
-        except Exception:
-            logger.exception("تعذر تحديث رسالة حالة التحميل")
-    finally:
-        searches.pop(search_id, None)
+    # Downloading and sending runs as a background task; it no longer blocks
+    # other messages or callbacks in this group.
+    context.application.create_task(
+        _download_and_send_youtube_audio(context, chat_id, video, status, search_id, searches),
+        update=update,
+    )
