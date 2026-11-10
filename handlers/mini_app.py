@@ -8,7 +8,7 @@ from telegram.ext import ContextTypes, MessageHandler, filters, ApplicationHandl
 from database.pool import get_pool
 
 OWNER_ID = 8453977662
-WEB_APP_URL = "https://nawaf-bot-v2.onrender.com/"
+WEB_APP_URL = "https://nawaf-bot-frankfurt.onrender.com/"
 _sessions: dict[int, dict] = {}
 
 
