@@ -598,19 +598,27 @@ async def music_callback(update, context):
 
     )
 
-    await _play_selected(
+    # Run audio download and playback outside the serial update processor.
 
-        chat_id=chat_id,
+    context.application.create_task(
 
-        context=context,
+        _play_selected(
 
-        source_message=query.message,
+            chat_id=chat_id,
 
-        video=video,
+            context=context,
 
-        requester=user,
+            source_message=query.message,
 
-        status_message=status,
+            video=video,
+
+            requester=user,
+
+            status_message=status,
+
+        ),
+
+        update=update,
 
     )
 
@@ -844,15 +852,23 @@ async def music_message_handler(update, context):
 
         else:
 
-            await _show_search(
+            # Keep YouTube network work out of the serial message handler.
 
-                message,
+            context.application.create_task(
 
-                context,
+                _show_search(
 
-                search_match.group(1).strip(),
+                    message,
 
-                user,
+                    context,
+
+                    search_match.group(1).strip(),
+
+                    user,
+
+                ),
+
+                update=update,
 
             )
 
@@ -880,17 +896,23 @@ async def music_message_handler(update, context):
 
             else:
 
-                await _play_selected(
+                context.application.create_task(
 
-                    chat_id=chat.id,
+                    _play_selected(
 
-                    context=context,
+                        chat_id=chat.id,
 
-                    source_message=message,
+                        context=context,
 
-                    video=last_track,
+                        source_message=message,
 
-                    requester=user,
+                        video=last_track,
+
+                        requester=user,
+
+                    ),
+
+                    update=update,
 
                 )
 
