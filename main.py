@@ -296,7 +296,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             import uuid
             uuid.UUID(game_id)
             from telegram import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
-            game_url = f"https://nawaf-bot-v2.onrender.com/mini-app?game_id={game_id}"
+            game_url = f"https://nawaf-bot-frankfurt.onrender.com/mini-app?game_id={game_id}"
             await update.effective_message.reply_text(
                 "تم تجهيز تحدي كونكت 4. افتح اللعبة من الزر بالأسفل.",
                 reply_markup=InlineKeyboardMarkup([[
