@@ -51,8 +51,8 @@ async def lookup_user(context, value: str | int | None) -> Any | None:
     try:
         row = await get_user_by_id(user_id)
         if row:
-            saved_username = row.get("username")
-            saved_name = (row.get("first_name") or "").strip()
+            saved_username = row["username"]
+            saved_name = (row["first_name"] or "").strip()
             if saved_name and saved_name != str(user_id):
                 return SimpleNamespace(
                     id=user_id,
