@@ -63,16 +63,25 @@ async def save_target_user(user: Any) -> None:
     if not user:
         return
     pool = get_pool()
+    user_id = int(user.id)
+    first_name = getattr(user, "first_name", None)
+    # Never persist the numeric-ID fallback as if it were the user's real name.
+    if first_name is not None and str(first_name).strip() == str(user_id):
+        first_name = None
     await pool.execute(
         """INSERT INTO users(user_id,username,first_name,last_name,is_bot)
            VALUES($1,$2,$3,$4,$5)
            ON CONFLICT(user_id) DO UPDATE SET
              username=COALESCE(EXCLUDED.username,users.username),
-             first_name=COALESCE(EXCLUDED.first_name,users.first_name),
+             first_name=CASE
+               WHEN EXCLUDED.first_name IS NOT NULL THEN EXCLUDED.first_name
+               WHEN users.first_name = users.user_id::text THEN NULL
+               ELSE users.first_name
+             END,
              last_name=COALESCE(EXCLUDED.last_name,users.last_name),
              updated_at=NOW()""",
-        int(user.id), getattr(user, "username", None),
-        getattr(user, "first_name", None), getattr(user, "last_name", None),
+        user_id, getattr(user, "username", None),
+        first_name, getattr(user, "last_name", None),
         bool(getattr(user, "is_bot", False)),
     )
 
