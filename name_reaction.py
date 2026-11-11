@@ -509,9 +509,16 @@ async def _reply_control_handler(client, message):
                 part for part in (user.first_name, user.last_name) if part
             ).strip() or "لا يوجد"
             username = f"@{user.username}" if user.username else "لا يوجد"
+            try:
+                profile = await client.get_chat(user.id)
+                bio = (getattr(profile, "bio", None) or "").strip() or "لا يوجد"
+            except Exception:
+                bio = "لا يوجد"
+
             await message.reply_text(
                 f"• NAME : {name}\n"
                 f"• ID : {user.id}\n"
+                f"• BIO : {bio}\n"
                 f"• USE : {username}"
             )
         except Exception as exc:
