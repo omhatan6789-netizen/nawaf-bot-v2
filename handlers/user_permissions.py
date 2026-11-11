@@ -46,18 +46,7 @@ async def get_permission_target(update: Update, context: ContextTypes.DEFAULT_TY
     parts = (message.text or "").strip().split()
     if len(parts) < 3:
         return None
-    target_text = parts[-1].strip()
-    if target_text.isdigit():
-        try:
-            return await context.bot.get_chat(int(target_text))
-        except Exception:
-            return None
-    if target_text.startswith("@"):
-        try:
-            return await context.bot.get_chat(target_text)
-        except Exception:
-            return None
-    return None
+    return await lookup_user(context, parts[-1].strip())
 
 
 async def permission_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
