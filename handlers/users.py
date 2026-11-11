@@ -8,7 +8,6 @@ from database.points import get_points
 from database.roles import OWNER_ID, get_rank
 from handlers.cache import ensure_user_loaded, get_user_data
 from handlers.roles import get_target_user
-from music_call import get_music_client
 
 
 async def user_id_command(
@@ -61,6 +60,7 @@ async def user_id_command(
     bio = "لا يوجد"
     display_name = first_name_value or "غير معروف"
     try:
+        from music_call import get_music_client
         music_client = get_music_client()
         user_info = await music_client.get_chat(user_id) if music_client is not None else None
         if user_info is None:
