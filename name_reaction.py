@@ -486,7 +486,7 @@ async def _reply_control_handler(client, message):
 
             username = f"@{user.username}" if user.username else "لا يوجد"
             await message.reply_text(
-                f"• ID : {user.id}\\n"
+                f"• ID : {user.id}\n"
                 f"• USE : {username}"
             )
         except Exception as exc:
