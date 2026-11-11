@@ -472,7 +472,7 @@ async def _reply_control_handler(client, message):
         return
 
     # كشف الحسابات من جلسة المساعد مباشرة، دون قاعدة البيانات.
-    reveal_match = re.fullmatch(r"كشف\\s+(@?[A-Za-z0-9_]+)", text)
+    reveal_match = re.fullmatch(r"كشف\s+(@?[A-Za-z0-9_]+)", text)
     if reveal_match:
         raw_target = reveal_match.group(1).strip()
         target = raw_target.lstrip("@")
