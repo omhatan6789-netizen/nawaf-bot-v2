@@ -471,6 +471,29 @@ async def _reply_control_handler(client, message):
     if not text:
         return
 
+    # كشف الحسابات من جلسة المساعد مباشرة، دون قاعدة البيانات.
+    reveal_match = re.fullmatch(r"كشف\\s+(@?[A-Za-z0-9_]+)", text)
+    if reveal_match:
+        raw_target = reveal_match.group(1).strip()
+        target = raw_target.lstrip("@")
+        try:
+            if target.isdigit():
+                if int(target) <= 0:
+                    raise ValueError("Invalid Telegram ID")
+                user = await client.get_users(int(target))
+            else:
+                user = await client.get_users(target)
+
+            username = f"@{user.username}" if user.username else "لا يوجد"
+            await message.reply_text(
+                f"• ID : {user.id}\\n"
+                f"• USE : {username}"
+            )
+        except Exception as exc:
+            print(f"[ACCOUNT REVEAL] Lookup failed for {raw_target}: {exc}")
+            await message.reply_text("❌ ما قدرت أوصل للحساب. تأكد من اليوزر أو الآيدي.")
+        return
+
     # --------------------------
     # مسح الرسائل
     # --------------------------
