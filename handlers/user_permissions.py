@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from html import escape
+
 from telegram import Update
 from telegram.ext import ContextTypes
 
@@ -100,11 +102,13 @@ async def permission_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     )
     if action == "منع":
         await message.reply_text(
-            f"🚫 تم منع {target.first_name} من الأمر:\n"
-            f"↤︎ {command}"
+            f'🚫 تم منع <a href="tg://user?id={int(target.id)}">{escape(str(target.first_name or target.id))}</a> من الأمر:\n'
+            f"↤︎ {command}",
+            parse_mode="HTML",
         )
     else:
         await message.reply_text(
-            f"✅ تم السماح لـ {target.first_name} بالأمر:\n"
-            f"↤︎ {command}"
+            f'✅ تم السماح لـ <a href="tg://user?id={int(target.id)}">{escape(str(target.first_name or target.id))}</a> بالأمر:\n'
+            f"↤︎ {command}",
+            parse_mode="HTML",
         )
