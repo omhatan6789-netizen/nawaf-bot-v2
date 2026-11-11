@@ -5,7 +5,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from database.timing import timed
-from handlers.target_lookup import lookup_user
+from handlers.target_lookup import lookup_user, lookup_replied_user
 
 from database.points import (
     add_points,
@@ -32,8 +32,6 @@ def _get_user_id_from_update(update: Update) -> int | None:
     message = update.message
     if not message:
         return None
-    if message.reply_to_message and message.reply_to_message.from_user:
-        return message.reply_to_message.from_user.id
     return update.effective_user.id if update.effective_user else None
 
 
@@ -65,7 +63,10 @@ async def add_points_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     target_user = None
     if update.message.reply_to_message and update.message.reply_to_message.from_user:
-        target_user = update.message.reply_to_message.from_user
+        target_user = await lookup_replied_user(update.message)
+        if not target_user:
+            await update.message.reply_text("❌ حساب المساعد ما قدر يوصل للمستخدم صاحب الرسالة.")
+            return
     elif len(parts) == 3:
         target_user = await lookup_user(context, parts[2])
         if not target_user:
@@ -114,7 +115,10 @@ async def remove_points_command(update: Update, context: ContextTypes.DEFAULT_TY
         await update.message.reply_text("❌ يجب أن يكون عدد النقاط أكبر من صفر.")
         return
     if update.message.reply_to_message and update.message.reply_to_message.from_user:
-        target_user = update.message.reply_to_message.from_user
+        target_user = await lookup_replied_user(update.message)
+        if not target_user:
+            await update.message.reply_text("❌ حساب المساعد ما قدر يوصل للمستخدم صاحب الرسالة.")
+            return
     elif len(parts) == 3:
         target_user = await lookup_user(context, parts[2])
         if not target_user:
