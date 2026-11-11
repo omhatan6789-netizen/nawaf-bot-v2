@@ -27,6 +27,7 @@ from database.moderation import (
     get_repetition_punishment_duration,
 )
 from database.roles import get_rank, get_rank_level
+from handlers.target_lookup import lookup_user
 
 logger = logging.getLogger(__name__)
 OWNER_ID = 8453977662
@@ -162,7 +163,7 @@ async def react_clown(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def resolve_target(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
-    allow_music_lookup: bool = False,
+    allow_music_lookup: bool = True,
 ):
     message = update.effective_message
     if not message:
@@ -179,43 +180,7 @@ async def resolve_target(
         (part for part in parts[1:] if part.isdigit() or part.startswith("@")),
         None,
     )
-    if not target_value:
-        return None
-
-    row = (
-        await get_user_by_id(int(target_value))
-        if target_value.isdigit()
-        else await get_user_by_username(target_value.lstrip("@"))
-    )
-    if row:
-        return SimpleNamespace(
-            id=int(row["user_id"]),
-            username=row["username"],
-            first_name=row["first_name"] or "",
-            is_bot=False,
-        )
-
-    if target_value.isdigit():
-        try:
-            user = await context.bot.get_chat(int(target_value))
-            if user:
-                await save_target_user(user)
-                return user
-        except Exception:
-            pass
-    elif allow_music_lookup:
-        try:
-            from music_call import get_music_client
-
-            music_client = get_music_client()
-            if music_client is not None:
-                user = await music_client.get_users(target_value.lstrip("@"))
-                if user:
-                    await save_target_user(user)
-                    return user
-        except Exception:
-            logger.debug("Music account username lookup failed", exc_info=True)
-    return None
+    return await lookup_user(context, target_value)
 
 
 def moderation_message(action, target, duration, reason=None, actor_rank=None):
