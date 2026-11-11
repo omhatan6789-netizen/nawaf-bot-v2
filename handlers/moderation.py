@@ -19,7 +19,7 @@ from telegram.ext import ContextTypes, ApplicationHandlerStop
 
 from database.moderation import (
     get_moderation_settings, set_moderation_setting,
-    save_target_user, get_user_by_id, get_user_by_username,
+    save_target_user,
     save_sanction, delete_sanction, get_active_mute,
     get_user_restrictions, get_sanction_rows, clear_sanction_table,
     get_warning_count, add_warning, clear_warnings,
@@ -27,7 +27,7 @@ from database.moderation import (
     get_repetition_punishment_duration,
 )
 from database.roles import get_rank, get_rank_level
-from handlers.target_lookup import lookup_user
+from handlers.target_lookup import lookup_user, resolve_message_user
 
 logger = logging.getLogger(__name__)
 OWNER_ID = 8453977662
@@ -165,22 +165,7 @@ async def resolve_target(
     context: ContextTypes.DEFAULT_TYPE,
     allow_music_lookup: bool = True,
 ):
-    message = update.effective_message
-    if not message:
-        return None
-    if message.reply_to_message and message.reply_to_message.from_user:
-        user = message.reply_to_message.from_user
-        await save_target_user(user)
-        return user
-
-    parts = (message.text or "").strip().split()
-    if len(parts) < 2:
-        return None
-    target_value = next(
-        (part for part in parts[1:] if part.isdigit() or part.startswith("@")),
-        None,
-    )
-    return await lookup_user(context, target_value)
+    return await resolve_message_user(update, context, token_index=1)
 
 
 def moderation_message(action, target, duration, reason=None, actor_rank=None):
@@ -593,10 +578,9 @@ async def repetition_action_callback(update, context):
     if await _get_level(target_id, chat.id) >= await _get_level(actor.id, chat.id):
         await query.answer("❌ لا يمكنك معاقبة شخص رتبته مساوية أو أعلى منك.", show_alert=True)
         return
-    try:
-        target = await context.bot.get_chat(target_id)
-    except Exception:
-        await query.answer("❌ تعذر العثور على المستخدم.", show_alert=True)
+    target = await lookup_user(context, target_id)
+    if not target:
+        await query.answer("❌ حساب المساعد ما قدر يوصل للمستخدم بهذا الآيدي.", show_alert=True)
         return
     duration = await get_repetition_punishment_duration(chat.id)
     until_time = datetime.now(timezone.utc) + timedelta(seconds=duration)
