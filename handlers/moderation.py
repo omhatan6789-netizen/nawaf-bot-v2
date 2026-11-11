@@ -159,7 +159,11 @@ async def react_clown(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.debug("Could not set clown reaction", exc_info=True)
 
 
-async def resolve_target(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def resolve_target(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    allow_music_lookup: bool = False,
+):
     message = update.effective_message
     if not message:
         return None
@@ -190,6 +194,7 @@ async def resolve_target(update: Update, context: ContextTypes.DEFAULT_TYPE):
             first_name=row["first_name"] or "",
             is_bot=False,
         )
+
     if target_value.isdigit():
         try:
             user = await context.bot.get_chat(int(target_value))
@@ -198,6 +203,18 @@ async def resolve_target(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 return user
         except Exception:
             pass
+    elif allow_music_lookup:
+        try:
+            from music_call import get_music_client
+
+            music_client = get_music_client()
+            if music_client is not None:
+                user = await music_client.get_users(target_value.lstrip("@"))
+                if user:
+                    await save_target_user(user)
+                    return user
+        except Exception:
+            logger.debug("Music account username lookup failed", exc_info=True)
     return None
 
 
@@ -539,7 +556,7 @@ async def reveal_command(update, context):
     message, chat = update.effective_message, update.effective_chat
     if not message or not chat:
         return
-    target = await resolve_target(update, context)
+    target = await resolve_target(update, context, allow_music_lookup=True)
     if not target:
         return
     username = getattr(target, "username", None)
