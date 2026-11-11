@@ -524,7 +524,7 @@ async def reveal_command(update, context):
     )
     text = (
         f'• NAME : <a href="tg://user?id={int(target.id)}">{html_escape(display_name)}</a>\n'
-        f'• ID : <a href="tg://user?id={int(target.id)}">{target.id}</a>\n'
+        f'• ID : <code>{target.id}</code>\n'
         f"• USE : {html_escape('@' + username if username else 'لا يوجد')}\n"
         f"• STE : {rank_text}\n"
         f"• MSG : {messages}"
