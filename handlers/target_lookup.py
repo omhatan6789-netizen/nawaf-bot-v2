@@ -25,12 +25,16 @@ async def lookup_user(context, value: str | int | None) -> Any | None:
     try:
         row = await (get_user_by_id(int(raw)) if is_id else get_user_by_username(username))
         if row:
-            return SimpleNamespace(
-                id=int(row["user_id"]),
-                username=row["username"],
-                first_name=row["first_name"] or "",
-                is_bot=False,
-            )
+            saved_name = (row["first_name"] or "").strip()
+            # Older versions could save the numeric ID as first_name.
+            # Do not treat that placeholder as a real profile; refresh via Telegram.
+            if saved_name and saved_name != str(row["user_id"]):
+                return SimpleNamespace(
+                    id=int(row["user_id"]),
+                    username=row["username"],
+                    first_name=saved_name,
+                    is_bot=False,
+                )
     except Exception:
         logger.debug("Database user lookup failed for %s", raw, exc_info=True)
 
