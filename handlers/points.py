@@ -5,6 +5,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from database.timing import timed
+from handlers.target_lookup import lookup_user
 
 from database.points import (
     add_points,
@@ -44,11 +45,13 @@ async def add_points_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
 
     parts = (update.message.text or "").strip().split()
-    if len(parts) != 2:
+    if len(parts) not in (2, 3):
         await update.message.reply_text(
             "❌ الاستخدام الصحيح:\n\n"
-            "اضف 500\n\n"
-            "ويُفضل استخدام الأمر بالرد على الشخص."
+            "اضف 500\n"
+            "اضف 500 @username\n"
+            "اضف 500 123456789\n\n"
+            "أو استخدم الأمر بالرد على الشخص."
         )
         return
     try:
@@ -60,13 +63,21 @@ async def add_points_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await update.message.reply_text("❌ يجب أن يكون عدد النقاط أكبر من صفر.")
         return
 
-    target_id = _get_user_id_from_update(update)
+    target_user = None
+    if update.message.reply_to_message and update.message.reply_to_message.from_user:
+        target_user = update.message.reply_to_message.from_user
+    elif len(parts) == 3:
+        target_user = await lookup_user(context, parts[2])
+        if not target_user:
+            await update.message.reply_text("❌ لم أستطع العثور على المستخدم.")
+            return
+    target_id = target_user.id if target_user else _get_user_id_from_update(update)
     if target_id is None:
         return
     new_points = await add_points(target_id, amount)
 
-    if update.message.reply_to_message and update.message.reply_to_message.from_user:
-        target_name = update.message.reply_to_message.from_user.first_name or "المستخدم"
+    if target_user:
+        target_name = target_user.first_name or "المستخدم"
         await update.message.reply_text(
             f"✅ تمت إضافة {amount} نقطة إلى {target_name}.\n\n"
             f"🏆 نقاطه الآن: {new_points}"
@@ -86,11 +97,12 @@ async def remove_points_command(update: Update, context: ContextTypes.DEFAULT_TY
         return
 
     parts = (update.message.text or "").strip().split()
-    if len(parts) != 2:
+    if len(parts) not in (2, 3):
         await update.message.reply_text(
             "❌ الاستخدام الصحيح:\n\n"
-            "خصم 500\n\n"
-            "ويجب استخدام الأمر بالرد على الشخص."
+            "خصم 500 @username\n"
+            "خصم 500 123456789\n\n"
+            "أو استخدم الأمر بالرد على الشخص."
         )
         return
     try:
@@ -101,12 +113,15 @@ async def remove_points_command(update: Update, context: ContextTypes.DEFAULT_TY
     if amount <= 0:
         await update.message.reply_text("❌ يجب أن يكون عدد النقاط أكبر من صفر.")
         return
-    if not update.message.reply_to_message:
-        await update.message.reply_text("❌ يجب استخدام الأمر بالرد على الشخص.")
-        return
-
-    target_user = update.message.reply_to_message.from_user
-    if not target_user:
+    if update.message.reply_to_message and update.message.reply_to_message.from_user:
+        target_user = update.message.reply_to_message.from_user
+    elif len(parts) == 3:
+        target_user = await lookup_user(context, parts[2])
+        if not target_user:
+            await update.message.reply_text("❌ لم أستطع العثور على المستخدم.")
+            return
+    else:
+        await update.message.reply_text("❌ حدد الشخص بالرد أو باليوزر أو بالآيدي.")
         return
     remaining_points = await deduct_points(target_user.id, amount)
     if remaining_points is None:
