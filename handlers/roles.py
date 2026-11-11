@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from html import escape
 
+from database.users import get_user
+
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, User
 from telegram.ext import ContextTypes
 
@@ -52,18 +54,48 @@ def role_mention(user_id: int, name: str | None = None) -> str:
 
 async def get_user_mention(context: ContextTypes.DEFAULT_TYPE, user_id: int) -> str:
     name = None
-    try:
-        from music_call import get_music_client
+    saved_username = None
 
-        music_client = get_music_client()
-        if music_client is not None:
-            profile = await music_client.get_users(int(user_id))
-            if profile:
-                name = " ".join(
-                    part for part in (profile.first_name, profile.last_name) if part
-                ).strip() or profile.username
+    # Prefer a real cached name when Telegram cannot resolve the numeric ID.
+    try:
+        row = await get_user(int(user_id))
+        if row:
+            saved_name = (row["first_name"] or "").strip()
+            saved_username = row["username"]
+            if saved_name and saved_name != str(user_id):
+                name = saved_name
     except Exception:
         pass
+
+    # Refresh profile through Telegram when possible.
+    if not name:
+        try:
+            info = await context.bot.get_chat(int(user_id))
+            name = (
+                getattr(info, "first_name", None)
+                or getattr(info, "title", None)
+                or getattr(info, "username", None)
+            )
+        except Exception:
+            pass
+
+    if not name:
+        try:
+            from music_call import get_music_client
+            from database.moderation import save_target_user
+
+            music_client = get_music_client()
+            if music_client is not None:
+                profile = await music_client.get_users(saved_username or int(user_id))
+                if profile:
+                    name = " ".join(
+                        part for part in (profile.first_name, profile.last_name) if part
+                    ).strip() or profile.username
+                    await save_target_user(profile)
+        except Exception:
+            pass
+
+    # role_mention always makes either the real name or fallback ID clickable.
     return role_mention(user_id, name or str(user_id))
 
 
