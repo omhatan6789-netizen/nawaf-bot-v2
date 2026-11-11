@@ -24,9 +24,9 @@ from database.blocked_words import (
 )
 from database.moderation import (
     save_sanction, delete_sanction, save_target_user,
-    get_user_by_id, get_user_by_username,
 )
 from database.roles import get_rank_level, is_primary_developer
+from handlers.target_lookup import lookup_user
 
 logger = logging.getLogger(__name__)
 OWNER_ID = 8453977662
@@ -618,10 +618,8 @@ async def blocked_words_callback(update: Update, context: ContextTypes.DEFAULT_T
                 pass
         return
     if action == "lift":
-        try:
-            member = await context.bot.get_chat_member(origin_chat_id, target_id)
-            target = member.user
-        except Exception:
+        target = await lookup_user(context, target_id)
+        if not target:
             target = SimpleNamespace(id=target_id, username=None, first_name=str(target_id))
         if punishment_action == "mute":
             await delete_sanction("bot_mutes", origin_chat_id, target_id)
