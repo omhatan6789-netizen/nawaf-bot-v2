@@ -17,10 +17,9 @@ from telegram.ext import ContextTypes
 from database.repetition import get_repetition_settings, update_repetition_setting
 from database.moderation import (
     add_warning, get_warning_count, clear_warnings, save_sanction,
-    get_user_by_id, get_user_by_username,
 )
 from database.roles import get_rank_level, is_primary_developer
-from handlers.target_lookup import lookup_user
+from handlers.target_lookup import resolve_message_user
 
 logger = logging.getLogger(__name__)
 OWNER_ID = 8453977662
@@ -342,18 +341,7 @@ async def set_repetition_rank(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 
 async def _get_warning_target(update, context):
-    message = update.effective_message
-    if not message:
-        return None
-    if message.reply_to_message and message.reply_to_message.from_user:
-        return message.reply_to_message.from_user
-    parts = (message.text or "").strip().split()
-    for value in parts[2:]:
-        if value.isdigit() or value.startswith("@"):
-            target = await lookup_user(context, value)
-            if target:
-                return target
-    return None
+    return await resolve_message_user(update, context, token_index=2)
 
 
 async def clear_user_repetition_warnings(update: Update, context: ContextTypes.DEFAULT_TYPE):
