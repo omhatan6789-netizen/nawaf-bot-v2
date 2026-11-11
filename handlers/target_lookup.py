@@ -45,7 +45,7 @@ async def lookup_user(context, value: str | int | None) -> Any | None:
                         id=int(row["user_id"]),
                         username=row["username"] or username,
                         first_name=saved_name,
-                        last_name=None,
+                        last_name=row["last_name"],
                         is_bot=False,
                     )
         except Exception:
