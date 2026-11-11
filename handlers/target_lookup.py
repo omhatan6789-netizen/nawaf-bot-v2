@@ -5,7 +5,7 @@ import logging
 from types import SimpleNamespace
 from typing import Any
 
-from database.moderation import get_user_by_id, save_target_user
+from database.moderation import get_user_by_id, get_user_by_username, save_target_user
 
 logger = logging.getLogger(__name__)
 
@@ -33,16 +33,37 @@ async def lookup_user(context, value: str | int | None) -> Any | None:
     if is_id and int(raw) <= 0:
         return None
 
-    # Username search stays exclusively on the assistant Pyrogram session.
+    # For usernames, use the local user cache first; Pyrogram is the fallback.
     if not is_id:
-        client = _music_client()
-        if client is None:
-            return None
+        username = raw.lstrip("@")
         try:
-            return await client.get_users(raw.lstrip("@"))
+            row = await get_user_by_username(username)
+            if row:
+                saved_name = (row["first_name"] or "").strip()
+                if saved_name and saved_name != str(row["user_id"]):
+                    return SimpleNamespace(
+                        id=int(row["user_id"]),
+                        username=row["username"] or username,
+                        first_name=saved_name,
+                        last_name=None,
+                        is_bot=False,
+                    )
         except Exception:
-            logger.debug("Pyrogram username lookup failed for %s", raw, exc_info=True)
-            return None
+            logger.debug("Database username lookup failed for %s", raw, exc_info=True)
+
+        client = _music_client()
+        if client is not None:
+            try:
+                user = await client.get_users(username)
+                if user:
+                    try:
+                        await save_target_user(user)
+                    except Exception:
+                        logger.debug("Could not cache Pyrogram user %s", raw, exc_info=True)
+                    return user
+            except Exception:
+                logger.debug("Pyrogram username lookup failed for %s", raw, exc_info=True)
+        return None
 
     user_id = int(raw)
     saved_username = None
