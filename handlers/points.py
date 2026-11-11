@@ -1,4 +1,5 @@
 import logging
+import html
 import time
 
 from telegram import Update
@@ -78,10 +79,12 @@ async def add_points_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     new_points = await add_points(target_id, amount)
 
     if target_user:
-        target_name = target_user.first_name or "المستخدم"
+        target_name = target_user.first_name or str(target_user.id)
         await update.message.reply_text(
-            f"✅ تمت إضافة {amount} نقطة إلى {target_name}.\n\n"
-            f"🏆 نقاطه الآن: {new_points}"
+            f"✅ تمت إضافة {amount} نقطة إلى "
+            f'<a href="tg://user?id={int(target_user.id)}">{html.escape(str(target_name))}</a>.\n\n'
+            f"🏆 نقاطه الآن: {new_points}",
+            parse_mode="HTML",
         )
     else:
         await update.message.reply_text(
@@ -137,10 +140,12 @@ async def remove_points_command(update: Update, context: ContextTypes.DEFAULT_TY
         )
         return
 
-    target_name = target_user.first_name or "المستخدم"
+    target_name = target_user.first_name or str(target_user.id)
     await update.message.reply_text(
-        f"✅ تم خصم {amount} نقطة من {target_name}.\n\n"
-        f"🏆 نقاطه المتبقية: {remaining_points}"
+        f"✅ تم خصم {amount} نقطة من "
+        f'<a href="tg://user?id={int(target_user.id)}">{html.escape(str(target_name))}</a>.\n\n'
+        f"🏆 نقاطه المتبقية: {remaining_points}",
+        parse_mode="HTML",
     )
 
 
