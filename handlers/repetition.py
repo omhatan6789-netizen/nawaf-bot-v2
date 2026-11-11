@@ -20,6 +20,7 @@ from database.moderation import (
     get_user_by_id, get_user_by_username,
 )
 from database.roles import get_rank_level, is_primary_developer
+from handlers.target_lookup import lookup_user
 
 logger = logging.getLogger(__name__)
 OWNER_ID = 8453977662
@@ -348,20 +349,10 @@ async def _get_warning_target(update, context):
         return message.reply_to_message.from_user
     parts = (message.text or "").strip().split()
     for value in parts[2:]:
-        value = value.strip()
-        row = await get_user_by_id(int(value)) if value.isdigit() else (
-            await get_user_by_username(value[1:]) if value.startswith("@") else None
-        )
-        if row:
-            return type("StoredUser", (), {
-                "id": int(row["user_id"]), "username": row["username"],
-                "first_name": row["first_name"] or "",
-            })()
-        if value.isdigit():
-            try:
-                return await context.bot.get_chat(int(value))
-            except Exception:
-                continue
+        if value.isdigit() or value.startswith("@"):
+            target = await lookup_user(context, value)
+            if target:
+                return target
     return None
 
 
