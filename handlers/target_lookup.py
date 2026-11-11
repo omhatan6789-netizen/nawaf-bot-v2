@@ -22,9 +22,11 @@ async def lookup_user(context, value: str | int | None) -> Any | None:
     if not is_id and not raw.startswith("@"):
         return None
 
+    saved_username = None
     try:
         row = await (get_user_by_id(int(raw)) if is_id else get_user_by_username(username))
         if row:
+            saved_username = row["username"]
             saved_name = (row["first_name"] or "").strip()
             # Older versions could save the numeric ID as first_name.
             # Do not treat that placeholder as a real profile; refresh via Telegram.
@@ -51,7 +53,9 @@ async def lookup_user(context, value: str | int | None) -> Any | None:
 
         music_client = get_music_client()
         if music_client is not None:
-            user = await music_client.get_users(int(raw) if is_id else username)
+            user = await music_client.get_users(
+                saved_username if is_id and saved_username else (int(raw) if is_id else username)
+            )
             if user:
                 await save_target_user(user)
                 return user
