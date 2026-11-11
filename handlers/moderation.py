@@ -513,9 +513,19 @@ async def reveal_command(update, context):
     rank = await get_rank(target.id, chat.id)
     messages = await get_user_messages(target.id)
     rank_text = f"<tg-spoiler>{html_escape(rank)}</tg-spoiler>" if target.id == OWNER_ID else html_escape(rank)
+    display_name = (
+        " ".join(
+            part for part in (
+                getattr(target, "first_name", None),
+                getattr(target, "last_name", None),
+            ) if part and str(part) != str(target.id)
+        ).strip()
+        or ("@" + username if username else str(target.id))
+    )
     text = (
-        f"• ID : <code>{target.id}</code>\n"
-        f"• USE : {html_escape('@' + username if username else '')}\n"
+        f'• NAME : <a href="tg://user?id={int(target.id)}">{html_escape(display_name)}</a>\n'
+        f'• ID : <a href="tg://user?id={int(target.id)}">{target.id}</a>\n'
+        f"• USE : {html_escape('@' + username if username else 'لا يوجد')}\n"
         f"• STE : {rank_text}\n"
         f"• MSG : {messages}"
     )
