@@ -89,7 +89,7 @@ async def save_target_user(user: Any) -> None:
 async def get_user_by_id(user_id: int) -> Any | None:
     pool = get_pool()
     return await pool.fetchrow(
-        "SELECT user_id,username,first_name FROM users WHERE user_id=$1",
+        "SELECT user_id,username,first_name,last_name FROM users WHERE user_id=$1",
         int(user_id),
     )
 
