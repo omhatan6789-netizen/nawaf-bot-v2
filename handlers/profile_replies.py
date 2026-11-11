@@ -26,9 +26,9 @@ from database.profile_replies import (
     delete_admin_reply,
     delete_all_admin_replies,
     get_all_admin_replies,
-    get_group_user_id_by_username,
 )
 from database.roles import get_rank_level
+from handlers.target_lookup import lookup_user
 
 logger = logging.getLogger(__name__)
 OWNER_ID = 8453977662
@@ -89,10 +89,7 @@ async def send_profile(
 
 
 async def get_user_info(context: ContextTypes.DEFAULT_TYPE, user_id: int):
-    try:
-        return await context.bot.get_chat(int(user_id))
-    except Exception:
-        return None
+    return await lookup_user(context, int(user_id))
 
 
 async def is_group_admin_or_above(
@@ -150,17 +147,17 @@ async def get_group_user_from_username(
     if not clean or " " in clean:
         return None
 
-    user_id = await get_group_user_id_by_username(clean)
-    if not user_id:
+    target = await lookup_user(context, username)
+    if not target:
         return None
     try:
-        member = await context.bot.get_chat_member(chat.id, user_id)
+        member = await context.bot.get_chat_member(chat.id, target.id)
     except Exception as exc:
         logger.warning("تعذر التحقق من عضوية %s: %s", username, exc)
         return None
     if member.status in (ChatMemberStatus.LEFT, ChatMemberStatus.BANNED):
         return None
-    return member.user
+    return target
 
 
 def clear_profile_pending(context: ContextTypes.DEFAULT_TYPE) -> None:
