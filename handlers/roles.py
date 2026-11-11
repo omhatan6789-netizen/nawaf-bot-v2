@@ -5,7 +5,6 @@ from html import escape
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, User
 from telegram.ext import ContextTypes
 
-from database.users import get_user
 from handlers.target_lookup import resolve_message_user
 from database.roles import (
     OWNER_ID, DEV_PRIMARY, DEV_SECONDARY, RANK_LEVELS, NORMAL_RANKS,
@@ -54,42 +53,17 @@ def role_mention(user_id: int, name: str | None = None) -> str:
 async def get_user_mention(context: ContextTypes.DEFAULT_TYPE, user_id: int) -> str:
     name = None
     try:
-        info = await context.bot.get_chat(user_id)
-        name = (
-            getattr(info, "first_name", None)
-            or getattr(info, "title", None)
-            or getattr(info, "username", None)
-        )
+        from music_call import get_music_client
+
+        music_client = get_music_client()
+        if music_client is not None:
+            profile = await music_client.get_users(int(user_id))
+            if profile:
+                name = " ".join(
+                    part for part in (profile.first_name, profile.last_name) if part
+                ).strip() or profile.username
     except Exception:
         pass
-    saved_username = None
-    if not name or str(name).strip() == str(user_id):
-        name = None
-        try:
-            row = await get_user(user_id)
-            if row:
-                saved_name = (row["first_name"] or "").strip()
-                saved_username = row["username"]
-                if saved_name and saved_name != str(user_id):
-                    name = saved_name
-        except Exception:
-            pass
-    # Refresh legacy rows through the assistant account, preferring a saved username.
-    if not name:
-        try:
-            from music_call import get_music_client
-            from database.moderation import save_target_user
-
-            music_client = get_music_client()
-            if music_client is not None:
-                profile = await music_client.get_users(saved_username or int(user_id))
-                if profile:
-                    name = profile.first_name or profile.username
-                    await save_target_user(profile)
-        except Exception:
-            pass
-    if not name:
-        name = f"@{saved_username}" if saved_username else None
     return role_mention(user_id, name or str(user_id))
 
 
