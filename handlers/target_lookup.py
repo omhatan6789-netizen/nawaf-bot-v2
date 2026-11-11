@@ -79,7 +79,7 @@ async def lookup_user(context, value: str | int | None) -> Any | None:
                     id=user_id,
                     username=saved_username,
                     first_name=saved_name,
-                    last_name=row.get("last_name"),
+                    last_name=None,
                     is_bot=False,
                 )
     except Exception:
@@ -127,18 +127,30 @@ async def lookup_replied_user(message) -> Any | None:
         return None
 
     client = _music_client()
-    if client is None:
-        return None
+    if client is not None:
+        try:
+            user = await client.get_users(int(replied_user.id))
+            if user:
+                try:
+                    await save_target_user(user)
+                except Exception:
+                    logger.debug("Could not cache replied user %s", replied_user.id, exc_info=True)
+                return user
+        except Exception:
+            logger.debug(
+                "Pyrogram lookup failed for replied user %s",
+                getattr(replied_user, "id", None),
+                exc_info=True,
+            )
 
+    # Telegram already supplied a valid User object with the replied message.
+    # Keep the personal-account reveal working even if the assistant session
+    # cannot independently resolve that account.
     try:
-        return await client.get_users(int(replied_user.id))
+        await save_target_user(replied_user)
     except Exception:
-        logger.debug(
-            "Pyrogram lookup failed for replied user %s",
-            getattr(replied_user, "id", None),
-            exc_info=True,
-        )
-        return None
+        logger.debug("Could not cache Telegram replied user %s", replied_user.id, exc_info=True)
+    return replied_user
 
 
 async def resolve_message_user(update, context, *, token_index: int = 1):
