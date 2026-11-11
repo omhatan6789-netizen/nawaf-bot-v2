@@ -53,6 +53,18 @@ async def lookup_user(context, value: str | int | None) -> Any | None:
                 return user
     except Exception:
         logger.debug("Music account lookup failed for %s", raw, exc_info=True)
+
+    # Telegram cannot always resolve an unseen account from its numeric ID.
+    # The ID is still sufficient for database-backed actions and Bot API
+    # moderation methods, so preserve it as a minimal target object.
+    if is_id and int(raw) > 0:
+        return SimpleNamespace(
+            id=int(raw),
+            username=None,
+            first_name=raw,
+            last_name=None,
+            is_bot=False,
+        )
     return None
 
 
