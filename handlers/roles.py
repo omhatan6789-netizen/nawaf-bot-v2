@@ -52,12 +52,24 @@ def role_mention(user_id: int, name: str | None = None) -> str:
 
 
 async def get_user_mention(context: ContextTypes.DEFAULT_TYPE, user_id: int) -> str:
+    name = None
     try:
         info = await context.bot.get_chat(user_id)
-        name = getattr(info, "first_name", None) or getattr(info, "title", None) or getattr(info, "username", None) or str(user_id)
+        name = (
+            getattr(info, "first_name", None)
+            or getattr(info, "title", None)
+            or getattr(info, "username", None)
+        )
     except Exception:
-        name = str(user_id)
-    return role_mention(user_id, name)
+        pass
+    if not name:
+        try:
+            row = await get_user(user_id)
+            if row:
+                name = row["first_name"] or row["username"]
+        except Exception:
+            pass
+    return role_mention(user_id, name or str(user_id))
 
 
 async def get_target_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
