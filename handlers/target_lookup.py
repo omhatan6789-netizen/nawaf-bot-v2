@@ -2,7 +2,10 @@
 from __future__ import annotations
 
 import logging
+from types import SimpleNamespace
 from typing import Any
+
+from database.moderation import get_user_by_id, save_target_user
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +20,7 @@ def _music_client():
 
 
 async def lookup_user(context, value: str | int | None) -> Any | None:
-    """Resolve a username or numeric Telegram ID using Pyrogram only."""
+    """Resolve usernames through Pyrogram; preserve the legacy lookup path for numeric IDs."""
     if value is None:
         return None
     raw = str(value).strip()
@@ -30,16 +33,69 @@ async def lookup_user(context, value: str | int | None) -> Any | None:
     if is_id and int(raw) <= 0:
         return None
 
-    client = _music_client()
-    if client is None:
-        return None
+    # Username search stays exclusively on the assistant Pyrogram session.
+    if not is_id:
+        client = _music_client()
+        if client is None:
+            return None
+        try:
+            return await client.get_users(raw.lstrip("@"))
+        except Exception:
+            logger.debug("Pyrogram username lookup failed for %s", raw, exc_info=True)
+            return None
 
-    target = int(raw) if is_id else raw.lstrip("@")
+    user_id = int(raw)
+    saved_username = None
+
+    # Numeric IDs use the previous working path: database -> Bot API -> Pyrogram.
     try:
-        return await client.get_users(target)
+        row = await get_user_by_id(user_id)
+        if row:
+            saved_username = row.get("username")
+            saved_name = (row.get("first_name") or "").strip()
+            if saved_name and saved_name != str(user_id):
+                return SimpleNamespace(
+                    id=user_id,
+                    username=saved_username,
+                    first_name=saved_name,
+                    last_name=row.get("last_name"),
+                    is_bot=False,
+                )
     except Exception:
-        logger.debug("Pyrogram user lookup failed for %s", raw, exc_info=True)
-        return None
+        logger.debug("Database ID lookup failed for %s", raw, exc_info=True)
+
+    try:
+        user = await context.bot.get_chat(user_id)
+        if user:
+            try:
+                await save_target_user(user)
+            except Exception:
+                logger.debug("Could not cache Bot API user %s", user_id, exc_info=True)
+            return user
+    except Exception:
+        logger.debug("Bot API ID lookup failed for %s", raw, exc_info=True)
+
+    client = _music_client()
+    if client is not None:
+        try:
+            user = await client.get_users(saved_username or user_id)
+            if user:
+                try:
+                    await save_target_user(user)
+                except Exception:
+                    logger.debug("Could not cache Pyrogram user %s", user_id, exc_info=True)
+                return user
+        except Exception:
+            logger.debug("Pyrogram ID lookup failed for %s", raw, exc_info=True)
+
+    # A numeric ID remains a valid target for ID-based moderation actions.
+    return SimpleNamespace(
+        id=user_id,
+        username=saved_username,
+        first_name=raw,
+        last_name=None,
+        is_bot=False,
+    )
 
 
 async def lookup_replied_user(message) -> Any | None:
