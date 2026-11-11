@@ -3,6 +3,8 @@ from __future__ import annotations
 from telegram import Update
 from telegram.ext import ContextTypes
 
+from handlers.target_lookup import resolve_message_user
+
 from database.roles import (
     OWNER_ID, is_primary_developer, is_secondary_developer,
     get_rank, set_user_permission,
@@ -38,15 +40,7 @@ async def can_manage_target(actor_id: int, target_id: int) -> bool:
 
 
 async def get_permission_target(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    message = update.effective_message
-    if not message:
-        return None
-    if message.reply_to_message and message.reply_to_message.from_user:
-        return message.reply_to_message.from_user
-    parts = (message.text or "").strip().split()
-    if len(parts) < 3:
-        return None
-    return await lookup_user(context, parts[-1].strip())
+    return await resolve_message_user(update, context, token_index=-1)
 
 
 async def permission_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
