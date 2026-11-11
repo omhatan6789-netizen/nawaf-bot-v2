@@ -6,6 +6,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, User
 from telegram.ext import ContextTypes
 
 from database.users import get_user
+from handlers.target_lookup import resolve_message_user
 from database.roles import (
     OWNER_ID, DEV_PRIMARY, DEV_SECONDARY, RANK_LEVELS, NORMAL_RANKS,
     add_group_rank, remove_group_rank, update_developer_rank,
@@ -60,46 +61,7 @@ async def get_user_mention(context: ContextTypes.DEFAULT_TYPE, user_id: int) -> 
 
 
 async def get_target_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    message = update.effective_message
-    if not message:
-        return None
-    if message.reply_to_message and message.reply_to_message.from_user:
-        return message.reply_to_message.from_user
-
-    parts = (message.text or "").strip().split()
-    for part in parts[1:]:
-        target = part.strip()
-        if target.isdigit():
-            target_id = int(target)
-            try:
-                return await context.bot.get_chat(target_id)
-            except Exception:
-                row = await get_user(target_id)
-                if row:
-                    return User(
-                        id=target_id,
-                        first_name=str(row["first_name"] or row["username"] or target_id),
-                        is_bot=bool(row["is_bot"]),
-                        username=row["username"],
-                    )
-        elif target.startswith("@"):
-            try:
-                return await context.bot.get_chat(target)
-            except Exception:
-                pool_row = None
-                from database.pool import get_pool
-                pool_row = await get_pool().fetchrow(
-                    "SELECT user_id,username,first_name,is_bot FROM users WHERE LOWER(username)=LOWER($1) LIMIT 1",
-                    target[1:],
-                )
-                if pool_row:
-                    return User(
-                        id=int(pool_row["user_id"]),
-                        first_name=str(pool_row["first_name"] or target[1:]),
-                        is_bot=bool(pool_row["is_bot"]),
-                        username=pool_row["username"],
-                    )
-    return None
+    return await resolve_message_user(update, context, token_index=1)
 
 
 def rank_permission_message(rank: str) -> str:
