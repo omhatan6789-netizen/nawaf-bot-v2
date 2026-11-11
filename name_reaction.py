@@ -472,25 +472,38 @@ async def _reply_control_handler(client, message):
         return
 
     # كشف الحسابات من جلسة المساعد مباشرة، دون قاعدة البيانات.
-    reveal_match = re.fullmatch(r"كشف\s+(@?[A-Za-z0-9_]+)", text)
-    if reveal_match:
-        raw_target = reveal_match.group(1).strip()
-        target = raw_target.lstrip("@")
+    # يقبل: كشف @username / كشف ID / كشف بالرد على رسالة الشخص.
+    reveal_match = re.fullmatch(r"كشف\\s+(@?[A-Za-z0-9_]+)", text)
+    replied_message = message.reply_to_message if text == "كشف" else None
+
+    if reveal_match or replied_message:
+        raw_target = reveal_match.group(1).strip() if reveal_match else "الرد"
         try:
-            if target.isdigit():
-                if int(target) <= 0:
-                    raise ValueError("Invalid Telegram ID")
-                user = await client.get_users(int(target))
+            if reveal_match:
+                target = raw_target.lstrip("@")
+                if target.isdigit():
+                    if int(target) <= 0:
+                        raise ValueError("Invalid Telegram ID")
+                    user = await client.get_users(int(target))
+                else:
+                    user = await client.get_users(target)
             else:
-                user = await client.get_users(target)
+                replied_user = replied_message.from_user
+                if not replied_user:
+                    await message.reply_text("❌ الرسالة اللي رديت عليها ما تخص حساب مستخدم.")
+                    return
+                try:
+                    user = await client.get_users(replied_user.id)
+                except Exception:
+                    user = replied_user
 
             name = " ".join(
                 part for part in (user.first_name, user.last_name) if part
             ).strip() or "لا يوجد"
             username = f"@{user.username}" if user.username else "لا يوجد"
             await message.reply_text(
-                f"• NAME : {name}\n"
-                f"• ID : {user.id}\n"
+                f"• NAME : {name}\\n"
+                f"• ID : {user.id}\\n"
                 f"• USE : {username}"
             )
         except Exception as exc:
