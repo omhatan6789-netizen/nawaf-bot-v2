@@ -473,13 +473,14 @@ async def _reply_control_handler(client, message):
 
     # كشف الحسابات من جلسة المساعد مباشرة، دون قاعدة البيانات.
     # يقبل: كشف @username / كشف ID / كشف بالرد على رسالة الشخص.
-    reveal_match = re.fullmatch(r"كشف\\s+(@?[A-Za-z0-9_]+)", text)
+    reveal_match = re.fullmatch(r"كشف\s+(@?[A-Za-z0-9_]+)", text)
     replied_message = message.reply_to_message if text == "كشف" else None
 
     if reveal_match or replied_message:
         raw_target = reveal_match.group(1).strip() if reveal_match else "الرد"
         try:
             if reveal_match:
+                # الحفاظ على البحث القديم باليوزر أو الآيدي.
                 target = raw_target.lstrip("@")
                 if target.isdigit():
                     if int(target) <= 0:
@@ -488,10 +489,17 @@ async def _reply_control_handler(client, message):
                 else:
                     user = await client.get_users(target)
             else:
+                # عند الرد نأخذ صاحب الرسالة المردود عليها، وليس حساب المساعد نفسه.
                 replied_user = replied_message.from_user
                 if not replied_user:
                     await message.reply_text("❌ الرسالة اللي رديت عليها ما تخص حساب مستخدم.")
                     return
+
+                me = await client.get_me()
+                if replied_user.id == me.id or replied_user.is_self:
+                    await message.reply_text("❌ رديت على رسالة حساب المساعد نفسه. رد على رسالة الشخص المطلوب.")
+                    return
+
                 try:
                     user = await client.get_users(replied_user.id)
                 except Exception:
@@ -502,8 +510,8 @@ async def _reply_control_handler(client, message):
             ).strip() or "لا يوجد"
             username = f"@{user.username}" if user.username else "لا يوجد"
             await message.reply_text(
-                f"• NAME : {name}\\n"
-                f"• ID : {user.id}\\n"
+                f"• NAME : {name}\n"
+                f"• ID : {user.id}\n"
                 f"• USE : {username}"
             )
         except Exception as exc:
