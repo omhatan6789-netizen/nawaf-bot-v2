@@ -325,7 +325,7 @@ def handle_connect4_post(handler):
         if _bot is None:
             raise RuntimeError("البوت ما زال يستعد، حاول بعد قليل")
         user = verify_init_data(payload.get("initData", ""), _bot.token)
-        is_challenge_api = path.startswith("/api/connect4/challenge/") or path.startswith("/api/minigames/") or path == "/api/extra-games"
+        is_challenge_api = path.startswith("/api/connect4/challenge/") or path.startswith("/api/minigames/") or path in ("/api/extra-games", "/api/casual-games")
         is_online_api = path in ("/api/online/restart", "/api/online/spectate", "/api/online/lobby", "/api/online/withdraw")
         if path == "/api/casual-games":
             from games import casual_games as casual
