@@ -246,8 +246,11 @@ async def delete_own_messages(client, message, count):
 
             # التأكد أن الرسالة من حسابنا
             if (
-                old_message.from_user
-                and old_message.from_user.is_self
+                getattr(old_message, "outgoing", False)
+                or (
+                    old_message.from_user
+                    and old_message.from_user.is_self
+                )
             ):
                 message_ids.append(old_message.id)
 
@@ -297,10 +300,30 @@ async def delete_own_messages(client, message, count):
 
             except Exception as exc:
                 print(
-                    f"[MESSAGE CLEANER] Batch delete error: {exc}"
+                    f"[MESSAGE CLEANER] Batch delete error: {exc}. "
+                    "Retrying messages individually."
                 )
-
-                failed_count += len(batch)
+                # إذا تعذر حذف الدفعة كاملة، جرّب كل رسالة منفردة
+                # حتى لا تمنع رسالة واحدة حذف بقية الرسائل.
+                for message_id in batch:
+                    while True:
+                        try:
+                            await client.delete_messages(
+                                chat_id=chat_id,
+                                message_ids=message_id,
+                                revoke=True
+                            )
+                            deleted_count += 1
+                            break
+                        except FloodWait as wait:
+                            await asyncio.sleep(wait.value + 1)
+                        except Exception as single_exc:
+                            print(
+                                f"[MESSAGE CLEANER] Message {message_id} "
+                                f"delete error: {single_exc}"
+                            )
+                            failed_count += 1
+                            break
                 break
 
     # حذف رسالة الأمر
@@ -539,10 +562,11 @@ async def _reply_control_handler(client, message):
 
         count = int(match.group(1))
 
+        # كل أمر مسح ينظف آخر 100 رسالة من رسائل الحساب نفسه.
         await delete_own_messages(
             client,
             message,
-            count
+            100
         )
 
         return
