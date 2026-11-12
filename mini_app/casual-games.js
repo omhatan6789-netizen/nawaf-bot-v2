@@ -128,7 +128,8 @@ function finishGame(){
  if(poll)clearTimeout(poll);poll=null;
  if(gameType==="match"){
   const players=current.players||[],scores=current.scores||[],high=Math.max(...scores),winners=players.filter((p,i)=>scores[i]===high);
-  const draw=winners.length!==1;showGameEndOverlay({winnerName:draw?"":winners[0]?.name,isDraw:draw,subtitle:draw?"تعادل! أحسنتم جميعًا 👏":("أبدع "+winners[0].name+" وجمع "+high+" أزواج 🏆")});
+  if(current.winner_id!==null&&current.winner_id!==undefined){const winner=players.find(p=>Number(p.id)===Number(current.winner_id));const reason=current.end_reason==="timeout"?"لأن خصمه انتهى وقته ⏰":current.end_reason==="withdraw"?"بعد انسحاب خصمه 🏳️":"فاز بالمباراة";showGameEndOverlay({winnerName:winner?.name||"الفائز",isDraw:false,subtitle:"فاز "+(winner?.name||"اللاعب")+" "+reason+" 🏆"});}
+  else {const draw=winners.length!==1;showGameEndOverlay({winnerName:draw?"":winners[0]?.name,isDraw:draw,subtitle:draw?"تعادل! أحسنتم جميعًا 👏":("أبدع "+winners[0].name+" وجمع "+high+" أزواج 🏆")});}
  }else{
   const win=Number(current.winner_id)===Number(tg?.initDataUnsafe?.user?.id||0);if(countdown)clearInterval(countdown);countdown=null;
   showGameEndOverlay({winnerName:win?telegramDisplayName():(current.players||[]).find(p=>Number(p.id)===Number(current.winner_id))?.name||"لم يفز أحد",isDraw:false,title:current.winner_id?"🎉 انتهت اللعبة":"انتهت اللعبة",subtitle:win?"عرفت الرقم الصحيح! مبروك 🎉":(current.winner_id?"سبقك لاعب آخر للرقم الصحيح":"انتهت المحاولات، الرقم كان "+current.secret)});
