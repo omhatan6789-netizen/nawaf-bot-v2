@@ -1,7 +1,7 @@
 (function(){
 const memoryStyle=document.createElement("style");
 memoryStyle.id="casual-memory-card-styles";
-memoryStyle.textContent="\n.memory-card{position:relative;min-height:66px!important;border:1px solid rgba(255,255,255,.13)!important;border-radius:14px!important;background:linear-gradient(145deg,#341116,#17090d)!important;color:#fff!important;box-shadow:0 5px 12px rgba(0,0,0,.24);transition:transform .22s ease,background .22s ease,border-color .22s ease,box-shadow .22s ease}\n.memory-card:not(:disabled){cursor:pointer}\n.memory-card:not(:disabled):active{transform:scale(.94)}\n.memory-card.revealed{background:linear-gradient(145deg,#fff1f2,#e7c5ca)!important;color:#351016!important;border-color:#fff!important;box-shadow:0 0 14px rgba(255,190,200,.22);animation:memoryFlipIn .28s ease both}\n.memory-card.matched{background:linear-gradient(145deg,#236b4a,#123c2b)!important;color:#fff!important;border:1px solid #7df0b2!important;box-shadow:0 0 16px rgba(80,230,150,.3);animation:memoryMatch .35s ease both;opacity:1}\n@keyframes memoryFlipIn{from{transform:perspective(500px) rotateY(85deg) scale(.92)}to{transform:perspective(500px) rotateY(0) scale(1)}}\n@keyframes memoryMatch{0%{transform:scale(.88)}65%{transform:scale(1.07)}100%{transform:scale(1)}}\n";
+memoryStyle.textContent=".memory-card{position:relative;min-height:66px!important;overflow:hidden;border:1px solid rgba(255,255,255,.13)!important;border-radius:14px!important;background:linear-gradient(145deg,#341116,#17090d)!important;color:#fff!important;box-shadow:0 5px 12px rgba(0,0,0,.24);transition:transform .45s cubic-bezier(.2,.75,.25,1),background .4s ease,border-color .4s ease,box-shadow .4s ease;transform-style:preserve-3d}\n.memory-card:not(:disabled){cursor:pointer}\n.memory-card:not(:disabled):active{transform:scale(.96)}\n.memory-card .memory-face{display:block;transition:transform .42s cubic-bezier(.2,.75,.25,1);backface-visibility:hidden}\n.memory-card.revealed{background:linear-gradient(145deg,#fff1f2,#e7c5ca)!important;color:#351016!important;border-color:#fff!important;box-shadow:0 0 14px rgba(255,190,200,.22);animation:memoryFlipIn .42s cubic-bezier(.2,.75,.25,1) both}\n.memory-card.face-down{animation:memoryFlipOut .48s cubic-bezier(.2,.75,.25,1) both}\n.memory-card.matched{background:linear-gradient(145deg,#236b4a,#123c2b)!important;color:#fff!important;border:1px solid #7df0b2!important;box-shadow:0 0 16px rgba(80,230,150,.3);animation:memoryMatch .42s ease both;opacity:1}\n.memory-owner{position:absolute;top:3px;left:4px;right:4px;display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:9px;line-height:12px;font-weight:700;color:#d8ffe8;text-align:center;pointer-events:none}\n.memory-card.matched .memory-face{padding-top:9px}\n@keyframes memoryFlipIn{0%{transform:perspective(500px) rotateY(88deg) scale(.96)}65%{transform:perspective(500px) rotateY(-8deg) scale(1.02)}100%{transform:perspective(500px) rotateY(0) scale(1)}}\n@keyframes memoryFlipOut{0%{transform:perspective(500px) rotateY(0) scale(1)}55%{transform:perspective(500px) rotateY(82deg) scale(.97)}100%{transform:perspective(500px) rotateY(0) scale(1)}}\n@keyframes memoryMatch{0%{transform:scale(.92)}65%{transform:scale(1.05)}100%{transform:scale(1)}}";
 if(!document.getElementById(memoryStyle.id)) document.head.append(memoryStyle);
 
 const api=async(action,game_id="",extra={})=>{
@@ -61,9 +61,12 @@ function renderGame(){
   const botBusy=!!current.bot_revealing;
   current.cards.forEach(card=>{
    const b=document.createElement("button");
-   b.className="c4-level memory-card"+(card.matched?" matched":"")+(card.value!==null?" revealed":"");
+   b.className="c4-level memory-card"+(card.matched?" matched":"")+(card.value!==null?" revealed":" face-down");
    b.style.minHeight="58px";b.style.padding="4px";b.style.fontSize="25px";
-   b.textContent=card.value||"❔";
+   const face=document.createElement("span");face.className="memory-face";face.textContent=card.value||"❔";b.append(face);
+   if(card.matched&&card.matched_by){
+    const owner=document.createElement("small");owner.className="memory-owner";owner.textContent=card.matched_by;b.append(owner);
+   }
    b.disabled=!!card.matched||!myTurn||current.bot_pending||botBusy||lock||card.value!==null;
    b.onclick=()=>flip(card.index);board.append(b);
   });
@@ -71,18 +74,21 @@ function renderGame(){
   if(!hideTimer && current.first!==null && current.second!==null){
    hideTimer=setTimeout(async()=>{
     hideTimer=null;
-    try{
-     current=await request("action",{move:{action:"continue"}});
-     if(current.bot_pending){current=await api("bot-turn",current.id);}
-     renderGame();
-    }catch(e){err(e);}
-   },current.bot_pending?2000:1300);
-  }else if(!hideTimer && current.bot_revealing){
+    try{current=await request("action",{move:{action:"continue"}});renderGame();}
+    catch(e){err(e);}
+   },1300);
+  }else if(!hideTimer && current.bot_revealing && current.bot_step===1){
+   hideTimer=setTimeout(async()=>{
+    hideTimer=null;
+    try{current=await api("bot-turn",current.id);renderGame();}
+    catch(e){err(e);}
+   },1000);
+  }else if(!hideTimer && current.bot_revealing && current.bot_step===2){
    hideTimer=setTimeout(async()=>{
     hideTimer=null;
     try{current=await request("action",{move:{action:"continue"}});renderGame();}
     catch(e){err(e);}
-   },2000);
+   },1400);
   }else if(!hideTimer && current.bot_pending && !current.bot_revealing && current.first===null){
    hideTimer=setTimeout(async()=>{
     hideTimer=null;
