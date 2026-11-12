@@ -77,7 +77,7 @@ function finishGame(){
   const draw=winners.length!==1;showGameEndOverlay({winnerName:draw?"":winners[0]?.name,isDraw:draw,subtitle:draw?"تعادل! أحسنتم جميعًا 👏":("أبدع "+winners[0].name+" وجمع "+high+" أزواج 🏆")});
  }else{
   const win=Number(current.winner_id)===Number(tg?.initDataUnsafe?.user?.id||0);
-  showGameEndOverlay({winnerName:win?telegramDisplayName():(current.players||[]).find(p=>Number(p.id)===Number(current.winner_id))?.name||"",isDraw:!current.winner_id,subtitle:win?"عرفت الرقم الصحيح! مبروك 🎉":(current.winner_id?"سبقك لاعب آخر للرقم الصحيح":"انتهت المحاولات، الرقم كان "+current.secret)});
+  showGameEndOverlay({winnerName:win?telegramDisplayName():(current.players||[]).find(p=>Number(p.id)===Number(current.winner_id))?.name||"",isDraw:false,title:current.winner_id?"🎉 انتهت اللعبة":"انتهت اللعبة",subtitle:win?"عرفت الرقم الصحيح! مبروك 🎉":(current.winner_id?"سبقك لاعب آخر للرقم الصحيح":"انتهت المحاولات، الرقم كان "+current.secret)});
  }
 }
 window.startCasualGame=async function(startParam){
