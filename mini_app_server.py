@@ -288,7 +288,7 @@ def handle_connect4_post(handler):
         "/api/minigames/solo/state", "/api/minigames/solo/action",
         "/api/minigames/solo/bot-move",
         "/api/online/restart", "/api/online/spectate", "/api/online/lobby", "/api/online/withdraw",
-        "/api/extra-games",
+        "/api/extra-games", "/api/casual-games",
     ):
         return False
     try:
@@ -313,7 +313,28 @@ def handle_connect4_post(handler):
         user = verify_init_data(payload.get("initData", ""), _bot.token)
         is_challenge_api = path.startswith("/api/connect4/challenge/") or path.startswith("/api/minigames/") or path == "/api/extra-games"
         is_online_api = path in ("/api/online/restart", "/api/online/spectate", "/api/online/lobby", "/api/online/withdraw")
-        if path == "/api/extra-games":
+        if path == "/api/casual-games":
+            from games import casual_games as casual
+            action = str(payload.get("action") or "state")
+            uid = int(user["id"])
+            name = " ".join(x for x in (user.get("first_name"), user.get("last_name")) if x) or user.get("username") or "مستخدم"
+            if action == "create":
+                result = _run(casual.create_game(uid, name, payload.get("game_type","match"), payload.get("mode","bot"), payload.get("settings") or {}))
+            elif action == "join":
+                result = _run(casual.join_game(uid, name, payload.get("game_id","")))
+            elif action == "configure":
+                result = _run(casual.configure_game(uid, payload.get("game_id",""), payload.get("settings") or {}))
+            elif action == "start":
+                result = _run(casual.start_game(uid, payload.get("game_id","")))
+            elif action == "action":
+                result = _run(casual.game_action(uid, payload.get("game_id",""), payload.get("move") or {}))
+            elif action == "bot-turn":
+                result = _run(casual.bot_turn(payload.get("game_id","")))
+            else:
+                result = _run(casual.get_state(uid, payload.get("game_id","")))
+            body = json.dumps({"ok": True, "result": result}, ensure_ascii=False).encode()
+            handler.send_response(200)
+        elif path == "/api/extra-games":
             from games import extra_mini_games as extra
             action = str(payload.get("action") or "")
             game_type = str(payload.get("game_type") or "")
