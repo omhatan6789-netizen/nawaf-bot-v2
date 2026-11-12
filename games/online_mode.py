@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import random
 import uuid
 
@@ -208,7 +209,8 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
             "reply_markup": keyboard,
         }
         if photo_file_id:
-            photo_url = f"https://nawaf-bot-v2.onrender.com/tg-file/{photo_file_id}"
+            base_url = os.environ.get("PUBLIC_BASE_URL", "https://nawaf-bot-frankfurt.onrender.com").rstrip("/")
+            photo_url = f"{base_url}/tg-file/{photo_file_id}"
             result_kwargs["thumbnail_url"] = photo_url
             result_kwargs["thumbnail_width"] = 80
             result_kwargs["thumbnail_height"] = 80
