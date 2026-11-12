@@ -1,4 +1,14 @@
 (function(){
+<style id="casual-memory-card-styles">
+.memory-card{position:relative;min-height:66px!important;border:1px solid rgba(255,255,255,.13)!important;border-radius:14px!important;background:linear-gradient(145deg,#341116,#17090d)!important;color:#fff!important;box-shadow:0 5px 12px rgba(0,0,0,.24);transition:transform .22s ease,background .22s ease,border-color .22s ease,box-shadow .22s ease}
+.memory-card:not(:disabled){cursor:pointer}
+.memory-card:not(:disabled):active{transform:scale(.94)}
+.memory-card.revealed{background:linear-gradient(145deg,#fff1f2,#e7c5ca)!important;color:#351016!important;border-color:#fff!important;box-shadow:0 0 14px rgba(255,190,200,.22);animation:memoryFlipIn .28s ease both}
+.memory-card.matched{background:linear-gradient(145deg,#236b4a,#123c2b)!important;color:#fff!important;border:1px solid #7df0b2!important;box-shadow:0 0 16px rgba(80,230,150,.3);animation:memoryMatch .35s ease both;opacity:1}
+@keyframes memoryFlipIn{from{transform:perspective(500px) rotateY(85deg) scale(.92)}to{transform:perspective(500px) rotateY(0) scale(1)}}
+@keyframes memoryMatch{0%{transform:scale(.88)}65%{transform:scale(1.07)}100%{transform:scale(1)}}
+</style>
+
 const api=async(action,game_id="",extra={})=>{
  const r=await fetch("/api/casual-games",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({initData:tg?.initData||"",action,game_id,...extra})});
  const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok)throw new Error(d.error||"تعذر تنفيذ الطلب");return d.result;
@@ -53,10 +63,38 @@ function renderGame(){
   '<div class="c4-panel"><div class="c4-result show" id="casual-status">'+(!isPlayer?"👀 أنت متفرج على المباراة":(current.bot_pending?"البوت يفكر...":(myTurn?"دورك، اختر بطاقتين":"دور "+safe(turn?.name))))+'</div><div id="casual-board" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin-top:12px"></div><button class="c4-secondary" id="casual-back">رجوع للألعاب</button></div>';
   const board=root.querySelector("#casual-board");
   board.style.gridTemplateColumns="repeat("+(current.cards.length<=16?4:5)+",minmax(0,1fr))";
-  current.cards.forEach(card=>{const b=document.createElement("button");b.className="c4-level";b.style.minHeight="58px";b.style.padding="4px";b.style.fontSize="25px";b.textContent=card.value||"❔";b.disabled=!!card.matched||card.value!==null||!myTurn||current.bot_pending||lock;b.onclick=()=>flip(card.index);board.append(b);});
+  const botBusy=!!current.bot_revealing;
+  current.cards.forEach(card=>{
+   const b=document.createElement("button");
+   b.className="c4-level memory-card"+(card.matched?" matched":"")+(card.value!==null?" revealed":"");
+   b.style.minHeight="58px";b.style.padding="4px";b.style.fontSize="25px";
+   b.textContent=card.value||"❔";
+   b.disabled=!!card.matched||!myTurn||current.bot_pending||botBusy||lock||card.value!==null;
+   b.onclick=()=>flip(card.index);board.append(b);
+  });
   root.querySelector("#casual-back").onclick=()=>{stop();showGames();};
-  if(current.first!==null&&current.second!==null&&!current.bot_pending&&!hideTimer){hideTimer=setTimeout(async()=>{hideTimer=null;try{current=await request("action",{move:{action:"continue"}});renderGame();}catch(e){err(e);}},950);}
-  if(current.bot_pending&&!lock){lock=true;setTimeout(async()=>{try{current=await api("bot-turn",current.id);lock=false;renderGame();}catch(e){lock=false;err(e);}},900);}
+  if(!hideTimer && current.first!==null && current.second!==null){
+   hideTimer=setTimeout(async()=>{
+    hideTimer=null;
+    try{
+     current=await request("action",{move:{action:"continue"}});
+     if(current.bot_pending){current=await api("bot-turn",current.id);}
+     renderGame();
+    }catch(e){err(e);}
+   },current.bot_pending?2000:1300);
+  }else if(!hideTimer && current.bot_revealing){
+   hideTimer=setTimeout(async()=>{
+    hideTimer=null;
+    try{current=await request("action",{move:{action:"continue"}});renderGame();}
+    catch(e){err(e);}
+   },2000);
+  }else if(!hideTimer && current.bot_pending && !current.bot_revealing && current.first===null){
+   hideTimer=setTimeout(async()=>{
+    hideTimer=null;
+    try{current=await api("bot-turn",current.id);renderGame();}
+    catch(e){err(e);}
+   },2000);
+  }
  }else{
   const me=Number(tg?.initDataUnsafe?.user?.id||0),guesses=current.guesses||[];
   root.innerHTML=heading("خمن الرقم 🔢","اختر رقمًا بين "+current.min+" و "+current.max)+
