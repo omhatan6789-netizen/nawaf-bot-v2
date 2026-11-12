@@ -1,13 +1,8 @@
 (function(){
-<style id="casual-memory-card-styles">
-.memory-card{position:relative;min-height:66px!important;border:1px solid rgba(255,255,255,.13)!important;border-radius:14px!important;background:linear-gradient(145deg,#341116,#17090d)!important;color:#fff!important;box-shadow:0 5px 12px rgba(0,0,0,.24);transition:transform .22s ease,background .22s ease,border-color .22s ease,box-shadow .22s ease}
-.memory-card:not(:disabled){cursor:pointer}
-.memory-card:not(:disabled):active{transform:scale(.94)}
-.memory-card.revealed{background:linear-gradient(145deg,#fff1f2,#e7c5ca)!important;color:#351016!important;border-color:#fff!important;box-shadow:0 0 14px rgba(255,190,200,.22);animation:memoryFlipIn .28s ease both}
-.memory-card.matched{background:linear-gradient(145deg,#236b4a,#123c2b)!important;color:#fff!important;border:1px solid #7df0b2!important;box-shadow:0 0 16px rgba(80,230,150,.3);animation:memoryMatch .35s ease both;opacity:1}
-@keyframes memoryFlipIn{from{transform:perspective(500px) rotateY(85deg) scale(.92)}to{transform:perspective(500px) rotateY(0) scale(1)}}
-@keyframes memoryMatch{0%{transform:scale(.88)}65%{transform:scale(1.07)}100%{transform:scale(1)}}
-</style>
+const memoryStyle=document.createElement("style");
+memoryStyle.id="casual-memory-card-styles";
+memoryStyle.textContent="\n.memory-card{position:relative;min-height:66px!important;border:1px solid rgba(255,255,255,.13)!important;border-radius:14px!important;background:linear-gradient(145deg,#341116,#17090d)!important;color:#fff!important;box-shadow:0 5px 12px rgba(0,0,0,.24);transition:transform .22s ease,background .22s ease,border-color .22s ease,box-shadow .22s ease}\n.memory-card:not(:disabled){cursor:pointer}\n.memory-card:not(:disabled):active{transform:scale(.94)}\n.memory-card.revealed{background:linear-gradient(145deg,#fff1f2,#e7c5ca)!important;color:#351016!important;border-color:#fff!important;box-shadow:0 0 14px rgba(255,190,200,.22);animation:memoryFlipIn .28s ease both}\n.memory-card.matched{background:linear-gradient(145deg,#236b4a,#123c2b)!important;color:#fff!important;border:1px solid #7df0b2!important;box-shadow:0 0 16px rgba(80,230,150,.3);animation:memoryMatch .35s ease both;opacity:1}\n@keyframes memoryFlipIn{from{transform:perspective(500px) rotateY(85deg) scale(.92)}to{transform:perspective(500px) rotateY(0) scale(1)}}\n@keyframes memoryMatch{0%{transform:scale(.88)}65%{transform:scale(1.07)}100%{transform:scale(1)}}\n";
+if(!document.getElementById(memoryStyle.id)) document.head.append(memoryStyle);
 
 const api=async(action,game_id="",extra={})=>{
  const r=await fetch("/api/casual-games",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({initData:tg?.initData||"",action,game_id,...extra})});
