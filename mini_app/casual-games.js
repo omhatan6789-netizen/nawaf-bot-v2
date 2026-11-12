@@ -72,7 +72,7 @@ function renderGame(){
  }
  schedulePoll();
 }
-async function flip(index){if(lock)return;lock=true;try{current=await request("action",{move:{index}});renderGame();}catch(e){err(e);}finally{lock=false;}}
+async function flip(index){if(lock)return;lock=true;try{current=await request("action",{move:{index}});lock=false;renderGame();}catch(e){lock=false;err(e);}}
 function finishGame(){
  if(poll)clearTimeout(poll);poll=null;
  if(gameType==="match"){
