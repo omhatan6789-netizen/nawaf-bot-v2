@@ -20,7 +20,7 @@ window.startCasualSetup=function(type){
  let mode="bot",difficulty="متوسط";
  root.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>{mode=b.dataset.mode;root.querySelectorAll("[data-mode]").forEach(x=>x.classList.toggle("active",x===b));});
  const levels=root.querySelector("#casual-levels");
- [["سهل","تحدي بسيط"],["متوسط","متوازن"],["صعب","أذكى"],["مستحيل","أعلى صعوبة"]].forEach(([v,d])=>{const b=document.createElement("button");b.className="c4-level"+(v===difficulty?" active":"");b.innerHTML=v+"<small>"+d+"</small>";b.onclick=()=>{difficulty=v;levels.querySelectorAll("button").forEach(x=>x.classList.toggle("active",x===b));};levels.append(b);});
+ [["سهل","تحدي بسيط"],["متوسط","متوازن"],["صعب","أذكى"],["مستحيل","أعلى صعوبة"]].forEach(([v,d])=>{const b=document.createElement("button");b.className="c4-level"+(v===difficulty?" active":"");b.innerHTML=v+"<small>"+d+"</small>";b.onclick=()=>{difficulty=v;if(!isMatch){root.querySelector("#casual-attempts").value=({"سهل":12,"متوسط":7,"صعب":5,"مستحيل":3})[v];}levels.querySelectorAll("button").forEach(x=>x.classList.toggle("active",x===b));};levels.append(b);});
  root.querySelector("#casual-create").onclick=async()=>{try{const settings=isMatch?{card_count:Number(root.querySelector("#casual-count").value),difficulty}:{min:Number(root.querySelector("#casual-min").value),max:Number(root.querySelector("#casual-max").value),attempts:Number(root.querySelector("#casual-attempts").value),difficulty};current=await api("create","",{game_type:type,mode,settings});if(mode==="online")renderLobby();else renderGame();}catch(e){err(e);}};
  root.querySelector("#casual-back").onclick=showGames;
 };
