@@ -48,7 +48,7 @@ def _public(row, uid):
         if row["status"] == "finished": result["secret"] = state.get("secret")
     return result
 
-async def create_game(user_id, name, game_type, mode="bot", settings=None):
+async def create_game(user_id, name, game_type, mode="bot", settings=None, bot_name="البوت"):
     if game_type not in ("match","number"): raise ValueError("اللعبة غير معروفة")
     if mode not in ("bot","online"): raise ValueError("طور اللعب غير صالح")
     settings = dict(settings or {})
@@ -64,7 +64,7 @@ async def create_game(user_id, name, game_type, mode="bot", settings=None):
         settings = {"min":low,"max":high,"attempts":attempts,"difficulty":settings.get("difficulty","متوسط")}
     uid = int(user_id); gid = uuid.uuid4()
     players = [{"id":uid,"name":str(name or "لاعب")[:80]}]
-    if mode == "bot": players.append({"id":-1,"name":"البوت","bot":True})
+    if mode == "bot": players.append({"id":-1,"name":str(bot_name or "البوت")[:80],"bot":True})
     state = _initial(game_type,settings,players,mode)
     status = "playing" if mode == "bot" else "waiting"
     pool = get_pool()
