@@ -36,6 +36,7 @@ def _public(row, uid):
                        "scores": state.get("scores", []), "turn_index": state.get("turn_index",0),
                        "first": state.get("first"), "second": state.get("second"),
                        "bot_pending": bool(state.get("bot_pending")),
+                       "bot_revealing": bool(state.get("bot_reveal")),
                        "winner_id": state.get("winner_id"), "matched": state.get("matched",0),
                        "total_pairs": len(state.get("cards",[]))//2})
     else:
@@ -102,9 +103,13 @@ async def game_action(user_id, raw_id, action):
         if player_index is None: raise ValueError("أنت لست لاعبًا في هذه اللعبة")
         if row["game_type"]=="match":
             if action.get("action") == "continue":
-                if state.get("first") is None or state.get("second") is None: raise ValueError("لا توجد حركة معلقة")
-                state["first"]=state["second"]=None
-                state["turn_index"]=int(state.pop("next_turn",state.get("turn_index",0)))
+                if state.get("bot_reveal"):
+                    state["bot_reveal"] = []
+                elif state.get("first") is not None and state.get("second") is not None:
+                    state["first"]=state["second"]=None
+                    state["turn_index"]=int(state.pop("next_turn",state.get("turn_index",0)))
+                else:
+                    raise ValueError("لا توجد حركة معلقة")
                 row=await c.fetchrow("UPDATE casual_game_rooms SET state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,json.dumps(state,ensure_ascii=False))
                 return _public(row,uid)
             if state.get("bot_pending"): raise ValueError("انتظر حركة البوت")
@@ -184,12 +189,16 @@ async def bot_turn(user_id, raw_id):
             picks=available[:2]
         if len(picks)==2:
             for i in picks: known[str(i)]=cards[i]["value"]
-            if cards[picks[0]]["value"]==cards[picks[1]]["value"]:
+            bot_matched = cards[picks[0]]["value"]==cards[picks[1]]["value"]
+            if bot_matched:
                 cards[picks[0]]["matched"]=cards[picks[1]]["matched"]=True
                 state["scores"][1]+=1;state["matched"]+=1
             state["first"]=state["second"]=None
+        else:
+            bot_matched = False
         state["bot_reveal"]=picks[:]
-        state["bot_pending"]=False;state["turn_index"]=0
+        state["bot_pending"]=bool(bot_matched)
+        state["turn_index"]=1 if bot_matched else 0
         status="finished" if state["matched"]>=len(cards)//2 else "playing"
         row=await c.fetchrow("UPDATE casual_game_rooms SET status=$2,state=$3::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,status,json.dumps(state,ensure_ascii=False))
     return _public(row,uid)
