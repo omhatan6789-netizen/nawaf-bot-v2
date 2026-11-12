@@ -1,17 +1,17 @@
 (function(){
 const memoryStyle=document.createElement("style");
 memoryStyle.id="casual-memory-card-styles";
-memoryStyle.textContent=".memory-card{position:relative;min-height:66px!important;overflow:hidden;border:1px solid rgba(255,255,255,.13)!important;border-radius:14px!important;background:linear-gradient(145deg,#341116,#17090d)!important;color:#fff!important;box-shadow:0 5px 12px rgba(0,0,0,.24);transition:transform .45s cubic-bezier(.2,.75,.25,1),background .4s ease,border-color .4s ease,box-shadow .4s ease;transform-style:preserve-3d}\n.memory-card:not(:disabled){cursor:pointer}\n.memory-card:not(:disabled):active{transform:scale(.96)}\n.memory-card .memory-face{display:block;transition:transform .42s cubic-bezier(.2,.75,.25,1);backface-visibility:hidden}\n.memory-card.revealed{background:linear-gradient(145deg,#fff1f2,#e7c5ca)!important;color:#351016!important;border-color:#fff!important;box-shadow:0 0 14px rgba(255,190,200,.22);animation:memoryFlipIn .42s cubic-bezier(.2,.75,.25,1) both}\n.memory-card.face-down{animation:memoryFlipOut .48s cubic-bezier(.2,.75,.25,1) both}\n.memory-card.matched{background:linear-gradient(145deg,#236b4a,#123c2b)!important;color:#fff!important;border:1px solid #7df0b2!important;box-shadow:0 0 16px rgba(80,230,150,.3);animation:memoryMatch .42s ease both;opacity:1}\n.memory-owner{position:absolute;top:3px;left:4px;right:4px;display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:9px;line-height:12px;font-weight:700;color:#d8ffe8;text-align:center;pointer-events:none}\n.memory-card.matched .memory-face{padding-top:9px}\n@keyframes memoryFlipIn{0%{transform:perspective(500px) rotateY(88deg) scale(.96)}65%{transform:perspective(500px) rotateY(-8deg) scale(1.02)}100%{transform:perspective(500px) rotateY(0) scale(1)}}\n@keyframes memoryFlipOut{0%{transform:perspective(500px) rotateY(0) scale(1)}55%{transform:perspective(500px) rotateY(82deg) scale(.97)}100%{transform:perspective(500px) rotateY(0) scale(1)}}\n@keyframes memoryMatch{0%{transform:scale(.92)}65%{transform:scale(1.05)}100%{transform:scale(1)}}";
+memoryStyle.textContent=".memory-card{position:relative;min-height:66px!important;overflow:hidden;border:1px solid rgba(255,255,255,.13)!important;border-radius:14px!important;background:linear-gradient(145deg,#341116,#17090d)!important;color:#fff!important;box-shadow:0 5px 12px rgba(0,0,0,.24);transition:transform .45s cubic-bezier(.2,.75,.25,1),background .4s ease,border-color .4s ease,box-shadow .4s ease;transform-style:preserve-3d}\n.memory-card:not(:disabled){cursor:pointer}\n.memory-card:not(:disabled):active{transform:scale(.96)}\n.memory-card .memory-face{display:block;transition:transform .42s cubic-bezier(.2,.75,.25,1);backface-visibility:hidden}\n.memory-card.revealed{background:linear-gradient(145deg,#fff1f2,#e7c5ca)!important;color:#351016!important;border-color:#fff!important;box-shadow:0 0 14px rgba(255,190,200,.22)}\n.memory-card.flip-in{animation:memoryFlipIn .42s cubic-bezier(.2,.75,.25,1) both}\n.memory-card.flip-out{animation:memoryFlipOut .48s cubic-bezier(.2,.75,.25,1) both}\n.memory-card.matched{background:linear-gradient(145deg,#236b4a,#123c2b)!important;color:#fff!important;border:1px solid #7df0b2!important;box-shadow:0 0 16px rgba(80,230,150,.3);opacity:1}\n.memory-card.just-matched{animation:memoryMatch .42s ease both}\n.memory-owner{position:absolute;top:3px;left:4px;right:4px;display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:9px;line-height:12px;font-weight:700;color:#d8ffe8;text-align:center;pointer-events:none}\n.memory-card.matched .memory-face{padding-top:9px}\n@keyframes memoryFlipIn{0%{transform:perspective(500px) rotateY(88deg) scale(.96)}65%{transform:perspective(500px) rotateY(-8deg) scale(1.02)}100%{transform:perspective(500px) rotateY(0) scale(1)}}\n@keyframes memoryFlipOut{0%{transform:perspective(500px) rotateY(0) scale(1)}55%{transform:perspective(500px) rotateY(82deg) scale(.97)}100%{transform:perspective(500px) rotateY(0) scale(1)}}\n@keyframes memoryMatch{0%{transform:scale(.92)}65%{transform:scale(1.05)}100%{transform:scale(1)}}";
 if(!document.getElementById(memoryStyle.id)) document.head.append(memoryStyle);
 
 const api=async(action,game_id="",extra={})=>{
  const r=await fetch("/api/casual-games",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({initData:tg?.initData||"",action,game_id,...extra})});
  const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok)throw new Error(d.error||"تعذر تنفيذ الطلب");return d.result;
 };
-let current=null,gameType="",poll=null,lock=false,hideTimer=null;
+let current=null,gameType="",poll=null,lock=false,hideTimer=null,memoryLastCards={};
 const shell=()=>{document.body.classList.add("c4-active");pageContent.innerHTML='<div class="c4-shell" id="casual-shell"></div>';return document.getElementById("casual-shell");};
 const err=e=>{const root=document.getElementById("casual-shell");if(root){let x=root.querySelector(".c4-error");if(!x){x=document.createElement("div");x.className="c4-error";root.append(x);}x.textContent=e?.message||"حدث خطأ";}};
-const stop=()=>{if(poll)clearTimeout(poll);if(hideTimer)clearTimeout(hideTimer);poll=hideTimer=null;current=null;lock=false;};
+const stop=()=>{if(poll)clearTimeout(poll);if(hideTimer)clearTimeout(hideTimer);poll=hideTimer=null;current=null;lock=false;memoryLastCards={};};
 const request=async(action,extra={})=>{const result=await api(action,current?.id||"",extra);current=result;return result;};
 function heading(title,sub){return '<div class="c4-heading"><h2>'+title+'</h2><p>'+sub+'</p></div>';}
 window.startCasualSetup=function(type){
@@ -59,9 +59,16 @@ function renderGame(){
   const board=root.querySelector("#casual-board");
   board.style.gridTemplateColumns="repeat("+(current.cards.length<=16?4:5)+",minmax(0,1fr))";
   const botBusy=!!current.bot_revealing;
+  const nextMemoryVisual={};
   current.cards.forEach(card=>{
    const b=document.createElement("button");
-   b.className="c4-level memory-card"+(card.matched?" matched":"")+(card.value!==null?" revealed":" face-down");
+   const key=String(current.id)+":"+String(card.index);
+   const previous=memoryLastCards[key]||{value:null,matched:false};
+   const isRevealed=card.value!==null;
+   const justFlippedIn=isRevealed&&previous.value===null&&!previous.matched;
+   const justFlippedOut=!isRevealed&&previous.value!==null&&!card.matched;
+   const justMatched=!!card.matched&&!previous.matched;
+   b.className="c4-level memory-card"+(card.matched?" matched":"")+(isRevealed?" revealed":" face-down")+(justFlippedIn?" flip-in":"")+(justFlippedOut?" flip-out":"")+(justMatched?" just-matched":"");
    b.style.minHeight="58px";b.style.padding="4px";b.style.fontSize="25px";
    const face=document.createElement("span");face.className="memory-face";face.textContent=card.value||"❔";b.append(face);
    if(card.matched&&card.matched_by){
@@ -69,7 +76,9 @@ function renderGame(){
    }
    b.disabled=!!card.matched||!myTurn||current.bot_pending||botBusy||lock||card.value!==null;
    b.onclick=()=>flip(card.index);board.append(b);
+   nextMemoryVisual[key]={value:card.value,matched:!!card.matched};
   });
+  memoryLastCards=nextMemoryVisual;
   root.querySelector("#casual-back").onclick=()=>{stop();showGames();};
   if(!hideTimer && current.first!==null && current.second!==null){
    hideTimer=setTimeout(async()=>{
