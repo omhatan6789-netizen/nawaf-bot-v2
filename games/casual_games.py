@@ -56,6 +56,7 @@ def _public(row, uid):
                        "guesses": state.get("guesses", []), "hint": state.get("hint"),
                        "winner_id": state.get("winner_id"),
                        "attempts_used": state.get("attempts",{}).get(str(uid),0),
+                       "turn_index": state.get("turn_index",0),
                        "attempts": state.get("attempts",{}) if row["status"]=="finished" else {}})
         if row["status"] == "finished": result["secret"] = state.get("secret")
     return result
@@ -222,6 +223,8 @@ async def bot_turn(user_id, raw_id):
                 state["scores"][1]+=1; state["matched"]+=1; state["turn_index"]=1; state["bot_pending"]=True
             else:
                 state["turn_index"]=0; state["bot_pending"]=False
+        if int(state.get("bot_step",0)) == 2:
+            _reset_deadline(state, _obj(row["settings"]))
         status="finished" if state["matched"]>=len(cards)//2 else "playing"
         row=await c.fetchrow("UPDATE casual_game_rooms SET status=$2,state=$3::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,status,json.dumps(state,ensure_ascii=False))
     return _public(row,uid)
