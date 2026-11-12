@@ -136,8 +136,11 @@ async def game_action(user_id, raw_id, action):
             hint="صحيح" if guess==state["secret"] else ("أعلى ⬆️" if guess<state["secret"] else "أقل ⬇️")
             state["guesses"].append({"id":uid,"name":players[player_index]["name"],"guess":guess,"hint":hint,"n":used})
             state["hint"]=hint
+            exhausted = all(int(attempts.get(str(int(p["id"])),0)) >= int(settings["attempts"]) for p in players if not p.get("bot"))
             if guess==state["secret"]:
                 state["winner_id"]=uid
+                row=await c.fetchrow("UPDATE casual_game_rooms SET status='finished',state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,json.dumps(state,ensure_ascii=False))
+            elif exhausted:
                 row=await c.fetchrow("UPDATE casual_game_rooms SET status='finished',state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,json.dumps(state,ensure_ascii=False))
             else:
                 row=await c.fetchrow("UPDATE casual_game_rooms SET state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,json.dumps(state,ensure_ascii=False))
@@ -156,6 +159,9 @@ async def bot_turn(raw_id):
         first=state.get("first")
         if first is not None:
             known[str(first)]=cards[first]["value"]
+        second=state.get("second")
+        if second is not None:
+            known[str(second)]=cards[second]["value"]
         pairs={}
         for k,v in known.items():
             i=int(k)
