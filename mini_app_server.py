@@ -130,6 +130,20 @@ def handle_mini_app_request(handler):
         handler.end_headers()
         handler.wfile.write(body)
         return True
+    if path == "/mini_app/casual-games.js":
+        file_path = WEB_ROOT / "casual-games.js"
+        try:
+            body = file_path.read_bytes()
+        except OSError:
+            handler.send_error(404, "Casual games script not found")
+            return True
+        handler.send_response(200)
+        handler.send_header("Content-Type", "application/javascript; charset=utf-8")
+        handler.send_header("Cache-Control", "public, max-age=300")
+        handler.send_header("Content-Length", str(len(body)))
+        handler.end_headers()
+        handler.wfile.write(body)
+        return True
     if path == "/mini_app/ambient.js":
         file_path = WEB_ROOT / "ambient.js"
         try:
