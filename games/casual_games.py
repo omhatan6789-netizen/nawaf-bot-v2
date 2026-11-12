@@ -146,14 +146,15 @@ async def game_action(user_id, raw_id, action):
                 row=await c.fetchrow("UPDATE casual_game_rooms SET state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,json.dumps(state,ensure_ascii=False))
     return _public(row,uid)
 
-async def bot_turn(raw_id):
-    gid=uuid.UUID(hex=str(raw_id).replace("-","")); pool=get_pool()
+async def bot_turn(user_id, raw_id):
+    gid=uuid.UUID(hex=str(raw_id).replace("-","")); uid=int(user_id); pool=get_pool()
     async with pool.acquire() as c:
       async with c.transaction():
         row=await c.fetchrow("SELECT * FROM casual_game_rooms WHERE id=$1 FOR UPDATE",gid)
         if not row or row["status"]!="playing": raise ValueError("اللعبة غير متاحة")
+        if int(row["owner_id"])!=uid or row["mode"]!="bot": raise ValueError("حركة البوت غير متاحة لهذه اللعبة")
         state=_obj(row["state"]); players=_obj(row["players"])
-        if row["game_type"]!="match" or not state.get("bot_pending"): return _public(row,int(row["owner_id"]))
+        if row["game_type"]!="match" or not state.get("bot_pending"): return _public(row,uid)
         cards=state["cards"]; known=state.setdefault("bot_memory",{})
         available=[i for i,x in enumerate(cards) if not x["matched"]]
         first=state.get("first")
@@ -183,7 +184,7 @@ async def bot_turn(raw_id):
         state["bot_pending"]=False;state["turn_index"]=0
         status="finished" if state["matched"]>=len(cards)//2 else "playing"
         row=await c.fetchrow("UPDATE casual_game_rooms SET status=$2,state=$3::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,status,json.dumps(state,ensure_ascii=False))
-    return _public(row,int(row["owner_id"]))
+    return _public(row,uid)
 
 async def get_state(user_id, raw_id):
     gid=uuid.UUID(hex=str(raw_id).replace("-","")); uid=int(user_id)
