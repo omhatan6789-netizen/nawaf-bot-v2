@@ -63,7 +63,8 @@ function renderGame(){
   '<div class="c4-panel"><div class="c4-result show" id="casual-hint">'+(current.hint||"بانتظار أول تخمين")+'</div><div class="c4-label">المحاولات: '+current.attempts_used+' / '+current.max_attempts+'</div><div style="display:flex;gap:8px"><input id="casual-guess" type="number" min="'+current.min+'" max="'+current.max+'" placeholder="اكتب رقمك" style="flex:1;min-width:0;padding:13px;border-radius:12px;background:#17090b;color:white"><button class="c4-start" id="casual-guess-btn">تخمين</button></div><div class="word-history" id="casual-history"></div><button class="c4-secondary" id="casual-back">رجوع للألعاب</button></div>';
   root.querySelector("#casual-history").innerHTML=guesses.map(g=>'<div class="custom-card">'+safe(g.name)+' — '+g.guess+' : '+safe(g.hint)+'</div>').join("");
   const input=root.querySelector("#casual-guess"),btn=root.querySelector("#casual-guess-btn");
-  btn.onclick=async()=>{if(lock)return;lock=true;btn.disabled=true;try{current=await request("action",{move:{guess:Number(input.value)}});renderGame();}catch(e){err(e);btn.disabled=false;}finally{lock=false;}};
+  if(current.attempts_used>=current.max_attempts){input.disabled=true;btn.disabled=true;root.querySelector("#casual-hint").textContent="انتهت محاولاتك، انتظر بقية اللاعبين.";}
+  btn.onclick=async()=>{if(lock||input.disabled)return;lock=true;btn.disabled=true;try{current=await request("action",{move:{guess:Number(input.value)}});renderGame();}catch(e){err(e);btn.disabled=false;}finally{lock=false;}};
   input.addEventListener("keydown",e=>{if(e.key==="Enter")btn.click();});
   root.querySelector("#casual-back").onclick=()=>{stop();showGames();};
  }
