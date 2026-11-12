@@ -80,7 +80,7 @@ function renderGame(){
   root.innerHTML=heading("تطابق البطاقات 🃏","طابق الأزواج واجمع أكبر عدد")+
   '<div class="mg-score">'+players.map((p,i)=>'<span>'+safe(p.name)+': '+(current.scores?.[i]||0)+'</span>').join("")+'</div>'+
   '<div class="c4-panel"><div class="c4-result show" id="casual-status">'+(!isPlayer?"👀 أنت متفرج على المباراة":(current.bot_pending?"البوت يفكر...":(myTurn?"دورك، اختر بطاقتين":"دور "+safe(turn?.name))))+'</div><div id="casual-board" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin-top:12px"></div><button class="c4-secondary" id="casual-back">رجوع للألعاب</button></div>';
-  addTurnControls(root,isPlayer);const board=root.querySelector("#casual-board");
+  addTurnControls(root,isPlayer,myTurn);const board=root.querySelector("#casual-board");
   board.style.gridTemplateColumns="repeat("+(current.cards.length<=16?4:5)+",minmax(0,1fr))";
   const botBusy=!!current.bot_revealing;
   const nextMemoryVisual={};
@@ -130,12 +130,14 @@ function renderGame(){
    },2000);
   }
  }else{
-  const me=Number(tg?.initDataUnsafe?.user?.id||0),guesses=current.guesses||[];
+  const me=Number(tg?.initDataUnsafe?.user?.id||0),guesses=current.guesses||[],players=current.players||[];
+  const isPlayer=players.some(p=>Number(p.id)===me);
+  const myTurn=isPlayer&&(current.mode!=="online"||Number(players[current.turn_index||0]?.id)===me);
   root.innerHTML=heading("خمن الرقم 🔢","اختر رقمًا بين "+current.min+" و "+current.max)+
+  '<div class="mg-score">'+players.map((p)=>'<span>'+safe(p.name)+'</span>').join("")+'</div>'+
   '<div class="c4-panel"><div class="c4-result show" id="casual-hint">'+(current.hint||"بانتظار أول تخمين")+'</div><div class="c4-label">المحاولات: '+current.attempts_used+' / '+current.max_attempts+'</div><input id="casual-guess" type="number" min="'+current.min+'" max="'+current.max+'" placeholder="اكتب رقمك" style="width:100%;padding:14px;border-radius:12px;background:#17090b;color:white;font-size:18px;text-align:center"><div class="word-history" id="casual-history"></div><button class="c4-start" id="casual-guess-btn" style="display:block;width:100%;min-height:52px;margin-top:14px;font-size:18px">تخمين</button><button class="c4-secondary" id="casual-back">رجوع للألعاب</button><button class="c4-secondary" id="casual-home">الرجوع للقائمة الرئيسية</button></div>';
-  addTurnControls(root,isPlayer);root.querySelector("#casual-history").innerHTML=guesses.map(g=>'<div class="custom-card">'+safe(g.name)+' — '+g.guess+' : '+safe(g.hint)+'</div>').join("");
+  addTurnControls(root,isPlayer,myTurn);root.querySelector("#casual-history").innerHTML=guesses.map(g=>'<div class="custom-card">'+safe(g.name)+' — '+g.guess+' : '+safe(g.hint)+'</div>').join("");
   const input=root.querySelector("#casual-guess"),btn=root.querySelector("#casual-guess-btn");
-  const isPlayer=(current.players||[]).some(p=>Number(p.id)===me);
   if(!isPlayer){input.disabled=true;btn.disabled=true;root.querySelector("#casual-hint").textContent="👀 أنت متفرج على المباراة.";}
   else if(current.mode==="online"&&Number((current.players||[]).findIndex(p=>Number(p.id)===me))!==Number(current.turn_index||0)){input.disabled=true;btn.disabled=true;root.querySelector("#casual-hint").textContent="انتظر دور "+safe(current.players?.[current.turn_index]?.name||"اللاعب");}
   else if(current.attempts_used>=current.max_attempts){input.disabled=true;btn.disabled=true;root.querySelector("#casual-hint").textContent="انتهت محاولاتك، انتظر بقية اللاعبين.";}
