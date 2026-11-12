@@ -134,6 +134,7 @@ body.c4-active #page{padding-left:10px;padding-right:10px}
 <section id="page" hidden><div class="section-title" id="page-title"></div><div class="custom" id="page-content"></div><button id="back-home" class="back-button">↩ رجوع للقائمة الرئيسية</button></section>
 </main>
 <script src="/mini_app/ambient.js?v=20261106-7"></script>
+<script src="/mini_app/casual-games.js?v=1"></script>
 <script>
 const tg=window.Telegram?.WebApp;tg?.ready();tg?.expand();
 (function showWelcomeToast(){
@@ -171,7 +172,7 @@ function applyMiniAppButtonColors(map){
 }
 const miniButtonColorObserver=new MutationObserver(()=>applyMiniAppButtonColors());
 miniButtonColorObserver.observe(document.body,{childList:true,subtree:true,characterData:true});
-function showHome(){stopC4Timer();stopMiniGameTimers();stopExtraGame();document.body.classList.remove('c4-active');page.hidden=true;home.hidden=false;}
+function showHome(){stopC4Timer();stopMiniGameTimers();stopExtraGame();stopCasualGame();document.body.classList.remove('c4-active');page.hidden=true;home.hidden=false;}
 function telegramDisplayName(){const u=tg?.initDataUnsafe?.user||{};return [u.first_name,u.last_name].filter(Boolean).join(' ').trim()||u.username||'أنت';}
 function winnerDisplayName(game){const status=String(game?.status||'');const botName=String(game?.bot_name||'').trim();if(game?.game_mode!=='human'&&botName&&(status==='won'||status==='lost'))return status==='lost'?botName:telegramDisplayName();const name=String(game?.winner_name||'').trim();return (!name||name==='أحد اللاعبين'||name==='أنت'||(name.startsWith('اللاعب ')||name.startsWith('لاعب ')))?'الفائز':name;}
 function openBot(startParam=''){if(!botUsername)return;const link='https://t.me/'+botUsername+(startParam?'?start='+encodeURIComponent(startParam):'');if(tg?.openTelegramLink)tg.openTelegramLink(link);else location.href=link;}
@@ -195,12 +196,14 @@ function showTop(kind,title){
 }
 
 function showGames(){
- stopC4Timer();stopMiniGameTimers();stopExtraGame();document.body.classList.remove('c4-active');home.hidden=true;page.hidden=false;pageTitle.textContent='الألعاب 🎮';pageContent.replaceChildren();
+ stopC4Timer();stopMiniGameTimers();stopExtraGame();stopCasualGame();document.body.classList.remove('c4-active');home.hidden=true;page.hidden=false;pageTitle.textContent='الألعاب 🎮';pageContent.replaceChildren();
  const games=[
   ['🔴','كونكت 4','العب ضد البوت أو تحدَّ لاعبًا','connect'],
   ['🟦','المربعات','ارسم الخطوط واجمع المربعات','dots'],
   ['🧠','اختبر ذاكرتك','احفظ التسلسل وتحدَّ لاعبًا آخر','memory'],
   ['🔤','خمن الكلمة','تحدَّ حتى 10 لاعبين أو تدرب لحالك','word'],
+  ['🃏','تطابق البطاقات','طابق الأزواج ضد البوت أو أصدقائك','match'],
+  ['🔢','خمن الرقم','اكتشف الرقم مع تلميحات أعلى أو أقل','number'],
  ];
  games.forEach(([emoji,name,hint,type])=>{
   const card=document.createElement('button');card.className='custom-card game-card';card.type='button';card.style.width='100%';card.style.cursor='pointer';
@@ -213,7 +216,7 @@ function showGames(){
    const placeholder=document.createElement('div');placeholder.className='game-cover-placeholder';placeholder.textContent=emoji;card.appendChild(placeholder);
   }
   const label=document.createElement('span');label.className='label';label.textContent=name;card.appendChild(label);
-  card.onclick=()=>{if(type==='connect'){showConnect4Setup();return;}if(type==='word'){showWordSetup();return;}showMiniGameInstructions(type);};
+  card.onclick=()=>{if(type==='connect'){showConnect4Setup();return;}if(type==='word'){showWordSetup();return;}if(type==='match'||type==='number'){startCasualSetup(type);return;}showMiniGameInstructions(type);};
   pageContent.appendChild(card);
  });
 }
@@ -1039,7 +1042,11 @@ document.getElementById('back-home').onclick=showHome;
    else{if(b.image){const im=document.createElement('img');im.className='thumb';im.src=b.image;a.appendChild(im);}const name=document.createElement('span');name.className='label';name.textContent=b.title;a.appendChild(name);const dots=document.createElement('span');dots.className='dots';dots.textContent='⋮';a.appendChild(dots);}
    root.appendChild(a);
   }
-  if(extraGameType&&extraGameId){
+  const casualStartParam=tg?.initDataUnsafe?.start_param||'';
+  if(casualStartParam.startsWith('casual_match_')||casualStartParam.startsWith('casual_number_')){
+    startCasualGame(casualStartParam);
+  }
+  else if(extraGameType&&extraGameId){
     home.hidden=true;page.hidden=false;pageTitle.textContent='خمن الكلمة';
     extraGame=await extraGameRequest('join','word');if(extraGame.status==='waiting')renderWordLobby();else renderWordGame();
   }
