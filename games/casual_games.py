@@ -10,7 +10,7 @@ def _obj(value):
 
 def _deck(count):
     symbols = ["🍎","🍋","🍇","🍉","🍒","🥝","🍓","🍍","🥥","🥑","🍑","🍊","🫐","🥕","🌽"]
-    pairs = (symbols * 2)[:count]
+    pairs = symbols[:count // 2] * 2
     random.shuffle(pairs)
     return [{"value": v, "matched": False} for v in pairs]
 
