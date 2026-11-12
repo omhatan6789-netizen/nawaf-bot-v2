@@ -50,7 +50,7 @@ function renderGame(){
   const me=Number(tg?.initDataUnsafe?.user?.id||0),players=current.players||[],turn=players[current.turn_index]||players[0],isPlayer=players.some(p=>Number(p.id)===me),myTurn=isPlayer&&Number(turn?.id)===me;
   root.innerHTML=heading("تطابق البطاقات 🃏","طابق الأزواج واجمع أكبر عدد")+
   '<div class="mg-score">'+players.map((p,i)=>'<span>'+safe(p.name)+': '+(current.scores?.[i]||0)+'</span>').join("")+'</div>'+
-  '<div class="c4-panel"><div class="c4-result show" id="casual-status">'+(current.bot_pending?"البوت يفكر...":(myTurn?"دورك، اختر بطاقتين":"دور "+safe(turn?.name)))+'</div><div id="casual-board" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin-top:12px"></div><button class="c4-secondary" id="casual-back">رجوع للألعاب</button></div>';
+  '<div class="c4-panel"><div class="c4-result show" id="casual-status">'+(!isPlayer?"👀 أنت متفرج على المباراة":(current.bot_pending?"البوت يفكر...":(myTurn?"دورك، اختر بطاقتين":"دور "+safe(turn?.name))))+'</div><div id="casual-board" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin-top:12px"></div><button class="c4-secondary" id="casual-back">رجوع للألعاب</button></div>';
   const board=root.querySelector("#casual-board");
   board.style.gridTemplateColumns="repeat("+(current.cards.length<=16?4:5)+",minmax(0,1fr))";
   current.cards.forEach(card=>{const b=document.createElement("button");b.className="c4-level";b.style.minHeight="58px";b.style.padding="4px";b.style.fontSize="25px";b.textContent=card.value||"❔";b.disabled=!!card.matched||card.value!==null||!myTurn||current.bot_pending||lock;b.onclick=()=>flip(card.index);board.append(b);});
