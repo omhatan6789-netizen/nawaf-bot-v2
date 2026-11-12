@@ -1111,11 +1111,11 @@ async def start_name_reaction():
 
     # أوامر الحساب
 
-    # استقبل الرسائل النصية أولاً ثم تحقق من هوية الحساب داخل المعالج.
-    # هذا يتجاوز مشكلة بعض إصدارات PyrogramMod مع outgoing في القروبات.
+    # استقبال رسائل الحساب نفسه صراحةً عبر فلتر Pyrogram المخصص له.
+    # هذا يمنع الاعتماد على outgoing أو فحص مرسل الرسالة بعد وصول كل رسائل القروب.
     _control_handler = MessageHandler(
         _reply_control_handler,
-        filters.text | filters.caption
+        filters.me & (filters.text | filters.caption)
     )
 
     # اكتشاف نواف في القروبات
