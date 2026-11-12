@@ -16,7 +16,7 @@ window.startCasualSetup=function(type){
  '<div class="c4-panel"><div class="c4-label">طريقة اللعب</div><div class="c4-levels"><button class="c4-level active" data-mode="bot">🤖 ضد البوت</button><button class="c4-level" data-mode="online">👥 أونلاين</button></div>'+
  (isMatch?'<label class="c4-label">عدد البطاقات</label><select id="casual-count" style="width:100%;padding:13px;border-radius:12px;background:#17090b;color:white"><option>12</option><option selected>16</option><option>20</option><option>24</option><option>30</option></select>':
  '<label class="c4-label">أقل رقم</label><input id="casual-min" type="number" value="1" style="width:100%;padding:13px;border-radius:12px;background:#17090b;color:white"><label class="c4-label">أعلى رقم</label><input id="casual-max" type="number" value="100" style="width:100%;padding:13px;border-radius:12px;background:#17090b;color:white"><label class="c4-label">عدد المحاولات</label><input id="casual-attempts" type="number" min="1" max="30" value="7" style="width:100%;padding:13px;border-radius:12px;background:#17090b;color:white">')+
- '<div class="c4-label" style="margin-top:15px">مستوى البوت</div><div class="c4-levels" id="casual-levels"></div><button class="c4-start" id="casual-create">ابدأ اللعب</button><button class="c4-secondary" id="casual-back">رجوع للألعاب</button><div class="c4-hint">اللعبتان بدون نقاط أو رهانات نهائيًا</div></div>';
+ '<div class="c4-label" style="margin-top:15px">مستوى التحدي</div><div class="c4-levels" id="casual-levels"></div><button class="c4-start" id="casual-create">ابدأ اللعب</button><button class="c4-secondary" id="casual-back">رجوع للألعاب</button><div class="c4-hint">اللعبتان بدون نقاط أو رهانات نهائيًا</div></div>';
  let mode="bot",difficulty="متوسط";
  root.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>{mode=b.dataset.mode;root.querySelectorAll("[data-mode]").forEach(x=>x.classList.toggle("active",x===b));});
  const levels=root.querySelector("#casual-levels");
@@ -77,7 +77,7 @@ function finishGame(){
   const draw=winners.length!==1;showGameEndOverlay({winnerName:draw?"":winners[0]?.name,isDraw:draw,subtitle:draw?"تعادل! أحسنتم جميعًا 👏":("أبدع "+winners[0].name+" وجمع "+high+" أزواج 🏆")});
  }else{
   const win=Number(current.winner_id)===Number(tg?.initDataUnsafe?.user?.id||0);
-  showGameEndOverlay({winnerName:win?telegramDisplayName():(current.players||[]).find(p=>Number(p.id)===Number(current.winner_id))?.name||"",isDraw:false,title:current.winner_id?"🎉 انتهت اللعبة":"انتهت اللعبة",subtitle:win?"عرفت الرقم الصحيح! مبروك 🎉":(current.winner_id?"سبقك لاعب آخر للرقم الصحيح":"انتهت المحاولات، الرقم كان "+current.secret)});
+  showGameEndOverlay({winnerName:win?telegramDisplayName():(current.players||[]).find(p=>Number(p.id)===Number(current.winner_id))?.name||"لم يفز أحد",isDraw:false,title:current.winner_id?"🎉 انتهت اللعبة":"انتهت اللعبة",subtitle:win?"عرفت الرقم الصحيح! مبروك 🎉":(current.winner_id?"سبقك لاعب آخر للرقم الصحيح":"انتهت المحاولات، الرقم كان "+current.secret)});
  }
 }
 window.startCasualGame=async function(startParam){
