@@ -329,7 +329,7 @@ def handle_connect4_post(handler):
             elif action == "action":
                 result = _run(casual.game_action(uid, payload.get("game_id",""), payload.get("move") or {}))
             elif action == "bot-turn":
-                result = _run(casual.bot_turn(payload.get("game_id","")))
+                result = _run(casual.bot_turn(uid, payload.get("game_id","")))
             else:
                 result = _run(casual.get_state(uid, payload.get("game_id","")))
             body = json.dumps({"ok": True, "result": result}, ensure_ascii=False).encode()
