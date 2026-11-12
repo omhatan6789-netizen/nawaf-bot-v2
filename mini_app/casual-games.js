@@ -41,7 +41,7 @@ function renderLobby(){
 }
 function safe(v){return String(v||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
 function schedulePoll(){
- if(poll)clearTimeout(poll);poll=setTimeout(async()=>{try{if(!current)return;const next=await api("state",current.id);current=next;if(current.status==="waiting")renderLobby();else renderGame();}catch(e){}if(current&&current.status!=="finished")schedulePoll();},1400);
+ if(poll)clearTimeout(poll);poll=setTimeout(async()=>{try{if(!current)return;const next=await api("state",current.id);if(JSON.stringify(next)!==JSON.stringify(current)){current=next;if(current.status==="waiting")renderLobby();else renderGame();return;}}catch(e){}if(current&&current.status!=="finished")schedulePoll();},1400);
 }
 function renderGame(){
  const root=shell(),isMatch=gameType==="match";
