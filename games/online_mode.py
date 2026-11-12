@@ -139,6 +139,9 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
     await pool.execute(
         "DELETE FROM online_game_lobbies WHERE created_at < NOW() - INTERVAL '2 days' AND status <> 'playing'"
     )
+    await pool.execute(
+        "DELETE FROM casual_game_rooms WHERE created_at < NOW() - INTERVAL '2 days' AND status <> 'playing'"
+    )
     results = []
     me = await context.bot.get_me()
     for game_type in _select_games(inline.query):
