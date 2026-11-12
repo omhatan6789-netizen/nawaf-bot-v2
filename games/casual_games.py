@@ -12,13 +12,13 @@ def _deck(count):
     symbols = ["🍎","🍋","🍇","🍉","🍒","🥝","🍓","🍍","🥥","🥑","🍑","🍊","🫐","🥕","🌽"]
     pairs = symbols[:count // 2] * 2
     random.shuffle(pairs)
-    return [{"value": v, "matched": False} for v in pairs]
+    return [{"value": v, "matched": False, "matched_by": None} for v in pairs]
 
 def _initial(game_type, settings, players, mode):
     if game_type == "match":
         return {"cards": _deck(int(settings.get("card_count", 16))), "scores": [0]*len(players),
                 "turn_index": 0, "first": None, "second": None, "matched": 0,
-                "bot_memory": {}, "bot_pending": False}
+                "bot_memory": {}, "bot_pending": False, "bot_step": 0, "bot_first": None, "bot_reveal": []}
     return {"secret": random.randint(int(settings.get("min", 1)), int(settings.get("max", 100))),
             "guesses": [], "winner_id": None, "hint": None, "attempts": {},
             "max_attempts": int(settings.get("attempts", 7))}
@@ -31,12 +31,12 @@ def _public(row, uid):
               "settings": settings}
     if row["game_type"] == "match":
         result.update({"cards": [{"value": c["value"] if c["matched"] or i in (state.get("first"), state.get("second")) or i in state.get("bot_reveal", []) else None,
-                                   "matched": bool(c["matched"]), "index": i}
+                                   "matched": bool(c["matched"]), "matched_by": c.get("matched_by"), "index": i}
                                   for i,c in enumerate(state.get("cards", []))],
                        "scores": state.get("scores", []), "turn_index": state.get("turn_index",0),
                        "first": state.get("first"), "second": state.get("second"),
                        "bot_pending": bool(state.get("bot_pending")),
-                       "bot_revealing": bool(state.get("bot_reveal")),
+                       "bot_revealing": bool(state.get("bot_reveal")), "bot_step": int(state.get("bot_step",0)),
                        "winner_id": state.get("winner_id"), "matched": state.get("matched",0),
                        "total_pairs": len(state.get("cards",[]))//2})
     else:
@@ -105,6 +105,8 @@ async def game_action(user_id, raw_id, action):
             if action.get("action") == "continue":
                 if state.get("bot_reveal"):
                     state["bot_reveal"] = []
+                    state["bot_step"] = 0
+                    state["bot_first"] = None
                 elif state.get("first") is not None and state.get("second") is not None:
                     state["first"]=state["second"]=None
                     state["turn_index"]=int(state.pop("next_turn",state.get("turn_index",0)))
@@ -123,6 +125,7 @@ async def game_action(user_id, raw_id, action):
                 a,b=state["first"],state["second"]
                 if cards[a]["value"]==cards[b]["value"]:
                     cards[a]["matched"]=cards[b]["matched"]=True
+                    cards[a]["matched_by"]=cards[b]["matched_by"]=players[player_index]["name"]
                     state["scores"][player_index]+=1; state["matched"]+=1
                     state["first"]=state["second"]=None
                 else:
@@ -163,46 +166,44 @@ async def bot_turn(user_id, raw_id):
         if row["game_type"]!="match" or not state.get("bot_pending"): return _public(row,uid)
         cards=state["cards"]; known=state.setdefault("bot_memory",{})
         available=[i for i,x in enumerate(cards) if not x["matched"]]
-        first=state.get("first")
-        if first is not None:
-            known[str(first)]=cards[first]["value"]
-        second=state.get("second")
-        if second is not None:
-            known[str(second)]=cards[second]["value"]
-        level=(_obj(row["settings"]).get("difficulty","متوسط"))
-        if level=="سهل":
-            known.clear()
+        level=_obj(row["settings"]).get("difficulty","متوسط")
+        if level=="سهل": known.clear()
         elif level=="متوسط" and len(known)>4:
-            known=dict(list(known.items())[-4:])
-            state["bot_memory"]=known
+            known=dict(list(known.items())[-4:]); state["bot_memory"]=known
         elif level=="مستحيل":
-            known={str(i):cards[i]["value"] for i in available}
-            state["bot_memory"]=known
-        pairs={}
-        for k,v in known.items():
-            i=int(k)
-            if i in available: pairs.setdefault(v,[]).append(i)
-        pair=next((v[:2] for v in pairs.values() if len(v)>=2),None)
-        if pair: picks=pair
+            known={str(i):cards[i]["value"] for i in available}; state["bot_memory"]=known
+        if int(state.get("bot_step",0)) == 0:
+            pairs={}
+            for k,v in known.items():
+                i=int(k)
+                if i in available: pairs.setdefault(v,[]).append(i)
+            pair=next((v[:2] for v in pairs.values() if len(v)>=2),None)
+            if pair: first=pair[0]
+            else:
+                choices=[i for i in available if str(i) not in known] or available
+                first=random.choice(choices)
+            known[str(first)]=cards[first]["value"]
+            state["bot_first"]=first; state["bot_reveal"]=[first]; state["bot_step"]=1
         else:
-            random.shuffle(available)
-            picks=available[:2]
-        if len(picks)==2:
-            for i in picks: known[str(i)]=cards[i]["value"]
-            bot_matched = cards[picks[0]]["value"]==cards[picks[1]]["value"]
-            if bot_matched:
-                cards[picks[0]]["matched"]=cards[picks[1]]["matched"]=True
-                state["scores"][1]+=1;state["matched"]+=1
-            state["first"]=state["second"]=None
-        else:
-            bot_matched = False
-        state["bot_reveal"]=picks[:]
-        state["bot_pending"]=bool(bot_matched)
-        state["turn_index"]=1 if bot_matched else 0
+            first=int(state.get("bot_first")); choices=[i for i in available if i!=first]
+            pair=next((int(k) for k,v in known.items() if v==cards[first]["value"] and int(k) in choices),None)
+            if pair is not None: second=pair
+            else:
+                unknown=[i for i in choices if str(i) not in known] or choices
+                second=random.choice(unknown)
+            known[str(second)]=cards[second]["value"]
+            matched=cards[first]["value"]==cards[second]["value"]
+            state["bot_reveal"]=[first,second]; state["bot_step"]=2; state["bot_first"]=None
+            if matched:
+                bot_name=players[1]["name"]
+                cards[first]["matched"]=cards[second]["matched"]=True
+                cards[first]["matched_by"]=cards[second]["matched_by"]=bot_name
+                state["scores"][1]+=1; state["matched"]+=1; state["turn_index"]=1; state["bot_pending"]=True
+            else:
+                state["turn_index"]=0; state["bot_pending"]=False
         status="finished" if state["matched"]>=len(cards)//2 else "playing"
         row=await c.fetchrow("UPDATE casual_game_rooms SET status=$2,state=$3::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,status,json.dumps(state,ensure_ascii=False))
     return _public(row,uid)
-
 async def get_state(user_id, raw_id):
     gid=uuid.UUID(hex=str(raw_id).replace("-","")); uid=int(user_id)
     row=await get_pool().fetchrow("SELECT * FROM casual_game_rooms WHERE id=$1",gid)
