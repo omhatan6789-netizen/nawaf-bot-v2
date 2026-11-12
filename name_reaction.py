@@ -230,13 +230,19 @@ async def delete_own_messages(client, message, count):
     chat_id = message.chat.id
     message_ids = []
 
+    try:
+        me = await client.get_me()
+        my_user_id = me.id
+    except Exception as exc:
+        print(f"[MESSAGE CLEANER] Cannot identify account: {exc}")
+        return
+
     print(
         f"[MESSAGE CLEANER] Searching for {count} own messages "
-        f"in chat {chat_id}"
+        f"in chat {chat_id}; account_id={my_user_id}"
     )
 
-    # البحث عن رسائل الحساب من الأحدث إلى الأقدم
-
+    # البحث عن رسائل الحساب بمطابقة رقم المستخدم مباشرةً
     try:
         async for old_message in client.get_chat_history(chat_id):
 
@@ -244,14 +250,8 @@ async def delete_own_messages(client, message, count):
             if old_message.id == message.id:
                 continue
 
-            # التأكد أن الرسالة من حسابنا
-            if (
-                getattr(old_message, "outgoing", False)
-                or (
-                    old_message.from_user
-                    and old_message.from_user.is_self
-                )
-            ):
+            sender = getattr(old_message, "from_user", None)
+            if sender and sender.id == my_user_id:
                 message_ids.append(old_message.id)
 
                 if len(message_ids) >= count:
@@ -270,6 +270,11 @@ async def delete_own_messages(client, message, count):
         return
 
     # حذف الرسائل على دفعات
+
+    print(
+        f"[MESSAGE CLEANER] Found {len(message_ids)} own messages "
+        f"in chat {chat_id}"
+    )
 
     deleted_count = 0
     failed_count = 0
@@ -325,6 +330,12 @@ async def delete_own_messages(client, message, count):
                             failed_count += 1
                             break
                 break
+
+    print(
+        f"[MESSAGE CLEANER] Finished in chat {chat_id}: "
+        f"deleted={deleted_count}, failed={failed_count}, "
+        f"found={len(message_ids)}"
+    )
 
     # حذف رسالة الأمر
 
