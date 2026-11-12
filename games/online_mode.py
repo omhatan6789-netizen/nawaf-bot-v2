@@ -153,8 +153,8 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
             game_id = uuid.UUID(hex=game["id"])
             room_url = f"https://t.me/{me.username}?startapp=casual_{game_type}_{game_id.hex}"
             lobby_text = (
-                f"🎮 غرفة أونلاين — {title}\\n\\n"
-                f"أنشأ {inline.from_user.full_name or inline.from_user.first_name or 'لاعب'} غرفة جديدة.\\n"
+                f"🎮 غرفة أونلاين — {title}\n\n"
+                f"أنشأ {inline.from_user.full_name or inline.from_user.first_name or 'لاعب'} غرفة جديدة.\n"
                 "افتحوا الغرفة من الزر بالأسفل للانضمام، ويمكن لصاحبها ضبط الإعدادات وبدء اللعب."
             )
             result_id = game_id.hex
