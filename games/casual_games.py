@@ -30,7 +30,7 @@ def _public(row, uid):
               "is_owner": int(row["owner_id"]) == int(uid), "players": players,
               "settings": settings}
     if row["game_type"] == "match":
-        result.update({"cards": [{"value": c["value"] if c["matched"] or i in (state.get("first"), state.get("second")) else None,
+        result.update({"cards": [{"value": c["value"] if c["matched"] or i in (state.get("first"), state.get("second")) or i in state.get("bot_reveal", []) else None,
                                    "matched": bool(c["matched"]), "index": i}
                                   for i,c in enumerate(state.get("cards", []))],
                        "scores": state.get("scores", []), "turn_index": state.get("turn_index",0),
@@ -109,6 +109,7 @@ async def game_action(user_id, raw_id, action):
                 return _public(row,uid)
             if state.get("bot_pending"): raise ValueError("انتظر حركة البوت")
             if player_index != int(state.get("turn_index",0)): raise ValueError("انتظر دورك")
+            state["bot_reveal"]=[]
             idx=int(action.get("index",-1)); cards=state["cards"]
             if idx<0 or idx>=len(cards) or cards[idx]["matched"] or idx in (state.get("first"),state.get("second")): raise ValueError("اختر بطاقة متاحة")
             if state.get("first") is None: state["first"]=idx
@@ -187,6 +188,7 @@ async def bot_turn(user_id, raw_id):
                 cards[picks[0]]["matched"]=cards[picks[1]]["matched"]=True
                 state["scores"][1]+=1;state["matched"]+=1
             state["first"]=state["second"]=None
+        state["bot_reveal"]=picks[:]
         state["bot_pending"]=False;state["turn_index"]=0
         status="finished" if state["matched"]>=len(cards)//2 else "playing"
         row=await c.fetchrow("UPDATE casual_game_rooms SET status=$2,state=$3::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,status,json.dumps(state,ensure_ascii=False))
