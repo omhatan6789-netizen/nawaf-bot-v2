@@ -17,6 +17,8 @@ GAME_INFO = {
     "dots": ("Dots and Boxes 🟦", "ارسم الخطوط واجمع أكبر عدد من المربعات"),
     "memory": ("Memory Match 🧠", "اختبر ذاكرتك وطابق الألوان والتسلسل"),
     "word": ("خمن الكلمة 🔤", "تحدَّ حتى 10 لاعبين واكتشفوا الكلمة قبل انتهاء الوقت"),
+    "match": ("تطابق البطاقات 🃏", "طابق أكبر عدد من أزواج البطاقات ضد لاعب أو البوت"),
+    "number": ("خمن الرقم 🔢", "اخمن الرقم الصحيح مع تلميحات أعلى أو أقل"),
 }
 
 def _safe_player_name(value, fallback: str) -> str:
@@ -60,6 +62,8 @@ async def online_image_add_start(update: Update, context: ContextTypes.DEFAULT_T
         [InlineKeyboardButton("المربعات 🟦", callback_data="online_image:dots")],
         [InlineKeyboardButton("اختبر ذاكرتك 🧠", callback_data="online_image:memory")],
         [InlineKeyboardButton("خمن الكلمة 🔤", callback_data="online_image:word")],
+        [InlineKeyboardButton("تطابق البطاقات 🃏", callback_data="online_image:match")],
+        [InlineKeyboardButton("خمن الرقم 🔢", callback_data="online_image:number")],
     ])
     await message.reply_text("اختر اللعبة التي تريد إضافة صورتها، وبعدها أرسل الصورة:", reply_markup=keyboard)
 
@@ -109,7 +113,7 @@ async def online_image_receive(update: Update, context: ContextTypes.DEFAULT_TYP
 
 def _select_games(query: str):
     value = (query or "").strip().lower()
-    supported_inline = ["connect", "dots", "memory", "word"]
+    supported_inline = ["connect", "dots", "memory", "word", "match", "number"]
     if not value:
         return supported_inline
     if any(word in value for word in ("كونكت", "connect", "4")):
@@ -118,6 +122,10 @@ def _select_games(query: str):
         return ["dots"]
     if any(word in value for word in ("ذاكرة", "ذاكرت", "memory")):
         return ["memory"]
+    if any(word in value for word in ("بطاقات", "تطابق", "match", "كروت")):
+        return ["match"]
+    if any(word in value for word in ("رقم", "الرقم", "number")):
+        return ["number"]
     if any(word in value for word in ("خمن", "كلمة", "word")):
         return ["word"]
     return supported_inline
@@ -135,7 +143,22 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
     me = await context.bot.get_me()
     for game_type in _select_games(inline.query):
         title, description = GAME_INFO[game_type]
-        if game_type == "word":
+        if game_type in ("match", "number"):
+            from games.casual_games import create_game
+            game = await create_game(
+                inline.from_user.id,
+                inline.from_user.full_name or inline.from_user.first_name or "مستخدم",
+                game_type, mode="online",
+            )
+            game_id = uuid.UUID(hex=game["id"])
+            room_url = f"https://t.me/{me.username}?startapp=casual_{game_type}_{game_id.hex}"
+            lobby_text = (
+                f"🎮 غرفة أونلاين — {title}\\n\\n"
+                f"أنشأ {inline.from_user.full_name or inline.from_user.first_name or 'لاعب'} غرفة جديدة.\\n"
+                "افتحوا الغرفة من الزر بالأسفل للانضمام، ويمكن لصاحبها ضبط الإعدادات وبدء اللعب."
+            )
+            result_id = game_id.hex
+        elif game_type == "word":
             from games.extra_mini_games import word_create
             game = await word_create(
                 inline.from_user.id,
