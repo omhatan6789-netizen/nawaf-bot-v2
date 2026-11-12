@@ -39,7 +39,7 @@ def _public(row, uid):
     result = {"id": row["id"].hex, "game_type": row["game_type"], "mode": row["mode"],
               "status": row["status"], "owner_id": int(row["owner_id"]),
               "is_owner": int(row["owner_id"]) == int(uid), "players": players,
-              "settings": settings, "turn_deadline": state.get("turn_deadline"), "turn_seconds": int(settings.get("turn_seconds",20))}
+              "settings": settings, "turn_deadline": state.get("turn_deadline"), "turn_seconds": int(settings.get("turn_seconds",20)), "end_reason": state.get("end_reason")}
     if row["game_type"] == "match":
         result.update({"cards": [{"value": c["value"] if c["matched"] or i in (state.get("first"), state.get("second")) or i in state.get("bot_reveal", []) else None,
                                    "matched": bool(c["matched"]), "matched_by": c.get("matched_by"), "index": i}
