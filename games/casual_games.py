@@ -101,6 +101,12 @@ async def game_action(user_id, raw_id, action):
         player_index=next((i for i,p in enumerate(players) if int(p["id"])==uid),None)
         if player_index is None: raise ValueError("أنت لست لاعبًا في هذه اللعبة")
         if row["game_type"]=="match":
+            if action.get("action") == "continue":
+                if state.get("first") is None or state.get("second") is None: raise ValueError("لا توجد حركة معلقة")
+                state["first"]=state["second"]=None
+                state["turn_index"]=int(state.pop("next_turn",state.get("turn_index",0)))
+                row=await c.fetchrow("UPDATE casual_game_rooms SET state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,json.dumps(state,ensure_ascii=False))
+                return _public(row,uid)
             if state.get("bot_pending"): raise ValueError("انتظر حركة البوت")
             if player_index != int(state.get("turn_index",0)): raise ValueError("انتظر دورك")
             idx=int(action.get("index",-1)); cards=state["cards"]
@@ -177,4 +183,39 @@ async def get_state(user_id, raw_id):
     gid=uuid.UUID(hex=str(raw_id).replace("-","")); uid=int(user_id)
     row=await get_pool().fetchrow("SELECT * FROM casual_game_rooms WHERE id=$1",gid)
     if not row: raise ValueError("اللعبة غير موجودة")
+    return _public(row,uid)
+
+async def configure_game(user_id, raw_id, settings):
+    gid=uuid.UUID(hex=str(raw_id).replace("-","")); uid=int(user_id); pool=get_pool()
+    async with pool.acquire() as c:
+      async with c.transaction():
+        row=await c.fetchrow("SELECT * FROM casual_game_rooms WHERE id=$1 FOR UPDATE",gid)
+        if not row or int(row["owner_id"])!=uid: raise ValueError("الإعدادات لصاحب الغرفة فقط")
+        if row["status"]!="waiting": raise ValueError("لا يمكن تعديل الإعدادات بعد بدء اللعبة")
+        current=_obj(row["settings"])
+        if row["game_type"]=="match":
+            count=int(settings.get("card_count",current.get("card_count",16)))
+            if count not in CARD_COUNTS: raise ValueError("اختر 12 أو 16 أو 20 أو 24 أو 30 بطاقة")
+            current["card_count"]=count
+        else:
+            low=int(settings.get("min",current.get("min",1))); high=int(settings.get("max",current.get("max",100)))
+            attempts=int(settings.get("attempts",current.get("attempts",7)))
+            if low<0 or high<=low or high-low>1000000: raise ValueError("نطاق الأرقام غير صالح")
+            if not 1<=attempts<=30: raise ValueError("عدد المحاولات من 1 إلى 30")
+            current.update({"min":low,"max":high,"attempts":attempts})
+        state=_initial(row["game_type"],current,_obj(row["players"]),row["mode"])
+        row=await c.fetchrow("UPDATE casual_game_rooms SET settings=$2::jsonb,state=$3::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,json.dumps(current,ensure_ascii=False),json.dumps(state,ensure_ascii=False))
+    return _public(row,uid)
+
+async def start_game(user_id, raw_id):
+    gid=uuid.UUID(hex=str(raw_id).replace("-","")); uid=int(user_id); pool=get_pool()
+    async with pool.acquire() as c:
+      async with c.transaction():
+        row=await c.fetchrow("SELECT * FROM casual_game_rooms WHERE id=$1 FOR UPDATE",gid)
+        if not row or int(row["owner_id"])!=uid: raise ValueError("بدء اللعبة لصاحب الغرفة فقط")
+        if row["status"]!="waiting": raise ValueError("الغرفة بدأت بالفعل")
+        players=_obj(row["players"])
+        if len(players)<2: raise ValueError("تحتاج لاعبين على الأقل")
+        state=_initial(row["game_type"],_obj(row["settings"]),players,"online")
+        row=await c.fetchrow("UPDATE casual_game_rooms SET status='playing',mode='online',state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,json.dumps(state,ensure_ascii=False))
     return _public(row,uid)
