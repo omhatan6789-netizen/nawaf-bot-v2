@@ -163,6 +163,15 @@ async def bot_turn(user_id, raw_id):
         second=state.get("second")
         if second is not None:
             known[str(second)]=cards[second]["value"]
+        level=(_obj(row["settings"]).get("difficulty","متوسط"))
+        if level=="سهل":
+            known.clear()
+        elif level=="متوسط" and len(known)>4:
+            known=dict(list(known.items())[-4:])
+            state["bot_memory"]=known
+        elif level=="مستحيل":
+            known={str(i):cards[i]["value"] for i in available}
+            state["bot_memory"]=known
         pairs={}
         for k,v in known.items():
             i=int(k)
@@ -170,11 +179,8 @@ async def bot_turn(user_id, raw_id):
         pair=next((v[:2] for v in pairs.values() if len(v)>=2),None)
         if pair: picks=pair
         else:
-            level=(_obj(row["settings"]).get("difficulty","متوسط"))
             random.shuffle(available)
             picks=available[:2]
-            if level in ("صعب","مستحيل") and first is not None:
-                known[str(first)]=cards[first]["value"]
         if len(picks)==2:
             for i in picks: known[str(i)]=cards[i]["value"]
             if cards[picks[0]]["value"]==cards[picks[1]]["value"]:
