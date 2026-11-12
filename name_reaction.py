@@ -70,6 +70,7 @@ DAILY_STATE_FILE = Path("daily_mention_state.json")
 # ==========================================
 
 _client = None
+_account_user_id = None
 
 _handler = None
 _control_handler = None
@@ -495,7 +496,19 @@ async def _reply_control_handler(client, message):
 
     global replies_enabled
 
-    if not message.outgoing:
+    # لا نعتمد على filters.outgoing أو message.outgoing وحدهما؛
+    # نطابق هوية مرسل الرسالة مع الحساب المسجل في جلسة Pyrogram.
+    sender = getattr(message, "from_user", None)
+    sender_id = getattr(sender, "id", None)
+    is_our_message = (
+        bool(getattr(message, "outgoing", False))
+        or bool(getattr(sender, "is_self", False))
+        or (
+            _account_user_id is not None
+            and sender_id == _account_user_id
+        )
+    )
+    if not is_our_message:
         return
 
     text = (
@@ -572,6 +585,11 @@ async def _reply_control_handler(client, message):
     if match:
 
         count = int(match.group(1))
+        print(
+            f"[MESSAGE CLEANER] Command received: chat={message.chat.id}, "
+            f"message_id={message.id}, sender_id={sender_id}, "
+            f"outgoing={getattr(message, 'outgoing', False)}, requested={count}"
+        )
 
         # كل أمر مسح ينظف آخر 100 رسالة من رسائل الحساب نفسه.
         await delete_own_messages(
@@ -1051,6 +1069,7 @@ async def daily_message_loop():
 async def start_name_reaction():
 
     global _client
+    global _account_user_id
     global _handler
     global _control_handler
     global _private_handler
@@ -1070,6 +1089,18 @@ async def start_name_reaction():
 
         return
 
+    try:
+        account_me = await _client.get_me()
+        _account_user_id = account_me.id
+        print(
+            f"[NAME REACTION] Control handler account id: {_account_user_id}"
+        )
+    except Exception as exc:
+        print(f"[NAME REACTION] Cannot identify control account: {exc}")
+        _client = None
+        _account_user_id = None
+        return
+
     # تحميل إعدادات الردود والكتم والتقييد من قاعدة البيانات
     try:
         await load_settings()
@@ -1080,10 +1111,11 @@ async def start_name_reaction():
 
     # أوامر الحساب
 
+    # استقبل الرسائل النصية أولاً ثم تحقق من هوية الحساب داخل المعالج.
+    # هذا يتجاوز مشكلة بعض إصدارات PyrogramMod مع outgoing في القروبات.
     _control_handler = MessageHandler(
         _reply_control_handler,
-        filters.outgoing
-        & (filters.text | filters.caption)
+        filters.text | filters.caption
     )
 
     # اكتشاف نواف في القروبات
@@ -1151,6 +1183,7 @@ async def start_name_reaction():
 async def shutdown_name_reaction():
 
     global _client
+    global _account_user_id
     global _handler
     global _control_handler
     global _private_handler
@@ -1203,6 +1236,7 @@ async def shutdown_name_reaction():
 
     _daily_chat_id = None
     _client = None
+    _account_user_id = None
 
     print(
         "[NAME REACTION] Stopped."
