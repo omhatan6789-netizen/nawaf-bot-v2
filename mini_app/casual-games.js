@@ -8,10 +8,10 @@ const api=async(action,game_id="",extra={})=>{
  const r=await fetch("/api/casual-games",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({initData:tg?.initData||"",action,game_id,...extra})});
  const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok)throw new Error(d.error||"تعذر تنفيذ الطلب");return d.result;
 };
-let current=null,gameType="",poll=null,lock=false,hideTimer=null,memoryLastCards={};
+let current=null,gameType="",poll=null,lock=false,hideTimer=null,countdown=null,memoryLastCards={};
 const shell=()=>{document.body.classList.add("c4-active");pageContent.innerHTML='<div class="c4-shell" id="casual-shell"></div>';return document.getElementById("casual-shell");};
 const err=e=>{const root=document.getElementById("casual-shell");if(root){let x=root.querySelector(".c4-error");if(!x){x=document.createElement("div");x.className="c4-error";root.append(x);}x.textContent=e?.message||"حدث خطأ";}};
-const stop=()=>{if(poll)clearTimeout(poll);if(hideTimer)clearTimeout(hideTimer);poll=hideTimer=null;current=null;lock=false;memoryLastCards={};};
+const stop=()=>{if(poll)clearTimeout(poll);if(hideTimer)clearTimeout(hideTimer);if(countdown)clearInterval(countdown);poll=hideTimer=countdown=null;current=null;lock=false;memoryLastCards={};};
 const request=async(action,extra={})=>{const result=await api(action,current?.id||"",extra);current=result;return result;};
 function heading(title,sub){return '<div class="c4-heading"><h2>'+title+'</h2><p>'+sub+'</p></div>';}
 window.startCasualSetup=function(type){
