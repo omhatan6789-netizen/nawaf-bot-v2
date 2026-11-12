@@ -343,6 +343,8 @@ def handle_connect4_post(handler):
                 result = _run(casual.start_game(uid, payload.get("game_id","")))
             elif action == "action":
                 result = _run(casual.game_action(uid, payload.get("game_id",""), payload.get("move") or {}))
+            elif action == "leave":
+                result = _run(casual.leave_game(uid, payload.get("game_id","")))
             elif action == "bot-turn":
                 result = _run(casual.bot_turn(uid, payload.get("game_id","")))
             else:
