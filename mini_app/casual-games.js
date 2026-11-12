@@ -44,6 +44,7 @@ function renderLobby(){
  const start=root.querySelector("#casual-start");if(start)start.onclick=async()=>{try{current=await request("start");renderGame();}catch(e){err(e);}};
  schedulePoll();
 }
+function addTurnControls(root,isPlayer){if(!isPlayer)return;const wrap=document.createElement("div");wrap.style.cssText="display:flex;justify-content:flex-end;align-items:center;gap:8px;margin:0 0 10px";const timer=document.createElement("span");timer.id="casual-turn-timer";timer.style.cssText="font-weight:800;color:#ffd6d6;font-size:14px";const leave=document.createElement("button");leave.textContent="انسحاب";leave.style.cssText="background:#d92332;color:#fff;border:0;border-radius:10px;padding:8px 16px;font-weight:800";leave.onclick=async()=>{if(!confirm("هل أنت متأكد من الانسحاب؟ سيُعلن فوز اللاعب الآخر."))return;leave.disabled=true;try{current=await request("leave");finishGame();}catch(e){leave.disabled=false;err(e);}};wrap.append(timer,leave);root.prepend(wrap);if(countdown)clearInterval(countdown);const tick=()=>{const left=Math.max(0,Number(current?.turn_deadline||0)-Math.floor(Date.now()/1000));timer.textContent="⏳ "+left+" ثانية";timer.style.color=left<=5?"#ff5555":"#ffd6d6";};tick();countdown=setInterval(tick,250);}
 function safe(v){return String(v||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
 function schedulePoll(){
  if(poll)clearTimeout(poll);poll=setTimeout(async()=>{try{if(!current)return;const next=await api("state",current.id);if(JSON.stringify(next)!==JSON.stringify(current)){current=next;if(current.status==="waiting")renderLobby();else renderGame();return;}}catch(e){}if(current&&current.status!=="finished")schedulePoll();},1400);
@@ -56,7 +57,7 @@ function renderGame(){
   root.innerHTML=heading("تطابق البطاقات 🃏","طابق الأزواج واجمع أكبر عدد")+
   '<div class="mg-score">'+players.map((p,i)=>'<span>'+safe(p.name)+': '+(current.scores?.[i]||0)+'</span>').join("")+'</div>'+
   '<div class="c4-panel"><div class="c4-result show" id="casual-status">'+(!isPlayer?"👀 أنت متفرج على المباراة":(current.bot_pending?"البوت يفكر...":(myTurn?"دورك، اختر بطاقتين":"دور "+safe(turn?.name))))+'</div><div id="casual-board" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin-top:12px"></div><button class="c4-secondary" id="casual-back">رجوع للألعاب</button></div>';
-  const board=root.querySelector("#casual-board");
+  addTurnControls(root,isPlayer);const board=root.querySelector("#casual-board");
   board.style.gridTemplateColumns="repeat("+(current.cards.length<=16?4:5)+",minmax(0,1fr))";
   const botBusy=!!current.bot_revealing;
   const nextMemoryVisual={};
@@ -109,7 +110,7 @@ function renderGame(){
   const me=Number(tg?.initDataUnsafe?.user?.id||0),guesses=current.guesses||[];
   root.innerHTML=heading("خمن الرقم 🔢","اختر رقمًا بين "+current.min+" و "+current.max)+
   '<div class="c4-panel"><div class="c4-result show" id="casual-hint">'+(current.hint||"بانتظار أول تخمين")+'</div><div class="c4-label">المحاولات: '+current.attempts_used+' / '+current.max_attempts+'</div><input id="casual-guess" type="number" min="'+current.min+'" max="'+current.max+'" placeholder="اكتب رقمك" style="width:100%;padding:14px;border-radius:12px;background:#17090b;color:white;font-size:18px;text-align:center"><div class="word-history" id="casual-history"></div><button class="c4-start" id="casual-guess-btn" style="display:block;width:100%;min-height:52px;margin-top:14px;font-size:18px">تخمين</button><button class="c4-secondary" id="casual-back">رجوع للألعاب</button><button class="c4-secondary" id="casual-home">الرجوع للقائمة الرئيسية</button></div>';
-  root.querySelector("#casual-history").innerHTML=guesses.map(g=>'<div class="custom-card">'+safe(g.name)+' — '+g.guess+' : '+safe(g.hint)+'</div>').join("");
+  addTurnControls(root,isPlayer&&((current.players||[]).findIndex(p=>Number(p.id)===me)===Number(current.turn_index||0)));root.querySelector("#casual-history").innerHTML=guesses.map(g=>'<div class="custom-card">'+safe(g.name)+' — '+g.guess+' : '+safe(g.hint)+'</div>').join("");
   const input=root.querySelector("#casual-guess"),btn=root.querySelector("#casual-guess-btn");
   const isPlayer=(current.players||[]).some(p=>Number(p.id)===me);
   if(!isPlayer){input.disabled=true;btn.disabled=true;root.querySelector("#casual-hint").textContent="👀 أنت متفرج على المباراة.";}
@@ -128,7 +129,7 @@ function finishGame(){
   const players=current.players||[],scores=current.scores||[],high=Math.max(...scores),winners=players.filter((p,i)=>scores[i]===high);
   const draw=winners.length!==1;showGameEndOverlay({winnerName:draw?"":winners[0]?.name,isDraw:draw,subtitle:draw?"تعادل! أحسنتم جميعًا 👏":("أبدع "+winners[0].name+" وجمع "+high+" أزواج 🏆")});
  }else{
-  const win=Number(current.winner_id)===Number(tg?.initDataUnsafe?.user?.id||0);
+  const win=Number(current.winner_id)===Number(tg?.initDataUnsafe?.user?.id||0);if(countdown)clearInterval(countdown);countdown=null;
   showGameEndOverlay({winnerName:win?telegramDisplayName():(current.players||[]).find(p=>Number(p.id)===Number(current.winner_id))?.name||"لم يفز أحد",isDraw:false,title:current.winner_id?"🎉 انتهت اللعبة":"انتهت اللعبة",subtitle:win?"عرفت الرقم الصحيح! مبروك 🎉":(current.winner_id?"سبقك لاعب آخر للرقم الصحيح":"انتهت المحاولات، الرقم كان "+current.secret)});
  }
 }
