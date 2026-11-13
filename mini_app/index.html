@@ -382,7 +382,7 @@ async function withdrawOnlineGame(gameType,gameId,button){
    else{miniGame=data.result.game;renderMiniGame();}
   }catch(e){if(button){button.disabled=false;button.textContent='انسحاب';}const status=document.getElementById('c4-status');if(status)status.textContent=e.message;}
 }
-function showGameEndOverlay({winnerName='',isDraw=false,title='',subtitle=''}={}){
+function showGameEndOverlay({winnerName='',isDraw=false,title='',subtitle='',gameType=''}={}){
  const safeWinner=String(winnerName||'').trim();
  const key=(isDraw?'draw':safeWinner||'winner')+'|'+String(title||'');
  const existing=document.querySelector('.online-end-overlay,.online-end-countdown');
@@ -412,14 +412,25 @@ function showGameEndOverlay({winnerName='',isDraw=false,title='',subtitle=''}={}
   countdown.append(prompt,numberDisplay);
   document.body.appendChild(countdown);
   let remaining=5;
-  const speakNumber=(number)=>{
+  let endSound=null;
+  const soundReady=fetch('/api/game-end-sound?game_type='+encodeURIComponent(gameType||''))
+   .then(r=>r.json()).then(data=>{
+    if(data&&data.url){endSound=new Audio(data.url);endSound.preload='auto';}
+   }).catch(()=>{});
+  const speakNumber=async(number)=>{
    try{
-    if(!('speechSynthesis'in window)||!('SpeechSynthesisUtterance'in window))return;
-    window.speechSynthesis.cancel();
-    const words={5:'Five',4:'Four',3:'Three',2:'Two',1:'One'};
-    const utterance=new SpeechSynthesisUtterance(words[number]);
-    utterance.lang='en-US';utterance.rate=0.9;utterance.pitch=1;utterance.volume=1;
-    window.speechSynthesis.speak(utterance);
+    await soundReady;
+    if(endSound){
+     endSound.pause();endSound.currentTime=0;
+     const played=endSound.play();
+     if(played&&typeof played.catch==='function')played.catch(()=>{});
+    }else if('speechSynthesis'in window&&'SpeechSynthesisUtterance'in window){
+     window.speechSynthesis.cancel();
+     const words={5:'Five',4:'Four',3:'Three',2:'Two',1:'One'};
+     const utterance=new SpeechSynthesisUtterance(words[number]);
+     utterance.lang='en-US';utterance.rate=0.9;utterance.pitch=1;utterance.volume=1;
+     window.speechSynthesis.speak(utterance);
+    }
    }catch(e){}
   };
   const tick=()=>{
@@ -439,7 +450,7 @@ function showGameEndOverlay({winnerName='',isDraw=false,title='',subtitle=''}={}
 function showOnlineEndOverlay(gameType,gameId,resultText){
  const draw=String(resultText||'').includes('تعادل');
  const name=draw?'':String(resultText||'').replace(/^🏆\\s*فاز\\s*/,'').replace(/!$/,'');
- showGameEndOverlay({winnerName:name,isDraw:draw});
+ showGameEndOverlay({winnerName:name,isDraw:draw,gameType});
 }
 async function miniGameRequest(path,payload={}){
  const initData=tg?.initData||'';
