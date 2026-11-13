@@ -105,7 +105,7 @@ async def newf_profile_request(update: Update, context: ContextTypes.DEFAULT_TYP
             return
 
     music_user, music_chat = await _get_music_user(actor.id)
-    display_name = _display_name(music_user, actor)
+    display_name = _display_name(music_user or music_chat, actor)
 
     if kind == "name":
         await message.reply_text(f"اسمك > {display_name}")
@@ -121,7 +121,7 @@ async def newf_profile_request(update: Update, context: ContextTypes.DEFAULT_TYP
                 await message.reply_text("ماعندك يالطيب.")
                 return
             photo_id = photos.photos[0][-1].file_id
-            username = getattr(music_user, "username", None) or actor.username
+            username = getattr(music_user, "username", None) or getattr(music_chat, "username", None) or actor.username
             button_url = f"https://t.me/{username}" if username else f"tg://user?id={actor.id}"
             keyboard = InlineKeyboardMarkup([[
                 InlineKeyboardButton(display_name, url=button_url)
@@ -143,12 +143,12 @@ async def newf_profile_request(update: Update, context: ContextTypes.DEFAULT_TYP
 
     if kind == "usernames":
         values = []
-        raw_usernames = getattr(music_user, "usernames", None) or []
+        raw_usernames = (getattr(music_user, "usernames", None) or getattr(music_chat, "usernames", None) or [])
         for item in raw_usernames:
-            name = getattr(item, "username", None)
+            name = getattr(item, "username", None) or (item if isinstance(item, str) else None)
             if name:
                 values.append(str(name).lstrip("@"))
-        primary = getattr(music_user, "username", None) or actor.username
+        primary = getattr(music_user, "username", None) or getattr(music_chat, "username", None) or actor.username
         if primary:
             values.insert(0, str(primary).lstrip("@"))
         unique, seen = [], set()
