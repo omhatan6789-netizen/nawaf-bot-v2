@@ -605,7 +605,7 @@ def build_application(use_updater: bool = True) -> Application:
         emoji_reactions_handler,
     ), group=-1003)
     application.add_handler(MessageHandler(
-        filters.ChatType.GROUPS & filters.TEXT & ~filters.COMMAND & ~filters.Regex(r"(?i)^\s*نيوف"),
+        filters.ChatType.GROUPS & filters.TEXT & ~filters.COMMAND,
         ai_assistant_message,
     ), group=-1000)
     # Recurring temporary messages.
