@@ -6,7 +6,7 @@ from telegram.ext import Application, ApplicationBuilder, CallbackQueryHandler, 
 
 from config import load_settings
 from handlers.mini_app import mini_app_message, register_mini_app_menu
-from handlers.mini_app_panel import (
+from handlers.game_end_sounds import (\n    game_end_sound_command, game_end_sound_callback, game_end_sound_message,\n)\nfrom handlers.mini_app_panel import (
     mini_app_panel_command, mini_app_panel_callback, mini_app_panel_message, mini_app_color_command,
 )
 from mini_app_server import configure_mini_app
@@ -451,6 +451,17 @@ def build_application(use_updater: bool = True) -> Application:
         filters.ChatType.PRIVATE & (filters.TEXT | filters.PHOTO | filters.ANIMATION | filters.AUDIO | filters.VOICE | filters.VIDEO | filters.Document.ALL) & ~filters.COMMAND,
         mini_app_message,
     ), group=-31)
+    application.add_handler(MessageHandler(
+        filters.ChatType.PRIVATE & filters.Regex(r"^صوت الفوز$"),
+        game_end_sound_command,
+    ), group=-30)
+    application.add_handler(CallbackQueryHandler(
+        game_end_sound_callback, pattern=r"^gamesound:"
+    ))
+    application.add_handler(MessageHandler(
+        filters.ChatType.PRIVATE & ~filters.COMMAND,
+        game_end_sound_message,
+    ), group=-29)
     application.add_handler(MessageHandler(
         filters.ChatType.PRIVATE & filters.Regex(r"^(?:اوامر الميني|أوامر الميني|لوحة الميني)$"),
         mini_app_panel_command,
