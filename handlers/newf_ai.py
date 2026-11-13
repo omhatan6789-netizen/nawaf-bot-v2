@@ -96,8 +96,8 @@ async def newf_profile_request(update: Update, context: ContextTypes.DEFAULT_TYP
 
     request = _detect_request(message.text)
     if not request:
-        await message.reply_text("ما فهمت طلبك. جرّب: نيوف وش اسمي، نيوف وش افتاري، نيوف وش بايوي، أو نيوف وش يوزراتي.")
-        raise ApplicationHandlerStop
+        # Not a profile request: let the general AI handler answer it.
+        return
 
     kind, value = request
     if kind != "name":
