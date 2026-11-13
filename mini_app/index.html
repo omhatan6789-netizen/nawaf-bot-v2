@@ -398,11 +398,11 @@ function showGameEndOverlay({winnerName='',isDraw=false,title='',subtitle='',gam
   const close=document.createElement('button');close.textContent='قفل الصفحة';close.onclick=()=>{if(tg&&typeof tg.close==='function')tg.close();else{try{window.close();}catch(e){}showHome();}};
   const homeButton=document.createElement('button');homeButton.textContent='الرجوع للقائمة الرئيسية';homeButton.onclick=()=>{clearOnlineEndOverlay();showHome();};
   actions.append(close,homeButton);card.append(heading,winner,message,actions);overlay.appendChild(card);document.body.appendChild(overlay);
-  window.setTimeout(()=>startGameEndCountdown(key,gameType),3000);
+  const soundReady=fetch('/api/game-end-sound?game_type='+encodeURIComponent(gameType||''))\n   .then(r=>r.json()).then(data=>{if(data&&data.url){const audio=new Audio(data.url);audio.preload='auto';audio.load();return audio;}return null;}).catch(()=>null);\n  gameEndCountdownTimer=setTimeout(()=>{gameEndCountdownTimer=null;startGameEndCountdown(key,gameType,soundReady);},3000);
  };
- window.setTimeout(displayResult,2000);
+ gameEndCountdownTimer=setTimeout(()=>{gameEndCountdownTimer=null;displayResult();},2000);
 }
-function startGameEndCountdown(key,gameType){
+function startGameEndCountdown(key,gameType,soundReady){
  if(!document.querySelector('.online-end-overlay'))return;
  const layer=document.createElement('div');layer.className='online-end-countdown';layer.dataset.endKey=key;
  layer.style.cssText='position:fixed;inset:0;z-index:100001;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.28);backdrop-filter:blur(13px);-webkit-backdrop-filter:blur(13px)';
