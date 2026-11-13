@@ -89,9 +89,15 @@ async def newf_profile_request(update: Update, context: ContextTypes.DEFAULT_TYP
     if not message or not actor or not chat or not message.text:
         return
 
+    normalized_message = _normalize(message.text)
+    words = normalized_message.split()
+    if not words or not words[0].startswith("نيوف"):
+        return
+
     request = _detect_request(message.text)
     if not request:
-        return
+        await message.reply_text("ما فهمت طلبك. جرّب: نيوف وش اسمي، نيوف وش افتاري، نيوف وش بايوي، أو نيوف وش يوزراتي.")
+        raise ApplicationHandlerStop
 
     kind, value = request
     if kind != "name":
