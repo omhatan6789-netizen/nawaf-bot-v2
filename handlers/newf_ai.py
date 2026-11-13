@@ -18,7 +18,7 @@ def _normalize(text: str) -> str:
     text = re.sub(r"[\u064B-\u065F\u0670\u0640]", "", text)
     text = text.lower()
     # Collapse repeated letters so forms like افتارييي / نيووووف are recognized.
-    text = re.sub(r"(.)\1+", r"\1", text)
+    text = re.sub(r"([^\W\d_])\1+", r"\1", text)
     text = re.sub(r"[^\w\s]", " ", text)
     return " ".join(text.split())
 
