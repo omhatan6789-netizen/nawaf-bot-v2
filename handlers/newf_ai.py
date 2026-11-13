@@ -140,6 +140,8 @@ async def newf_profile_request(update: Update, context: ContextTypes.DEFAULT_TYP
                 caption=f"افتارك رقم {photo_index}",
                 reply_markup=keyboard,
             )
+        except ApplicationHandlerStop:
+            raise
         except Exception:
             logger.exception("Could not send profile photo for %s", actor.id)
             await message.reply_text("تعذر جلب افتارك حاليًا.")
