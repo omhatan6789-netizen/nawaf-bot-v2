@@ -131,6 +131,12 @@ async def lookup_replied_user(message) -> Any | None:
         try:
             user = await client.get_users(int(replied_user.id))
             if user:
+                # Keep the message's user object if it has username metadata
+                # that the ID lookup omitted (common with collectible usernames).
+                fetched_usernames = getattr(user, "usernames", None) or []
+                replied_usernames = getattr(replied_user, "usernames", None) or []
+                if replied_usernames and not fetched_usernames:
+                    user = replied_user
                 try:
                     await save_target_user(user)
                 except Exception:
