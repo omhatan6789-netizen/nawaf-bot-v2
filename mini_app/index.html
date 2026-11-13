@@ -353,7 +353,13 @@ function startOnlineLobby(){
  onlineLobbyPoll=setInterval(()=>loadOnlineLobby().catch(()=>{}),2200);
 }
 
-function clearOnlineEndOverlay(){document.querySelector('.online-end-overlay')?.remove();}
+let gameEndCountdownTimer=null;
+function clearOnlineEndOverlay(){
+ if(gameEndCountdownTimer){clearTimeout(gameEndCountdownTimer);gameEndCountdownTimer=null;}
+ try{if('speechSynthesis'in window)window.speechSynthesis.cancel();}catch(e){}
+ document.querySelector('.online-end-countdown')?.remove();
+ document.querySelector('.online-end-overlay')?.remove();
+}
 async function restartOnlineGame(gameType,gameId){
  const overlay=document.querySelector('.online-end-overlay'),button=overlay?.querySelector('[data-online-restart]');
  if(button){button.disabled=true;button.textContent='جاري تجهيز جولة جديدة...';}
@@ -379,18 +385,50 @@ async function withdrawOnlineGame(gameType,gameId,button){
 function showGameEndOverlay({winnerName='',isDraw=false,title='',subtitle=''}={}){
  const safeWinner=String(winnerName||'').trim();
  const key=(isDraw?'draw':safeWinner||'winner')+'|'+String(title||'');
- const existing=document.querySelector('.online-end-overlay');
+ const existing=document.querySelector('.online-end-overlay,.online-end-countdown');
  if(existing&&existing.dataset.endKey===key)return;
  clearOnlineEndOverlay();
- const overlay=document.createElement('div');overlay.className='online-end-overlay';overlay.dataset.endKey=key;
- const card=document.createElement('div');card.className='online-end-card';
- const heading=document.createElement('h2');heading.textContent=title||(isDraw?'🤝 تعادل جميل!':'🎉 مبروك الفوز!');
- const winner=document.createElement('div');winner.className='online-end-winner';winner.textContent=isDraw?'تعادل بين اللاعبين':(safeWinner||'الفائز');
- const message=document.createElement('p');message.textContent=subtitle||(isDraw?'كانت مباراة حماسية! يعطيكم العافية على اللعب 👏':('أبدعت يا '+(safeWinner||'بطل')+'! تستاهل الفوز 🏆'));
- const actions=document.createElement('div');actions.className='online-end-actions';
- const close=document.createElement('button');close.textContent='قفل الصفحة';close.onclick=()=>{if(tg&&typeof tg.close==='function')tg.close();else{try{window.close();}catch(e){}showHome();}};
- const homeButton=document.createElement('button');homeButton.textContent='الرجوع للقائمة الرئيسية';homeButton.onclick=()=>{clearOnlineEndOverlay();showHome();};
- actions.append(close,homeButton);card.append(heading,winner,message,actions);overlay.appendChild(card);document.body.appendChild(overlay);
+ const displayResult=()=>{
+  const overlay=document.createElement('div');overlay.className='online-end-overlay';overlay.dataset.endKey=key;
+  const card=document.createElement('div');card.className='online-end-card';
+  const heading=document.createElement('h2');heading.textContent=title||(isDraw?'🤝 تعادل جميل!':'🎉 مبروك الفوز!');
+  const winner=document.createElement('div');winner.className='online-end-winner';winner.textContent=isDraw?'تعادل بين اللاعبين':(safeWinner||'الفائز');
+  const message=document.createElement('p');message.textContent=subtitle||(isDraw?'كانت مباراة حماسية! يعطيكم العافية على اللعب 👏':('أبدعت يا '+(safeWinner||'بطل')+'! تستاهل الفوز 🏆'));
+  const actions=document.createElement('div');actions.className='online-end-actions';
+  const close=document.createElement('button');close.textContent='قفل الصفحة';close.onclick=()=>{if(tg&&typeof tg.close==='function')tg.close();else{try{window.close();}catch(e){}showHome();}};
+  const homeButton=document.createElement('button');homeButton.textContent='الرجوع للقائمة الرئيسية';homeButton.onclick=()=>{clearOnlineEndOverlay();showHome();};
+  actions.append(close,homeButton);card.append(heading,winner,message,actions);overlay.appendChild(card);document.body.appendChild(overlay);
+ };
+ if(!isDraw&&safeWinner&&safeWinner!=='لم يفز أحد'){
+  const countdown=document.createElement('div');
+  countdown.className='online-end-countdown';countdown.dataset.endKey=key;
+  countdown.setAttribute('aria-live','assertive');
+  countdown.style.cssText='position:fixed;inset:0;z-index:100001;display:flex;align-items:center;justify-content:center;background:#080808;color:#ff172b;font-size:clamp(100px,30vw,170px);font-weight:1000;line-height:1;font-variant-numeric:tabular-nums;text-shadow:0 0 24px #ff172b88,0 0 55px #ff172b55;pointer-events:none;user-select:none';
+  document.body.appendChild(countdown);
+  let remaining=8;
+  const speakNumber=(number)=>{
+   try{
+    if(!('speechSynthesis'in window)||!('SpeechSynthesisUtterance'in window))return;
+    window.speechSynthesis.cancel();
+    const words={8:'Eight',7:'Seven',6:'Six',5:'Five',4:'Four',3:'Three',2:'Two',1:'One'};
+    const utterance=new SpeechSynthesisUtterance(words[number]);
+    utterance.lang='en-US';utterance.rate=0.9;utterance.pitch=1;utterance.volume=1;
+    window.speechSynthesis.speak(utterance);
+   }catch(e){}
+  };
+  const tick=()=>{
+   if(!document.body.contains(countdown)){gameEndCountdownTimer=null;return;}
+   countdown.textContent=String(remaining);speakNumber(remaining);
+   if(remaining===1){
+    gameEndCountdownTimer=setTimeout(()=>{gameEndCountdownTimer=null;countdown.remove();displayResult();},1000);
+   }else{
+    remaining-=1;gameEndCountdownTimer=setTimeout(tick,1000);
+   }
+  };
+  tick();
+  return;
+ }
+ displayResult();
 }
 function showOnlineEndOverlay(gameType,gameId,resultText){
  const draw=String(resultText||'').includes('تعادل');
