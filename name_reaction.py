@@ -526,14 +526,17 @@ async def _reply_control_handler(client, message):
     if reveal_match or replied_message:
         raw_target = reveal_match.group(1).strip() if reveal_match else "الرد"
         try:
+            requested_username = None
             if reveal_match:
-                # الحفاظ على البحث القديم باليوزر أو الآيدي.
+                # الحفاظ على اسم المستخدم الذي بحث به الشخص؛ قد يكون يوزر Fragment
+                # إضافيًا لا يظهر في الحقل الأساسي user.username.
                 target = raw_target.lstrip("@")
                 if target.isdigit():
                     if int(target) <= 0:
                         raise ValueError("Invalid Telegram ID")
                     user = await client.get_users(int(target))
                 else:
+                    requested_username = target
                     user = await client.get_users(target)
             else:
                 # عند الرد نأخذ صاحب الرسالة المردود عليها، وليس حساب المساعد نفسه.
@@ -583,6 +586,9 @@ async def _reply_control_handler(client, message):
                         if value and is_active and value not in active_usernames:
                             active_usernames.append(value)
                 username_value = active_usernames[0] if active_usernames else None
+            # إذا تم الوصول للحساب عبر يوزر إضافي، اعرض نفس اليوزر الذي نجح البحث به.
+            if not username_value and requested_username:
+                username_value = requested_username
             username = f"@{username_value}" if username_value else "لا يوجد"
             try:
                 profile = await client.get_chat(user.id)
