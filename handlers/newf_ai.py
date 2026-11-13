@@ -30,7 +30,6 @@ def _detect_request(raw: str):
         return None
 
     rest = " ".join(words[1:])
-    compact = rest.replace(" ", "")
     if not rest:
         return None
 
@@ -45,7 +44,7 @@ def _detect_request(raw: str):
     if any(word in rest for word in ("يوزر", "يوزري", "يوزرات", "معرفي", "معرفاتي", "username")):
         return ("usernames", None)
 
-    if any(word in rest for word in ("اسمي", "اسم حسابي", "وش اسمي", "وش اسمي", "اسمك")):
+    if any(word in rest for word in ("اسمي", "اسم حسابي", "اسمك")):
         return ("name", None)
 
     return None
