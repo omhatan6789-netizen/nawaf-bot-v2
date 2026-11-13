@@ -6,7 +6,7 @@ import re
 import unicodedata
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ContextTypes
+from telegram.ext import ApplicationHandlerStop, ContextTypes
 
 from database.roles import get_rank_level
 
@@ -99,17 +99,17 @@ async def newf_profile_request(update: Update, context: ContextTypes.DEFAULT_TYP
             level = await get_rank_level(actor.id, chat.id)
         except Exception:
             logger.exception("Could not check rank for profile request")
-            return
+            raise ApplicationHandlerStop
         # Restricted profile details are only available to ادمن and higher.
         if level < 2:
-            return
+            raise ApplicationHandlerStop
 
     music_user, music_chat = await _get_music_user(actor.id)
     display_name = _display_name(music_user or music_chat, actor)
 
     if kind == "name":
         await message.reply_text(f"اسمك > {display_name}")
-        return
+        raise ApplicationHandlerStop
 
     if kind == "avatar":
         photo_index = int(value or 1)
@@ -119,7 +119,7 @@ async def newf_profile_request(update: Update, context: ContextTypes.DEFAULT_TYP
             )
             if not photos.photos:
                 await message.reply_text("ماعندك يالطيب.")
-                return
+                raise ApplicationHandlerStop
             photo_id = photos.photos[0][-1].file_id
             username = getattr(music_user, "username", None) or getattr(music_chat, "username", None) or actor.username
             button_url = f"https://t.me/{username}" if username else f"tg://user?id={actor.id}"
@@ -134,12 +134,12 @@ async def newf_profile_request(update: Update, context: ContextTypes.DEFAULT_TYP
         except Exception:
             logger.exception("Could not send profile photo for %s", actor.id)
             await message.reply_text("تعذر جلب افتارك حاليًا.")
-        return
+        raise ApplicationHandlerStop
 
     if kind == "bio":
         bio = getattr(music_chat, "bio", None) or getattr(music_user, "bio", None)
         await message.reply_text(str(bio).strip() if bio and str(bio).strip() else "ما عندك بايو.")
-        return
+        raise ApplicationHandlerStop
 
     if kind == "usernames":
         values = []
@@ -158,3 +158,4 @@ async def newf_profile_request(update: Update, context: ContextTypes.DEFAULT_TYP
                 seen.add(key)
                 unique.append("@" + name)
         await message.reply_text(" ، ".join(unique) if unique else "ماعندك يوزر.")
+        raise ApplicationHandlerStop
