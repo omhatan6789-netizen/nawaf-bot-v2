@@ -509,7 +509,23 @@ async def reveal_command(update, context):
     target = await resolve_target(update, context, allow_music_lookup=True)
     if not target:
         return
+    # Telegram may expose collectible Fragment usernames in the
+    # usernames list while leaving the primary username field empty.
     username = getattr(target, "username", None)
+    if not username:
+        for item in (getattr(target, "usernames", None) or []):
+            value = item if isinstance(item, str) else getattr(item, "username", None)
+            active = True if isinstance(item, str) else getattr(item, "active", False)
+            if value and active:
+                username = value
+                break
+
+    # If the command used a username, preserve that exact successful lookup
+    # as a fallback (including collectible usernames omitted by the API object).
+    command_parts = (message.text or "").strip().split()
+    if not username and len(command_parts) > 1 and command_parts[1].startswith("@"):
+        username = command_parts[1].lstrip("@")
+
     rank = await get_rank(target.id, chat.id)
     messages = await get_user_messages(target.id)
     rank_text = f"<tg-spoiler>{html_escape(rank)}</tg-spoiler>" if target.id == OWNER_ID else html_escape(rank)
