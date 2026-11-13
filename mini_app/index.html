@@ -520,7 +520,7 @@ function handleMiniGameResult(result){
 async function pollMiniGameChallenge(){miniGameChallengePollTimer=null;try{handleMiniGameResult(await miniGameRequest('/api/minigames/challenge/state',{challenge_id:miniGameChallengeIdFromStart}));}catch(e){miniGameChallengePollTimer=setTimeout(pollMiniGameChallenge,1800);}}
 async function submitMiniGameChoice(choice){document.querySelectorAll('#mg-rps button').forEach(b=>b.disabled=true);try{handleMiniGameResult(await miniGameRequest('/api/minigames/challenge/choice',{challenge_id:miniGameChallengeIdFromStart,choice}));}catch(e){const el=document.getElementById('mg-rps-status');if(el)el.textContent=e.message;document.querySelectorAll('#mg-rps button').forEach(b=>b.disabled=false);}}
 function renderMiniGame(){
- clearOnlineEndOverlay();stopMiniGameTimers();const shell=c4Shell(),game=miniGame,state=game.state,humanTurn=!!game.your_turn;
+ if(miniGame?.status==='playing')clearOnlineEndOverlay();stopMiniGameTimers();const shell=c4Shell(),game=miniGame,state=game.state,humanTurn=!!game.your_turn;
  const p1=game.player1_name||'مستخدم',p2=game.player2_name||'مستخدم';
  const playerLabel=(game.player_names||[p1,p2]).join(' • ');
  const heading=game.game_type==='dots'?'المربعات':'اختبر ذاكرتك';
@@ -673,7 +673,7 @@ async function startConnect4(rpsChoice=null){
  }catch(e){const shell=document.getElementById('c4-shell');if(shell){const error=document.createElement('div');error.className='c4-error';error.textContent=e.message;shell.appendChild(error);if(btn){btn.disabled=false;btn.textContent='ابدأ التحدي ✦';}}}
 }
 function renderConnect4(previousBoard=null){
- clearOnlineEndOverlay();stopC4Timer();const shell=c4Shell();
+ if(c4Game?.status==='playing')clearOnlineEndOverlay();stopC4Timer();const shell=c4Shell();
  const human=c4Game.game_mode==='human';
  const p1=human?(c4Game.player1_name||'اللاعب الأول'):'أنت';
  const p2=human?(c4Game.player2_name||'اللاعب الثاني'):(c4Game.bot_name||'البوت');
