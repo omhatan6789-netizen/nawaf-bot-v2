@@ -460,7 +460,7 @@ function renderMiniGameSolo(){
   shell.querySelector('#mg-status').textContent='انتهت اللعبة';shell.querySelector('#mg-clock').textContent='—';
   const draw=game.status==='draw';
   const winnerName=draw?'':game.status==='won'?telegramDisplayName():game.status==='lost'?(game.bot_name||'البوت'):winnerDisplayName(game);
-  showGameEndOverlay({winnerName,isDraw:draw,subtitle:draw?'كانت مباراة حماسية! يعطيكم العافية 👏':('مبروك '+winnerName+'! تستاهل الفوز 🏆')});
+  showGameEndOverlay({winnerName,isDraw:draw,gameType:game.game_type,subtitle:draw?'كانت مباراة حماسية! يعطيكم العافية 👏':('مبروك '+winnerName+'! تستاهل الفوز 🏆')});
   return;
  }
  if(isDots){
@@ -708,7 +708,7 @@ function renderConnect4(previousBoard=null){
  if(c4Game.status!=='playing'){
   shell.querySelector('#c4-status').textContent='';shell.querySelector('#c4-clock').textContent='—';shell.querySelector('#c4-progress').style.width='0%';
   const draw=c4Game.status==='draw',winnerName=draw?'':winnerDisplayName(c4Game);
-  showGameEndOverlay({winnerName,isDraw:draw,subtitle:draw?'كانت مباراة حماسية! يعطيكم العافية 👏':('مبروك '+winnerName+'! تستاهل الفوز 🏆')});
+  showGameEndOverlay({winnerName,isDraw:draw,gameType:'connect',subtitle:draw?'كانت مباراة حماسية! يعطيكم العافية 👏':('مبروك '+winnerName+'! تستاهل الفوز 🏆')});
  }else if(!myTurn){
   if(c4Game.spectator){shell.querySelector('#c4-status').textContent='👁 وضع المشاهدة — تابع اللعب مباشرة';shell.querySelector('#c4-clock').textContent='مباشر';pollConnect4State();}
   else {
@@ -884,7 +884,7 @@ function renderWordGame(){
   const subtitle=training
    ?(g.my_score>=g.win_target?'أحسنت! حققت '+g.my_score+' كلمات صحيحة وفزت على البوت 🎉':'انتهت اللعبة، حققت '+g.my_score+' من '+g.win_target+' كلمات. حاول مرة ثانية 💪')
    :(draw?'نتيجة متقاربة! يعطيكم العافية على اللعب 👏':('مبروك '+(winnerName||'الفائز')+'! حصل على أعلى نتيجة 🏆'));
-  showGameEndOverlay({winnerName,isDraw:draw,subtitle});
+  showGameEndOverlay({winnerName,isDraw:draw,gameType:'word_guess',subtitle});
   return;
  }
  const myOut=g.attempts_left<=0;
