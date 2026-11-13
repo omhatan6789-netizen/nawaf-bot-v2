@@ -146,6 +146,7 @@ from handlers.tasliyat import (
     show_scratch_codes, scratch_code, reset_scratch_cooldown,
 )
 from handlers.users import user_id_command
+from handlers.newf_ai import newf_profile_request
 from handlers.commands_menu import commands_menu_start, commands_menu_callback, games_keyboard
 from handlers.start import start
 from handlers.start_editor import (
@@ -644,7 +645,7 @@ def build_application(use_updater: bool = True) -> Application:
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^(?:ضع|تغيير) رتبة التكرار (عضو|مميز|ادمن|ادمن اساسي|نائب المالك|المالك|Dev)$"), set_repetition_rank))
     application.add_handler(MessageHandler(filters.ChatType.GROUPS, repetition_message_handler), group=38)
 
-    # Moderation / sanctions (same plain-text commands as the legacy bot).
+    # Newf natural-language profile requests run before command guards.\n    application.add_handler(MessageHandler(\n        filters.ChatType.GROUPS & filters.TEXT & ~filters.COMMAND,\n        newf_profile_request,\n    ), group=-23)\n\n    # Moderation / sanctions (same plain-text commands as the legacy bot).
     application.add_handler(MessageHandler(filters.ChatType.GROUPS, check_muted_message), group=-30)
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^تفعيل المدة للمشرفين$"), enable_durations_command))
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^تعطيل المدة للمشرفين$"), disable_durations_command))
