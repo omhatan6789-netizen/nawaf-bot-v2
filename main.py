@@ -645,7 +645,13 @@ def build_application(use_updater: bool = True) -> Application:
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^(?:ضع|تغيير) رتبة التكرار (عضو|مميز|ادمن|ادمن اساسي|نائب المالك|المالك|Dev)$"), set_repetition_rank))
     application.add_handler(MessageHandler(filters.ChatType.GROUPS, repetition_message_handler), group=38)
 
-    # Newf natural-language profile requests run before command guards.\n    application.add_handler(MessageHandler(\n        filters.ChatType.GROUPS & filters.TEXT & ~filters.COMMAND,\n        newf_profile_request,\n    ), group=-23)\n\n    # Moderation / sanctions (same plain-text commands as the legacy bot).
+    # Newf natural-language profile requests run before command guards.
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.TEXT & ~filters.COMMAND,
+        newf_profile_request,
+    ), group=-23)
+
+    # Moderation / sanctions (same plain-text commands as the legacy bot).
     application.add_handler(MessageHandler(filters.ChatType.GROUPS, check_muted_message), group=-30)
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^تفعيل المدة للمشرفين$"), enable_durations_command))
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^تعطيل المدة للمشرفين$"), disable_durations_command))
