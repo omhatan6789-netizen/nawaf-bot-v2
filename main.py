@@ -649,7 +649,7 @@ def build_application(use_updater: bool = True) -> Application:
     application.add_handler(MessageHandler(
         filters.ChatType.GROUPS & filters.TEXT & ~filters.COMMAND,
         newf_profile_request,
-    ), group=-23)
+    ), group=-1001)
 
     # Moderation / sanctions (same plain-text commands as the legacy bot).
     application.add_handler(MessageHandler(filters.ChatType.GROUPS, check_muted_message), group=-30)
