@@ -221,7 +221,7 @@ def handle_mini_app_request(handler):
                    ORDER BY CASE WHEN scope_key=$1 THEN 0 ELSE 1 END LIMIT 1""",
                 game_type,
             ))
-            payload = {"ok": True, "url": ("/tg-file/" + sound["file_id"]) if sound else None}
+            payload = {"ok": True, "url": ("/mini-app/game-end-sound/" + sound["scope_key"]) if sound else None}
             body = json.dumps(payload, ensure_ascii=False).encode()
             handler.send_response(200)
         except Exception:
@@ -279,6 +279,29 @@ def handle_mini_app_request(handler):
         except Exception:
             logging.getLogger(__name__).exception("Failed to serve Mini App sound")
             handler.send_error(404, "Sound not found")
+        return True
+    if path.startswith("/mini-app/game-end-sound/"):
+        scope_key = unquote(path.rsplit("/", 1)[-1])
+        try:
+            sound = _run(get_pool().fetchrow(
+                "SELECT file_id,mime_type,media_kind FROM game_end_sounds WHERE scope_key=$1",
+                scope_key,
+            ))
+            if not sound:
+                handler.send_error(404, "Victory sound not found")
+                return True
+            telegram_file = _run(_bot.get_file(sound["file_id"]))
+            body = bytes(_run(telegram_file.download_as_bytearray()))
+            content_type = sound["mime_type"] or ("video/mp4" if sound["media_kind"] == "video" else "audio/mpeg")
+            handler.send_response(200)
+            handler.send_header("Content-Type", content_type)
+            handler.send_header("Content-Length", str(len(body)))
+            handler.send_header("Cache-Control", "public, max-age=3600")
+            handler.end_headers()
+            handler.wfile.write(body)
+        except Exception:
+            logging.getLogger(__name__).exception("Failed to serve game victory sound")
+            handler.send_error(404, "Victory sound not found")
         return True
     if path.startswith("/tg-file/"):
         file_id = unquote(path[len("/tg-file/"):])
