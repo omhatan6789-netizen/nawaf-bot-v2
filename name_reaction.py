@@ -555,7 +555,20 @@ async def _reply_control_handler(client, message):
             name = " ".join(
                 part for part in (user.first_name, user.last_name) if part
             ).strip() or "لا يوجد"
-            username = f"@{user.username}" if user.username else "لا يوجد"
+            # Telegram may move collectible Fragment usernames into user.usernames
+            # and leave user.username empty. Prefer the main username, then the
+            # first active username in Telegram's ordered usernames list.
+            username_value = getattr(user, "username", None)
+            if not username_value:
+                extra_usernames = getattr(user, "usernames", None) or []
+                active_usernames = []
+                for item in extra_usernames:
+                    value = item if isinstance(item, str) else getattr(item, "username", None)
+                    is_active = True if isinstance(item, str) else getattr(item, "active", True)
+                    if value and is_active:
+                        active_usernames.append(value)
+                username_value = active_usernames[0] if active_usernames else None
+            username = f"@{username_value}" if username_value else "لا يوجد"
             try:
                 profile = await client.get_chat(user.id)
                 bio = (getattr(profile, "bio", None) or "").strip() or "لا يوجد"
