@@ -403,14 +403,20 @@ function showGameEndOverlay({winnerName='',isDraw=false,title='',subtitle=''}={}
   const countdown=document.createElement('div');
   countdown.className='online-end-countdown';countdown.dataset.endKey=key;
   countdown.setAttribute('aria-live','assertive');
-  countdown.style.cssText='position:fixed;inset:0;z-index:100001;display:flex;align-items:center;justify-content:center;background:#080808;color:#ff172b;font-size:clamp(100px,30vw,170px);font-weight:1000;line-height:1;font-variant-numeric:tabular-nums;text-shadow:0 0 24px #ff172b88,0 0 55px #ff172b55;pointer-events:none;user-select:none';
+  countdown.style.cssText='position:fixed;inset:0;z-index:100001;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:transparent;color:#ff172b;pointer-events:none;user-select:none;text-align:center';
+  const prompt=document.createElement('div');
+  prompt.textContent='من تتوقع فاز؟🔥';
+  prompt.style.cssText='font-size:clamp(23px,6vw,34px);font-weight:900;color:#ff172b;text-shadow:0 2px 12px #000,0 0 18px #ff172b66;padding:0 16px';
+  const numberDisplay=document.createElement('div');
+  numberDisplay.style.cssText='font-size:clamp(110px,32vw,180px);font-weight:1000;line-height:1;font-variant-numeric:tabular-nums;color:#ff172b;text-shadow:0 3px 18px #000,0 0 28px #ff172b99';
+  countdown.append(prompt,numberDisplay);
   document.body.appendChild(countdown);
-  let remaining=8;
+  let remaining=5;
   const speakNumber=(number)=>{
    try{
     if(!('speechSynthesis'in window)||!('SpeechSynthesisUtterance'in window))return;
     window.speechSynthesis.cancel();
-    const words={8:'Eight',7:'Seven',6:'Six',5:'Five',4:'Four',3:'Three',2:'Two',1:'One'};
+    const words={5:'Five',4:'Four',3:'Three',2:'Two',1:'One'};
     const utterance=new SpeechSynthesisUtterance(words[number]);
     utterance.lang='en-US';utterance.rate=0.9;utterance.pitch=1;utterance.volume=1;
     window.speechSynthesis.speak(utterance);
@@ -418,7 +424,7 @@ function showGameEndOverlay({winnerName='',isDraw=false,title='',subtitle=''}={}
   };
   const tick=()=>{
    if(!document.body.contains(countdown)){gameEndCountdownTimer=null;return;}
-   countdown.textContent=String(remaining);speakNumber(remaining);
+   numberDisplay.textContent=String(remaining);speakNumber(remaining);
    if(remaining===1){
     gameEndCountdownTimer=setTimeout(()=>{gameEndCountdownTimer=null;countdown.remove();displayResult();},1000);
    }else{
