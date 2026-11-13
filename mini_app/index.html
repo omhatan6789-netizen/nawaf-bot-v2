@@ -398,11 +398,13 @@ function showGameEndOverlay({winnerName='',isDraw=false,title='',subtitle='',gam
   const close=document.createElement('button');close.textContent='قفل الصفحة';close.onclick=()=>{if(tg&&typeof tg.close==='function')tg.close();else{try{window.close();}catch(e){}showHome();}};
   const homeButton=document.createElement('button');homeButton.textContent='الرجوع للقائمة الرئيسية';homeButton.onclick=()=>{clearOnlineEndOverlay();showHome();};
   actions.append(close,homeButton);card.append(heading,winner,message,actions);overlay.appendChild(card);document.body.appendChild(overlay);
-  const soundReady=fetch('/api/game-end-sound?game_type='+encodeURIComponent(gameType||''))\n   .then(r=>r.json()).then(data=>{if(data&&data.url){const audio=new Audio(data.url);audio.preload='auto';audio.load();return audio;}return null;}).catch(()=>null);\n  gameEndCountdownTimer=setTimeout(()=>{gameEndCountdownTimer=null;startGameEndCountdown(key,gameType,soundReady);},3000);
+  const soundReady=fetch('/api/game-end-sound?game_type='+encodeURIComponent(gameType||''))
+   .then(r=>r.json()).then(data=>{if(data&&data.url){const audio=new Audio(data.url);audio.preload='auto';audio.load();return audio;}return null;}).catch(()=>null);
+  gameEndCountdownTimer=setTimeout(()=>{gameEndCountdownTimer=null;startGameEndCountdown(key,soundReady);},3000);
  };
  gameEndCountdownTimer=setTimeout(()=>{gameEndCountdownTimer=null;displayResult();},2000);
 }
-function startGameEndCountdown(key,gameType,soundReady){
+function startGameEndCountdown(key,soundReady){
  if(!document.querySelector('.online-end-overlay'))return;
  const layer=document.createElement('div');layer.className='online-end-countdown';layer.dataset.endKey=key;
  layer.style.cssText='position:fixed;inset:0;z-index:100001;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.28);backdrop-filter:blur(13px);-webkit-backdrop-filter:blur(13px)';
@@ -411,21 +413,17 @@ function startGameEndCountdown(key,gameType,soundReady){
  const number=document.createElement('div');number.style.cssText='color:#fff;font-size:clamp(88px,26vw,132px);font-weight:1000;line-height:1;font-variant-numeric:tabular-nums;text-shadow:0 0 24px #fff8';
  const home=document.createElement('button');home.type='button';home.textContent='الرجوع للقائمة الرئيسية';home.style.cssText='width:100%;min-height:54px;border:1px solid #ffffff70;border-radius:15px;background:linear-gradient(135deg,#ed4054,#94152a);color:#fff;font-size:16px;font-weight:900;cursor:pointer';home.onclick=()=>{clearOnlineEndOverlay();showHome();};
  card.append(label,number,home);layer.appendChild(card);document.body.appendChild(layer);
- let remaining=5, timer=null, sound=null;
- const soundReady=fetch('/api/game-end-sound?game_type='+encodeURIComponent(gameType||''))
-  .then(r=>r.json()).then(data=>{if(data&&data.url){sound=new Audio(data.url);sound.preload='auto';sound.load();}});
+ let remaining=5, sound=null;
  const tick=()=>{
   if(!document.body.contains(layer))return;
   number.textContent=String(remaining);
   if(sound){try{sound.pause();sound.currentTime=0;const p=sound.play();if(p&&p.catch)p.catch(()=>{});}catch(e){}}
   if(remaining===1){
-   timer=setTimeout(()=>{timer=null;layer.remove();if(tg&&typeof tg.close==='function')tg.close();else showHome();},1000);
-  }else{remaining-=1;timer=setTimeout(tick,1000);}
+   gameEndCountdownTimer=setTimeout(()=>{gameEndCountdownTimer=null;layer.remove();if(tg&&typeof tg.close==='function')tg.close();else showHome();},1000);
+  }else{remaining-=1;gameEndCountdownTimer=setTimeout(tick,1000);}
  };
- soundReady.catch(()=>{}).finally(()=>{if(document.body.contains(layer))tick();});
- gameEndCountdownTimer=timer;
+ Promise.resolve(soundReady).then(audio=>{sound=audio;if(document.body.contains(layer))tick();}).catch(()=>{if(document.body.contains(layer))tick();});
 }
-
 function showOnlineEndOverlay(gameType,gameId,resultText){
  const draw=String(resultText||'').includes('تعادل');
  const name=draw?'':String(resultText||'').replace(/^🏆\\s*فاز\\s*/,'').replace(/!$/,'');
