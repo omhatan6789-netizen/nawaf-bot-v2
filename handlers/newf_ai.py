@@ -110,12 +110,15 @@ async def newf_profile_request(update: Update, context: ContextTypes.DEFAULT_TYP
         if level < 2:
             raise ApplicationHandlerStop
 
-    music_user, music_chat = await _get_music_user(actor.id)
-    display_name = _display_name(music_user or music_chat, actor)
-
+    # The display name is already present in the Telegram update. Do not
+    # depend on the separate Pyrogram music session for this simple request.
     if kind == "name":
+        display_name = _display_name(None, actor)
         await message.reply_text(f"اسمك > {display_name}")
         raise ApplicationHandlerStop
+
+    music_user, music_chat = await _get_music_user(actor.id)
+    display_name = _display_name(music_user or music_chat, actor)
 
     if kind == "avatar":
         photo_index = int(value or 1)
