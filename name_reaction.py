@@ -548,7 +548,15 @@ async def _reply_control_handler(client, message):
                     return
 
                 try:
-                    user = await client.get_users(replied_user.id)
+                    fetched_user = await client.get_users(replied_user.id)
+                    # Prefer the user object attached to the actual group message
+                    # when the cached lookup omits collectible usernames.
+                    fetched_usernames = getattr(fetched_user, "usernames", None) or []
+                    replied_usernames = getattr(replied_user, "usernames", None) or []
+                    if replied_usernames and not fetched_usernames:
+                        user = replied_user
+                    else:
+                        user = fetched_user
                 except Exception:
                     user = replied_user
 
@@ -560,13 +568,20 @@ async def _reply_control_handler(client, message):
             # first active username in Telegram's ordered usernames list.
             username_value = getattr(user, "username", None)
             if not username_value:
-                extra_usernames = getattr(user, "usernames", None) or []
+                # Some Telegram updates contain the collectible usernames while
+                # a subsequent get_users() cache lookup omits them. Check both
+                # the selected user object and the original replied-to message.
+                username_sources = [user]
+                if replied_message and getattr(replied_message, "from_user", None):
+                    username_sources.append(replied_message.from_user)
+
                 active_usernames = []
-                for item in extra_usernames:
-                    value = item if isinstance(item, str) else getattr(item, "username", None)
-                    is_active = True if isinstance(item, str) else getattr(item, "active", True)
-                    if value and is_active:
-                        active_usernames.append(value)
+                for source_user in username_sources:
+                    for item in (getattr(source_user, "usernames", None) or []):
+                        value = item if isinstance(item, str) else getattr(item, "username", None)
+                        is_active = True if isinstance(item, str) else getattr(item, "active", False)
+                        if value and is_active and value not in active_usernames:
+                            active_usernames.append(value)
                 username_value = active_usernames[0] if active_usernames else None
             username = f"@{username_value}" if username_value else "لا يوجد"
             try:
