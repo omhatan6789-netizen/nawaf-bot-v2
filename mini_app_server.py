@@ -212,6 +212,28 @@ def handle_mini_app_request(handler):
         handler.end_headers()
         handler.wfile.write(body)
         return True
+    if path == "/api/game-end-sound":
+        try:
+            game_type = parse_qs(urlparse(handler.path).query).get("game_type", [""])[0].strip()
+            sound = _run(get_pool().fetchrow(
+                """SELECT file_id,mime_type,media_kind FROM game_end_sounds
+                   WHERE scope_key IN ($1,'all')
+                   ORDER BY CASE WHEN scope_key=$1 THEN 0 ELSE 1 END LIMIT 1""",
+                game_type,
+            ))
+            payload = {"ok": True, "url": ("/tg-file/" + sound["file_id"]) if sound else None}
+            body = json.dumps(payload, ensure_ascii=False).encode()
+            handler.send_response(200)
+        except Exception:
+            logging.getLogger(__name__).exception("Game end sound lookup failed")
+            body = json.dumps({"ok": False, "url": None}).encode()
+            handler.send_response(503)
+        handler.send_header("Content-Type", "application/json; charset=utf-8")
+        handler.send_header("Cache-Control", "no-store")
+        handler.send_header("Content-Length", str(len(body)))
+        handler.end_headers()
+        handler.wfile.write(body)
+        return True
     if path == "/api/mini-app":
         try:
             top = parse_qs(urlparse(handler.path).query).get("top", [None])[0]
