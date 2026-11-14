@@ -103,7 +103,7 @@ async def user_id_command(
             keyboard = InlineKeyboardMarkup([[
                 InlineKeyboardButton(
                     "🌷",
-                    url="https://t.me/Lewadbot",
+                    url=f"https://t.me/{(await context.bot.get_me()).username}",
                 )
             ]])
 

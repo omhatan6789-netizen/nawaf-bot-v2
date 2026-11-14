@@ -16,7 +16,6 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
 logger = logging.getLogger(__name__)
-BOT_USERNAME = "lnll0bot"
 SEARCH_RESULT_COUNT = 4
 MAX_AUDIO_BYTES = 49 * 1024 * 1024
 SAMPLECUT_API = "https://api.samplecut.app/v1/downloads"
@@ -250,7 +249,7 @@ async def _download_and_send_youtube_audio(context, chat_id, video, status, sear
             if duration:
                 caption += f" . ↠ {duration}"
             keyboard = InlineKeyboardMarkup([[
-                InlineKeyboardButton("🌷", url=f"https://t.me/{BOT_USERNAME}")
+                InlineKeyboardButton("🌷", url=f"https://t.me/{(await context.bot.get_me()).username}")
             ]])
             with open(file_path, "rb") as audio_file:
                 await context.bot.send_audio(

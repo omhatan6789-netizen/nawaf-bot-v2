@@ -44,8 +44,6 @@ from datetime import datetime, timedelta, timezone
 
 from html import escape
 
-BOT_USERNAME = "lnll0bot"
-
 SEARCH_RESULT_COUNT = 4
 
 def _format_call_duration(seconds):
@@ -224,7 +222,7 @@ async def _show_call_participants(message, context):
 
                     "🌷",
 
-                    url=f"https://t.me/{BOT_USERNAME}",
+                    url=f"https://t.me/{(await context.bot.get_me()).username}",
 
                 )
 
@@ -494,7 +492,7 @@ async def _play_selected(
 
                     "🌷",
 
-                    url=f"https://t.me/{BOT_USERNAME}",
+                    url=f"https://t.me/{(await context.bot.get_me()).username}",
 
                 )
 

@@ -832,7 +832,7 @@ function renderWordLobby(){
  scheduleExtraPoll();
 }
 function shareExtraGame(id){
- const deep='https://t.me/Lewadbot?startapp=word_'+id;
+ const deep='https://t.me/'+botUsername+'?startapp=word_'+id;
  const url='https://t.me/share/url?url='+encodeURIComponent(deep);
  if(tg?.openTelegramLink)tg.openTelegramLink(url);else if(navigator.clipboard)navigator.clipboard.writeText(deep).then(()=>alert('تم نسخ رابط الغرفة'));
 }
