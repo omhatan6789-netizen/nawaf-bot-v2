@@ -432,6 +432,8 @@ def handle_connect4_post(handler):
                 result = _run(ns.create_game(uid, name, payload.get("mode", "bot"), payload.get("size", 3), payload.get("duration", 60)))
             elif action == "join":
                 result = _run(ns.join_game(uid, name, payload.get("game_id", "")))
+            elif action == "configure":
+                result = _run(ns.configure_game(uid, payload.get("game_id", ""), payload.get("size", 3), payload.get("duration", 120)))
             elif action == "start":
                 result = _run(ns.start_game(uid, payload.get("game_id", "")))
             elif action == "move":
