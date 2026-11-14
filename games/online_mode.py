@@ -168,9 +168,10 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
             else:
                 room_id = room["id"].hex
             room_url = f"https://t.me/{me.username}?startapp=sort_{room_id}"
+            creator_name = " ".join(x for x in (inline.from_user.first_name, inline.from_user.last_name) if x) or inline.from_user.username or "لاعب"
             lobby_text = (
-                f"🔢 غرفة ترتيب الأرقام\\n\\n"
-                f"أنشأ {inline.from_user.full_name or inline.from_user.first_name or 'لاعب'} غرفة جديدة.\\n"
+                f"🔢 غرفة ترتيب الأرقام\n\n"
+                f"أنشأ {creator_name} غرفة جديدة.\n"
                 "افتحوا الغرفة من الزر بالأسفل للانضمام. الحد الأقصى 5 لاعبين."
             )
             result_kwargs = {
