@@ -92,7 +92,7 @@ async def newf_profile_request(update: Update, context: ContextTypes.DEFAULT_TYP
     normalized_message = _normalize(message.text)
 
     # Lookup any Telegram account by numeric ID using the music account session.
-    account_match = re.fullmatch(r"(?:حسابه|حساب)\\s+(\\d+)", normalized_message)
+    account_match = re.fullmatch(r"(?:حسابه|حساب)\s+(\d+)", normalized_message)
     if account_match:
         target_id = int(account_match.group(1))
         try:
