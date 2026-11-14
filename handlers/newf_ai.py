@@ -9,6 +9,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationHandlerStop, ContextTypes
 
 from database.roles import get_rank_level
+from database.pool import get_pool
 
 logger = logging.getLogger(__name__)
 
@@ -96,19 +97,36 @@ async def newf_profile_request(update: Update, context: ContextTypes.DEFAULT_TYP
     if account_match:
         target_id = int(account_match.group(1))
         try:
-            music_user, music_chat = await _get_music_user(target_id)
-            target = music_user or music_chat
-            if target is None:
-                await message.reply_text("ما قدرت أوصل للحساب بهذا الايدي.")
-                raise ApplicationHandlerStop
-            display_name = _display_name(target, None)
-            usernames = getattr(target, "usernames", None) or []
-            username = getattr(target, "username", None)
-            if not username:
-                for item in usernames:
-                    username = getattr(item, "username", None) or (item if isinstance(item, str) else None)
-                    if username:
-                        break
+            # First search people whose messages the bot has actually received.
+            # This works even when the group's member list is hidden.
+            seen = await get_pool().fetchrow(
+                """SELECT username, first_name, last_name
+                   FROM telegram_seen_users WHERE user_id=$1""",
+                target_id,
+            )
+            music_user = music_chat = None
+            if seen:
+                display_name = " ".join(
+                    part.strip() for part in
+                    (seen["first_name"] or "", seen["last_name"] or "")
+                    if part and part.strip()
+                ) or "غير معروف"
+                username = seen["username"]
+            else:
+                # Fall back to the Pyrogram session for accounts it already knows.
+                music_user, music_chat = await _get_music_user(target_id)
+                target = music_user or music_chat
+                if target is None:
+                    await message.reply_text("ما قدرت أوصل للحساب بهذا الايدي.")
+                    raise ApplicationHandlerStop
+                display_name = _display_name(target, None)
+                usernames = getattr(target, "usernames", None) or []
+                username = getattr(target, "username", None)
+                if not username:
+                    for item in usernames:
+                        username = getattr(item, "username", None) or (item if isinstance(item, str) else None)
+                        if username:
+                            break
             profile_url = f"https://t.me/{str(username).lstrip('@')}" if username else f"tg://user?id={target_id}"
             keyboard = InlineKeyboardMarkup([[
                 InlineKeyboardButton(display_name, url=profile_url)

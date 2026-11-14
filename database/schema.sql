@@ -36,3 +36,20 @@ CREATE TABLE IF NOT EXISTS chat_members (
 
 CREATE INDEX IF NOT EXISTS idx_chat_members_user_id ON chat_members(user_id);
 CREATE INDEX IF NOT EXISTS idx_chats_active ON chats(is_active) WHERE is_active = TRUE;
+
+
+-- Accounts observed speaking or posting in groups. This works even when
+-- Telegram hides the member list because message updates include sender data.
+CREATE TABLE IF NOT EXISTS telegram_seen_users (
+    user_id BIGINT PRIMARY KEY,
+    username TEXT,
+    first_name TEXT NOT NULL DEFAULT '',
+    last_name TEXT NOT NULL DEFAULT '',
+    seen_in_chat_id BIGINT,
+    seen_in_chat_title TEXT,
+    observed_count BIGINT NOT NULL DEFAULT 1,
+    last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_telegram_seen_users_last_seen
+    ON telegram_seen_users(last_seen_at DESC);

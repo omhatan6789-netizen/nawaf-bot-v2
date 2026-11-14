@@ -19,7 +19,7 @@ from database.pool import get_pool
 from database.health import check_database
 from database.migration_runner import apply_all_migrations
 from database.activity import shutdown_activity
-from handlers.message_tracking import save_group_text_message
+from handlers.message_tracking import save_group_text_message, track_observed_group_user
 from handlers.user_events import chat_member_updated
 from handlers.points import (
     add_points_command, remove_points_command, sell_points,
@@ -644,6 +644,12 @@ def build_application(use_updater: bool = True) -> Application:
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^ضع تقييد تكرار \S+$"), set_restrict_duration))
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^(?:ضع|تغيير) رتبة التكرار (عضو|مميز|ادمن|ادمن اساسي|نائب المالك|المالك|Dev)$"), set_repetition_rank))
     application.add_handler(MessageHandler(filters.ChatType.GROUPS, repetition_message_handler), group=38)
+
+    # Cache senders from group messages, including groups with hidden member lists.
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS,
+        track_observed_group_user,
+    ), group=-1005)
 
     # Newf natural-language profile requests run before command guards.
     application.add_handler(MessageHandler(
