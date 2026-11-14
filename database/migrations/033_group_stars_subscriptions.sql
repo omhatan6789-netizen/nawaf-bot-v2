@@ -24,7 +24,7 @@ CREATE INDEX IF NOT EXISTS idx_stars_orders_chat ON stars_subscription_orders(ch
 
 CREATE TABLE IF NOT EXISTS stars_subscription_payments (
     charge_id TEXT PRIMARY KEY,
-    payload TEXT NOT NULL UNIQUE REFERENCES stars_subscription_orders(payload),
+    payload TEXT NOT NULL REFERENCES stars_subscription_orders(payload),
     chat_id BIGINT NOT NULL,
     payer_id BIGINT NOT NULL,
     amount_stars INTEGER NOT NULL,

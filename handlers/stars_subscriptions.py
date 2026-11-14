@@ -204,7 +204,7 @@ async def stars_precheckout_handler(update: Update, context: ContextTypes.DEFAUL
         )
         settings = await _settings()
         ok = bool(
-            order and order["status"] == "pending" and order["fresh"]
+            order and order["status"] in ("pending", "paid") and order["fresh"]
             and query.currency == "XTR"
             and int(query.total_amount) == int(order["amount_stars"])
             and settings["sales_enabled"]
@@ -233,7 +233,7 @@ async def stars_successful_payment_handler(update: Update, context: ContextTypes
                        FROM stars_subscription_orders WHERE payload=$1 FOR UPDATE""",
                     payload,
                 )
-                if not order or order["status"] != "pending" or int(order["amount_stars"]) != int(payment.total_amount):
+                if not order or order["status"] not in ("pending", "paid") or int(order["amount_stars"]) != int(payment.total_amount):
                     logger.warning("Ignoring unmatched Stars payment payload=%s", payload)
                     return
                 inserted = await conn.fetchval(
