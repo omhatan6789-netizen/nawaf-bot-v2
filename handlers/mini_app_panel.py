@@ -208,13 +208,19 @@ async def mini_app_panel_message(update: Update, context: ContextTypes.DEFAULT_T
     action, step = session.get("action"), session.get("step")
     if action == "number_sort_bg" and step == "media":
         media = msg.photo[-1] if msg.photo else None
+        if msg.document and (msg.document.mime_type or "").startswith("image/"):
+            media = msg.document
         if not media:
-            await msg.reply_text("ارسل صورة فقط (وليس فيديو).")
+            await msg.reply_text("ارسل صورة كصورة عادية أو كملف صورة، وليس فيديو. أو اكتب إلغاء.")
+            raise ApplicationHandlerStop
+        size = getattr(media, "file_size", 0) or 0
+        if size > 20 * 1024 * 1024:
+            await msg.reply_text("الصورة أكبر من 20 ميجابايت. أرسل صورة أصغر.")
             raise ApplicationHandlerStop
         from games.number_sort import save_settings
         await save_settings(background_file_id=media.file_id)
         SESSIONS.pop(user.id, None)
-        await msg.reply_text("تم تحديث خلفية لعبة ترتيب الأرقام فقط ✅", reply_markup=_back())
+        await msg.reply_text("تم تحديث خلفية لعبة ترتيب الأرقام فقط ✅ افتح اللعبة من جديد لمشاهدة التغيير.", reply_markup=_back())
         raise ApplicationHandlerStop
     if action == "number_sort_color" and step == "custom":
         if not re.fullmatch(r"#[0-9a-fA-F]{6}", text):
