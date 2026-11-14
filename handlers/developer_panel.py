@@ -43,6 +43,7 @@ def _main_keyboard(user_id):
     ]
     if user_id == OWNER_ID:
         rows[2].append(InlineKeyboardButton("المسموحين بالوصول", callback_data="devpanel:access"))
+        rows.append([InlineKeyboardButton("⭐️ اشتراكات النجوم", callback_data="devpanel:stars")])
     return InlineKeyboardMarkup(rows)
 
 
@@ -154,6 +155,10 @@ async def developer_panel_callback(update: Update, context: ContextTypes.DEFAULT
             f"أهلًا يـ {_mention(user.id, user.first_name)} 👋",
             parse_mode="HTML", reply_markup=_main_keyboard(user.id),
         )
+    elif data == "devpanel:stars":
+        if user.id == OWNER_ID:
+            from handlers.stars_subscriptions import open_stars_panel
+            await open_stars_panel(query, user.id)
     elif data == "devpanel:stats":
         await _show_stats(query)
     elif data == "devpanel:startedit":
