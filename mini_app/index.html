@@ -134,7 +134,8 @@ body.c4-active #page{padding-left:10px;padding-right:10px}
 <section id="page" hidden><div class="section-title" id="page-title"></div><div class="custom" id="page-content"></div><button id="back-home" class="back-button">↩ رجوع للقائمة الرئيسية</button></section>
 </main>
 <script src="/mini_app/ambient.js?v=20261106-7"></script>
-<script src="/mini_app/casual-games.js?v=6"></script>
+<script src="/mini_app/casual-games.js?v=7"></script>
+<script src="/mini_app/number-sort.js?v=1"></script>
 <script>
 const tg=window.Telegram?.WebApp;tg?.ready();tg?.expand();
 (function showWelcomeToast(){
@@ -196,14 +197,15 @@ function showTop(kind,title){
 }
 
 function showGames(){
- stopC4Timer();stopMiniGameTimers();stopExtraGame();stopCasualGame();document.body.classList.remove('c4-active');home.hidden=true;page.hidden=false;pageTitle.textContent='الألعاب 🎮';pageContent.replaceChildren();
+ stopNumberSort();stopC4Timer();stopMiniGameTimers();stopExtraGame();stopCasualGame();document.body.classList.remove('c4-active');home.hidden=true;page.hidden=false;pageTitle.textContent='الألعاب 🎮';pageContent.replaceChildren();
  const games=[
   ['🔴','كونكت 4','العب ضد البوت أو تحدَّ لاعبًا','connect'],
   ['🟦','المربعات','ارسم الخطوط واجمع المربعات','dots'],
   ['🧠','اختبر ذاكرتك','احفظ التسلسل وتحدَّ لاعبًا آخر','memory'],
   ['🔤','خمن الكلمة','تحدَّ حتى 10 لاعبين أو تدرب لحالك','word'],
   ['🃏','تطابق البطاقات','طابق الأزواج ضد البوت أو أصدقائك','match'],
-  ['🔢','خمن الرقم','اكتشف الرقم مع تلميحات أعلى أو أقل','number'],
+  ['🔢','ترتيب الأرقام','رتّب اللوحة قبل انتهاء الوقت','sort'],
+  ['🎯','خمن الرقم','اكتشف الرقم مع تلميحات أعلى أو أقل','number'],
  ];
  games.forEach(([emoji,name,hint,type])=>{
   const card=document.createElement('button');card.className='custom-card game-card';card.type='button';card.style.width='100%';card.style.cursor='pointer';
@@ -216,7 +218,7 @@ function showGames(){
    const placeholder=document.createElement('div');placeholder.className='game-cover-placeholder';placeholder.textContent=emoji;card.appendChild(placeholder);
   }
   const label=document.createElement('span');label.className='label';label.textContent=name;card.appendChild(label);
-  card.onclick=()=>{if(type==='connect'){showConnect4Setup();return;}if(type==='word'){showWordSetup();return;}if(type==='match'||type==='number'){startCasualSetup(type);return;}showMiniGameInstructions(type);};
+  card.onclick=()=>{if(type==='sort'){startNumberSortSetup();return;}if(type==='connect'){showConnect4Setup();return;}if(type==='word'){showWordSetup();return;}if(type==='match'||type==='number'){startCasualSetup(type);return;}showMiniGameInstructions(type);};
   pageContent.appendChild(card);
  });
 }
@@ -1075,7 +1077,10 @@ document.getElementById('back-home').onclick=showHome;
    root.appendChild(a);
   }
   const casualStartParam=tg?.initDataUnsafe?.start_param||'';
-  if(casualStartParam.startsWith('casual_match_')||casualStartParam.startsWith('casual_number_')){
+  if(casualStartParam.startsWith('sort_')){
+    startNumberSortGame(casualStartParam);
+  }
+  else if(casualStartParam.startsWith('casual_match_')||casualStartParam.startsWith('casual_number_')){
     startCasualGame(casualStartParam);
   }
   else if(extraGameType&&extraGameId){

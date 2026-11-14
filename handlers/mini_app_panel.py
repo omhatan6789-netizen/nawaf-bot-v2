@@ -28,6 +28,7 @@ def _menu():
         [InlineKeyboardButton("🔘 إدارة الأزرار", callback_data="minipanel:buttons"),
          InlineKeyboardButton("🎧 إدارة الأصوات", callback_data="minipanel:sounds")],
         [InlineKeyboardButton("🖼️ صورة الميني آب", callback_data="minipanel:banner")],
+        [InlineKeyboardButton("🔢 تخصيص لعبة ترتيب الأرقام", callback_data="minipanel:number-sort")],
     ])
 
 def _back():
@@ -118,6 +119,41 @@ async def mini_app_panel_callback(update: Update, context: ContextTypes.DEFAULT_
         sound_id = int(data.rsplit(":", 1)[-1])
         row = await pool.fetchrow("DELETE FROM mini_app_sounds WHERE id=$1 RETURNING title", sound_id)
         await q.edit_message_text(f"تم حذف الصوت «{html.escape(row['title'])}» ✅" if row else "الصوت غير موجود.", parse_mode="HTML", reply_markup=_back())
+    elif data == "minipanel:number-sort":
+        from games.number_sort import get_settings
+        cfg = await get_settings()
+        lines = ["🔢 تخصيص لعبة ترتيب الأرقام", "━━━━━━━━━━━━", f"لون المربعات: <code>{html.escape(cfg['tile_color'])}</code>", "الخلفية: " + ("صورة مخصصة" if cfg.get("background") else "الافتراضية")]
+        keys = [[InlineKeyboardButton("🖼️ تغيير الخلفية بصورة", callback_data="minipanel:sortbg")],
+                [InlineKeyboardButton("🎨 تغيير لون المربعات", callback_data="minipanel:sortcolor")],
+                [InlineKeyboardButton("↩️ استعادة الخلفية الافتراضية", callback_data="minipanel:sortresetbg")],
+                [InlineKeyboardButton("↩️ استعادة اللون الافتراضي", callback_data="minipanel:sortresetcolor")],
+                [InlineKeyboardButton("↩️ لوحة الميني", callback_data="minipanel:menu")]]
+        await q.edit_message_text("\\n".join(lines), parse_mode="HTML", reply_markup=InlineKeyboardMarkup(keys))
+    elif data == "minipanel:sortbg":
+        SESSIONS[uid] = {"action": "number_sort_bg", "step": "media"}
+        await q.edit_message_text("ارسل صورة الخلفية الجديدة للعبة ترتيب الأرقام فقط. أرسل «إلغاء» للتراجع.", reply_markup=_back())
+    elif data == "minipanel:sortcolor":
+        SESSIONS[uid] = {"action": "number_sort_color", "step": "palette"}
+        rows = [[InlineKeyboardButton(label, callback_data=f"minipanel:sortpick:{color}") for label, color in PALETTE[i:i+3]] for i in range(0, len(PALETTE), 3)]
+        rows += [[InlineKeyboardButton("✏️ إدخال لون #RRGGBB", callback_data="minipanel:sortcustom")], [InlineKeyboardButton("↩️ رجوع", callback_data="minipanel:number-sort")]]
+        await q.edit_message_text("اختر لون مربعات الأرقام أو أدخل كود HEX مخصصًا. لون الأرقام سيبقى أبيض.", reply_markup=InlineKeyboardMarkup(rows))
+    elif data.startswith("minipanel:sortpick:"):
+        from games.number_sort import save_settings
+        color = data.rsplit(":", 1)[-1]
+        await save_settings(tile_color=color)
+        SESSIONS.pop(uid, None)
+        await q.edit_message_text(f"تم تغيير لون المربعات إلى <code>{color}</code> ✅", parse_mode="HTML", reply_markup=_back())
+    elif data == "minipanel:sortcustom":
+        SESSIONS[uid] = {"action": "number_sort_color", "step": "custom"}
+        await q.edit_message_text("ارسل كود اللون بصيغة #RRGGBB، مثال: #12a4ff", reply_markup=_back())
+    elif data == "minipanel:sortresetbg":
+        from games.number_sort import save_settings
+        await save_settings(reset_background=True)
+        await q.edit_message_text("تمت استعادة خلفية اللعبة الافتراضية ✅", reply_markup=_back())
+    elif data == "minipanel:sortresetcolor":
+        from games.number_sort import save_settings
+        await save_settings(reset_color=True)
+        await q.edit_message_text("تمت استعادة لون المربعات الافتراضي ✅", reply_markup=_back())
     elif data == "minipanel:banner":
         SESSIONS[uid] = {"action": "banner", "step": "media"}
         await q.edit_message_text("ارسل صورة أو فيديو أو GIF للميني آب (حتى 20 ميجابايت):", reply_markup=_back())
@@ -170,6 +206,25 @@ async def mini_app_panel_message(update: Update, context: ContextTypes.DEFAULT_T
         return
     text = (msg.text or "").strip()
     action, step = session.get("action"), session.get("step")
+    if action == "number_sort_bg" and step == "media":
+        media = msg.photo[-1] if msg.photo else None
+        if not media:
+            await msg.reply_text("ارسل صورة فقط (وليس فيديو).")
+            raise ApplicationHandlerStop
+        from games.number_sort import save_settings
+        await save_settings(background_file_id=media.file_id)
+        SESSIONS.pop(user.id, None)
+        await msg.reply_text("تم تحديث خلفية لعبة ترتيب الأرقام فقط ✅", reply_markup=_back())
+        raise ApplicationHandlerStop
+    if action == "number_sort_color" and step == "custom":
+        if not re.fullmatch(r"#[0-9a-fA-F]{6}", text):
+            await msg.reply_text("اللون غير صحيح. ارسله بصيغة #RRGGBB، مثال #12a4ff.")
+            raise ApplicationHandlerStop
+        from games.number_sort import save_settings
+        await save_settings(tile_color=text)
+        SESSIONS.pop(user.id, None)
+        await msg.reply_text(f"تم تغيير لون المربعات إلى {text.lower()}، والأرقام ستبقى بيضاء دائمًا ✅", reply_markup=_back())
+        raise ApplicationHandlerStop
     if text in ("إلغاء", "الغاء", "الغاء الامر"):
         SESSIONS.pop(user.id, None)
         await msg.reply_text("تم الإلغاء.", reply_markup=_back())

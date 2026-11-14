@@ -40,6 +40,8 @@ async def _payload(top=None):
         "SELECT game_type,photo_file_id FROM online_game_images"
     )
     button_colors = await pool.fetch("SELECT button_text,color_hex FROM mini_app_button_colors")
+    from games.number_sort import get_settings as get_number_sort_settings
+    number_sort_settings = await get_number_sort_settings()
     leaderboard = None
     if top == "points":
         from database.points import get_points_leaderboard
@@ -108,6 +110,7 @@ async def _payload(top=None):
              "mime_type": r["mime_type"], "url": f"/mini-app/sound/{r['id']}"}
             for r in sounds
         ],
+        "number_sort_theme": number_sort_settings,
         "online_game_images": {
             r["game_type"]: "/tg-file/" + r["photo_file_id"] for r in online_images
         },
@@ -126,6 +129,54 @@ def handle_mini_app_request(handler):
         body = file_path.read_bytes()
         handler.send_response(200)
         handler.send_header("Content-Type", "text/html; charset=utf-8")
+        handler.send_header("Content-Length", str(len(body)))
+        handler.end_headers()
+        handler.wfile.write(body)
+        return True
+    if path == "/mini_app/number-sort.js":
+        file_path = WEB_ROOT / "number-sort.js"
+        try:
+            body = file_path.read_bytes()
+        except OSError:
+            handler.send_error(404, "Number sort script not found")
+            return True
+        handler.send_response(200)
+        handler.send_header("Content-Type", "application/javascript; charset=utf-8")
+        handler.send_header("Cache-Control", "public, max-age=300")
+        handler.send_header("Content-Length", str(len(body)))
+        handler.end_headers()
+        handler.wfile.write(body)
+        return True
+    if path == "/number-sort/background":
+        try:
+            from games.number_sort import get_background_file
+            file_id = _run(get_background_file())
+            if not file_id:
+                handler.send_error(404, "No custom background")
+                return True
+            tg_file = _run(_bot.get_file(file_id))
+            body = bytes(_run(tg_file.download_as_bytearray()))
+            content_type = "image/png" if body.startswith(b"\\x89PNG") else "image/webp" if body.startswith(b"RIFF") and body[8:12] == b"WEBP" else "image/jpeg"
+            handler.send_response(200)
+            handler.send_header("Content-Type", content_type)
+            handler.send_header("Cache-Control", "public, max-age=300")
+            handler.send_header("Content-Length", str(len(body)))
+            handler.end_headers()
+            handler.wfile.write(body)
+        except Exception:
+            logging.getLogger(__name__).exception("Number sort background unavailable")
+            handler.send_error(404, "Background not found")
+        return True
+    if path == "/api/number-sort-theme":
+        try:
+            from games.number_sort import get_settings
+            body = json.dumps({"ok": True, "result": _run(get_settings())}, ensure_ascii=False).encode()
+            handler.send_response(200)
+        except Exception:
+            body = json.dumps({"ok": False, "error": "تعذر تحميل إعدادات اللعبة"}).encode()
+            handler.send_response(503)
+        handler.send_header("Content-Type", "application/json; charset=utf-8")
+        handler.send_header("Cache-Control", "no-store")
         handler.send_header("Content-Length", str(len(body)))
         handler.end_headers()
         handler.wfile.write(body)
@@ -347,7 +398,7 @@ def handle_connect4_post(handler):
         "/api/minigames/solo/state", "/api/minigames/solo/action",
         "/api/minigames/solo/bot-move",
         "/api/online/restart", "/api/online/spectate", "/api/online/lobby", "/api/online/withdraw",
-        "/api/extra-games", "/api/casual-games",
+        "/api/extra-games", "/api/casual-games", "/api/number-sort",
     ):
         return False
     try:
@@ -370,9 +421,30 @@ def handle_connect4_post(handler):
         if _bot is None:
             raise RuntimeError("البوت ما زال يستعد، حاول بعد قليل")
         user = verify_init_data(payload.get("initData", ""), _bot.token)
-        is_challenge_api = path.startswith("/api/connect4/challenge/") or path.startswith("/api/minigames/") or path in ("/api/extra-games", "/api/casual-games")
+        is_challenge_api = path.startswith("/api/connect4/challenge/") or path.startswith("/api/minigames/") or path in ("/api/extra-games", "/api/casual-games", "/api/number-sort")
         is_online_api = path in ("/api/online/restart", "/api/online/spectate", "/api/online/lobby", "/api/online/withdraw")
-        if path == "/api/casual-games":
+        if path == "/api/number-sort":
+            from games import number_sort as ns
+            action = str(payload.get("action") or "state")
+            uid = int(user["id"])
+            name = " ".join(x for x in (user.get("first_name"), user.get("last_name")) if x) or user.get("username") or "مستخدم"
+            if action == "create":
+                result = _run(ns.create_game(uid, name, payload.get("mode", "bot"), payload.get("size", 3), payload.get("duration", 60)))
+            elif action == "join":
+                result = _run(ns.join_game(uid, name, payload.get("game_id", "")))
+            elif action == "start":
+                result = _run(ns.start_game(uid, payload.get("game_id", "")))
+            elif action == "move":
+                result = _run(ns.move(uid, payload.get("game_id", ""), payload.get("index", -1)))
+            elif action == "bot-move":
+                result = _run(ns.bot_move(uid, payload.get("game_id", "")))
+            elif action == "leave":
+                result = _run(ns.leave(uid, payload.get("game_id", "")))
+            else:
+                result = _run(ns.state(uid, payload.get("game_id", "")))
+            body = json.dumps({"ok": True, "result": result}, ensure_ascii=False).encode()
+            handler.send_response(200)
+        elif path == "/api/casual-games":
             from games import casual_games as casual
             action = str(payload.get("action") or "state")
             uid = int(user["id"])

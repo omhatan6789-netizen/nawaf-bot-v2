@@ -20,6 +20,7 @@ GAME_INFO = {
     "word": ("خمن الكلمة 🔤", "تحدَّ حتى 10 لاعبين واكتشفوا الكلمة قبل انتهاء الوقت"),
     "match": ("تطابق البطاقات 🃏", "طابق أكبر عدد من أزواج البطاقات ضد لاعب أو البوت"),
     "number": ("خمن الرقم 🔢", "اخمن الرقم الصحيح مع تلميحات أعلى أو أقل"),
+    "sort": ("ترتيب الأرقام 🔢", "رتّب الأرقام قبل انتهاء الوقت وتنافس مع 5 لاعبين"),
 }
 
 def _safe_player_name(value, fallback: str) -> str:
@@ -114,7 +115,7 @@ async def online_image_receive(update: Update, context: ContextTypes.DEFAULT_TYP
 
 def _select_games(query: str):
     value = (query or "").strip().lower()
-    supported_inline = ["connect", "dots", "memory", "word", "match", "number"]
+    supported_inline = ["connect", "dots", "memory", "word", "match", "number", "sort"]
     if not value:
         return supported_inline
     if any(word in value for word in ("كونكت", "connect", "4")):
@@ -125,6 +126,8 @@ def _select_games(query: str):
         return ["memory"]
     if any(word in value for word in ("بطاقات", "تطابق", "match", "كروت")):
         return ["match"]
+    if any(word in value for word in ("ترتيب", "الأرقام", "ارقام", "أرقام", "sort", "slide")):
+        return ["sort"]
     if any(word in value for word in ("رقم", "الرقم", "number")):
         return ["number"]
     if any(word in value for word in ("خمن", "كلمة", "word")):
@@ -147,7 +150,21 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
     me = await context.bot.get_me()
     for game_type in _select_games(inline.query):
         title, description = GAME_INFO[game_type]
-        if game_type in ("match", "number"):
+        if game_type == "sort":
+            from games.number_sort import create_game
+            game = await create_game(
+                inline.from_user.id,
+                inline.from_user.full_name or inline.from_user.first_name or "مستخدم",
+                mode="online", size=3, duration=60,
+            )
+            room_url = f"https://t.me/{me.username}?startapp=sort_{game['id']}"
+            lobby_text = (
+                f"🔢 غرفة ترتيب الأرقام\\n\\n"
+                f"أنشأ {inline.from_user.full_name or inline.from_user.first_name or 'لاعب'} غرفة جديدة.\\n"
+                "افتحوا الغرفة من الزر بالأسفل للانضمام. يمكن لصاحب الغرفة اختيار حجم اللوحة والمدة وبدء القيم."
+            )
+            result_id = game["id"]
+        elif game_type in ("match", "number"):
             from games.casual_games import create_game
             game = await create_game(
                 inline.from_user.id,
