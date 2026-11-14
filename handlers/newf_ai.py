@@ -90,6 +90,37 @@ async def newf_profile_request(update: Update, context: ContextTypes.DEFAULT_TYP
         return
 
     normalized_message = _normalize(message.text)
+
+    # Lookup any Telegram account by numeric ID using the music account session.
+    account_match = re.fullmatch(r"(?:حسابه|حساب)\\s+(\\d+)", normalized_message)
+    if account_match:
+        target_id = int(account_match.group(1))
+        try:
+            music_user, music_chat = await _get_music_user(target_id)
+            target = music_user or music_chat
+            if target is None:
+                await message.reply_text("ما قدرت أوصل للحساب بهذا الايدي.")
+                raise ApplicationHandlerStop
+            display_name = _display_name(target, None)
+            usernames = getattr(target, "usernames", None) or []
+            username = getattr(target, "username", None)
+            if not username:
+                for item in usernames:
+                    username = getattr(item, "username", None) or (item if isinstance(item, str) else None)
+                    if username:
+                        break
+            profile_url = f"https://t.me/{str(username).lstrip('@')}" if username else f"tg://user?id={target_id}"
+            keyboard = InlineKeyboardMarkup([[
+                InlineKeyboardButton(display_name, url=profile_url)
+            ]])
+            await message.reply_text("حسابه:", reply_markup=keyboard)
+        except ApplicationHandlerStop:
+            raise
+        except Exception:
+            logger.exception("Could not look up Telegram account %s", target_id)
+            await message.reply_text("تعذر جلب الحساب حاليًا.")
+        raise ApplicationHandlerStop
+
     words = normalized_message.split()
     if not words or not words[0].startswith("نيوف"):
         return
