@@ -96,7 +96,7 @@ async def create_game(user_id, name, mode, size, duration):
     if mode not in ("bot", "online"): raise ValueError("طريقة اللعب غير صحيحة")
     size, duration = int(size), int(duration)
     if size not in SIZES: raise ValueError("اختر لوحة 3×3 أو 4×4 أو 5×5")
-    if not 30 <= duration <= 120: raise ValueError("مدة القيم من 30 إلى 120 ثانية")
+    if not 30 <= duration <= 420: raise ValueError("مدة القيم من 30 ثانية إلى 7 دقائق")
     uid, gid = int(user_id), uuid.uuid4()
     board = _board(size)
     players = [{"id": uid, "name": str(name or "لاعب")[:80], "board": board[:], "moves": 0}]
