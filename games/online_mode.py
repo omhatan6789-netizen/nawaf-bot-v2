@@ -151,19 +151,39 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
     for game_type in _select_games(inline.query):
         title, description = GAME_INFO[game_type]
         if game_type == "sort":
-            from games.number_sort import create_game
-            game = await create_game(
+            room = await pool.fetchrow(
+                """SELECT id,settings FROM number_sort_rooms
+                   WHERE owner_id=$1 AND status='waiting'
+                   ORDER BY created_at DESC LIMIT 1""",
                 inline.from_user.id,
-                inline.from_user.full_name or inline.from_user.first_name or "مستخدم",
-                mode="online", size=3, duration=60,
             )
-            room_url = f"https://t.me/{me.username}?startapp=sort_{game['id']}"
+            if not room:
+                from games.number_sort import create_game
+                game = await create_game(
+                    inline.from_user.id,
+                    inline.from_user.full_name or inline.from_user.first_name or "مستخدم",
+                    mode="online", size=3, duration=60,
+                )
+                room_id = game["id"]
+            else:
+                room_id = room["id"].hex
+            room_url = f"https://t.me/{me.username}?startapp=sort_{room_id}"
             lobby_text = (
                 f"🔢 غرفة ترتيب الأرقام\\n\\n"
                 f"أنشأ {inline.from_user.full_name or inline.from_user.first_name or 'لاعب'} غرفة جديدة.\\n"
-                "افتحوا الغرفة من الزر بالأسفل للانضمام. يمكن لصاحب الغرفة اختيار حجم اللوحة والمدة وبدء القيم."
+                "افتحوا الغرفة من الزر بالأسفل للانضمام. الحد الأقصى 5 لاعبين."
             )
-            result_id = game["id"]
+            result_kwargs = {
+                "id": room_id,
+                "title": title,
+                "description": description,
+                "input_message_content": InputTextMessageContent(lobby_text),
+                "reply_markup": InlineKeyboardMarkup([[
+                    InlineKeyboardButton("فتح غرفة اللعبة", url=room_url)
+                ]]),
+            }
+            results.append(InlineQueryResultArticle(**result_kwargs))
+            continue
         elif game_type in ("match", "number"):
             from games.casual_games import create_game
             game = await create_game(
