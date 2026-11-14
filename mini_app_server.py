@@ -147,6 +147,32 @@ def handle_mini_app_request(handler):
         handler.end_headers()
         handler.wfile.write(body)
         return True
+    if path.startswith("/number-sort/avatar/"):
+        try:
+            raw_user_id = path.rsplit("/", 1)[-1]
+            user_id = int(raw_user_id)
+            if user_id <= 0 or _bot is None:
+                raise ValueError("No profile photo")
+            photos = _run(_bot.get_user_profile_photos(user_id, limit=1))
+            if not photos or not photos.photos or not photos.photos[0]:
+                raise ValueError("No profile photo")
+            photo = photos.photos[0][-1]
+            tg_file = _run(_bot.get_file(photo.file_id))
+            body = bytes(_run(tg_file.download_as_bytearray()))
+            content_type = "image/jpeg"
+            if body.startswith(b"\\x89PNG"):
+                content_type = "image/png"
+            elif body.startswith(b"RIFF") and body[8:12] == b"WEBP":
+                content_type = "image/webp"
+            handler.send_response(200)
+            handler.send_header("Content-Type", content_type)
+            handler.send_header("Cache-Control", "public, max-age=3600")
+            handler.send_header("Content-Length", str(len(body)))
+            handler.end_headers()
+            handler.wfile.write(body)
+        except Exception:
+            handler.send_error(404, "Profile photo not available")
+        return True
     if path == "/number-sort/background":
         try:
             from games.number_sort import get_background_file
