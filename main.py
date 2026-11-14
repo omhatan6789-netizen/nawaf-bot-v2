@@ -479,7 +479,7 @@ def build_application(use_updater: bool = True) -> Application:
     ))
     application.add_handler(MessageHandler(
         filters.ChatType.PRIVATE & ~filters.COMMAND, mini_app_panel_message,
-    ), group=-30)
+    ), group=-28)
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("health", health_command))
     application.add_handler(CommandHandler("send", send_command))
