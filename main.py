@@ -2,7 +2,7 @@ import asyncio
 import logging
 
 from telegram import Update
-from telegram.ext import Application, ApplicationBuilder, CallbackQueryHandler, ChatMemberHandler, CommandHandler, ContextTypes, ConversationHandler, InlineQueryHandler, MessageHandler, PreCheckoutQueryHandler, filters
+from telegram.ext import Application, ApplicationBuilder, CallbackQueryHandler, ChatMemberHandler, CommandHandler, ContextTypes, ConversationHandler, InlineQueryHandler, MessageHandler, filters
 
 from config import load_settings
 from handlers.mini_app import mini_app_message, register_mini_app_menu
@@ -155,11 +155,6 @@ from handlers.start_editor import (
 )
 from handlers.developer_panel import (
     developer_panel_command, developer_panel_callback, developer_panel_message,
-)
-from handlers.stars_subscriptions import (
-    stars_panel_callback, stars_panel_message, stars_group_invoice_command,
-    stars_precheckout_handler, stars_successful_payment_handler,
-    stars_group_guard, stars_group_callback_guard,
 )
 from handlers.send import send_command, handle_send_media
 from handlers.music import (
@@ -522,24 +517,6 @@ def build_application(use_updater: bool = True) -> Application:
     application.add_handler(CallbackQueryHandler(
         developer_panel_callback, pattern=r"^devpanel:"
     ))
-    application.add_handler(CallbackQueryHandler(stars_panel_callback, pattern=r"^stars:"))
-    application.add_handler(PreCheckoutQueryHandler(stars_precheckout_handler))
-    application.add_handler(MessageHandler(
-        filters.SUCCESSFUL_PAYMENT, stars_successful_payment_handler,
-    ), group=-10002)
-    application.add_handler(MessageHandler(
-        filters.ChatType.GROUPS & filters.Regex(r"^اشتراك القروب$"),
-        stars_group_invoice_command,
-    ), group=-10002)
-    application.add_handler(MessageHandler(
-        filters.ChatType.GROUPS, stars_group_guard,
-    ), group=-10000)
-    application.add_handler(CallbackQueryHandler(
-        stars_group_callback_guard,
-    ), group=-10000)
-    application.add_handler(MessageHandler(
-        filters.ChatType.PRIVATE & ~filters.COMMAND, stars_panel_message,
-    ), group=-8)
     application.add_handler(MessageHandler(
         filters.ChatType.PRIVATE & ~filters.COMMAND,
         developer_panel_message,
