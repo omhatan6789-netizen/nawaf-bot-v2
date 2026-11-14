@@ -131,6 +131,39 @@ async def join_game(user_id, name, raw_id):
     return _public(row, uid)
 
 
+async def configure_game(user_id, raw_id, size, duration):
+    gid, uid = uuid.UUID(hex=str(raw_id).replace("-", "")), int(user_id)
+    size, duration = int(size), int(duration)
+    if size not in SIZES:
+        raise ValueError("اختر لوحة 3×3 أو 4×4 أو 5×5")
+    if not 30 <= duration <= 420:
+        raise ValueError("مدة القيم من 30 ثانية إلى 7 دقائق")
+    pool = get_pool()
+    async with pool.acquire() as c:
+        async with c.transaction():
+            row = await c.fetchrow("SELECT * FROM number_sort_rooms WHERE id=$1 FOR UPDATE", gid)
+            if not row:
+                raise ValueError("الغرفة غير موجودة")
+            if int(row["owner_id"]) != uid:
+                raise ValueError("إعدادات الغرفة لصاحبها فقط")
+            if row["status"] != "waiting":
+                raise ValueError("لا يمكن تغيير الإعدادات بعد بدء القيم")
+            players = _obj(row["players"])
+            board = _board(size)
+            for player in players:
+                player["board"] = board[:]
+                player["moves"] = 0
+            settings = {"size": size, "duration": duration}
+            row = await c.fetchrow(
+                """UPDATE number_sort_rooms
+                   SET players=$2::jsonb,settings=$3::jsonb,updated_at=NOW()
+                   WHERE id=$1 RETURNING *""",
+                gid, json.dumps(players, ensure_ascii=False),
+                json.dumps(settings, ensure_ascii=False),
+            )
+    return _public(row, uid)
+
+
 async def start_game(user_id, raw_id):
     gid, uid = uuid.UUID(hex=str(raw_id).replace("-", "")), int(user_id)
     pool = get_pool()
