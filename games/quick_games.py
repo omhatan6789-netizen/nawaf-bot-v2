@@ -76,7 +76,7 @@ async def start_game(uid,raw):
         p=_j(r["players"])
         if len(p)<2: raise ValueError("تحتاج لاعبين على الأقل")
         st=_j(r["state"]); st["phase"]="show_target" if r["game_type"]=="timer" else "shuffle"
-        st["round_started"]=time.time(); st["deadline"]=time.time()+4 if r["game_type"]=="timer" else time.time()+2
+        st["round_started"]=time.time(); st["deadline"]=time.time()+4 if r["game_type"]=="timer" else time.time()+8.5
         if r["game_type"]=="timer": st["target_ms"]=random.randint(5000,90000)
         else:
             st["ball_index"]=random.randrange(int(_j(r["settings"])["cups"]))
@@ -131,7 +131,7 @@ async def game_action(uid,raw,move):
                     await _finish(c,r,p,st)
                 else:
                     st["eliminated"]=[x["id"] for x in result if not x["correct"]]; st["active_players"]=alive; st["round"]+=1
-                    st["ball_index"]=random.randrange(s["cups"]); st["choices"]={}; st["phase"]="shuffle"; st["deadline"]=now+2
+                    st["ball_index"]=random.randrange(s["cups"]); st["choices"]={}; st["phase"]="shuffle"; st["deadline"]=now+8.5
                     st["shuffle"]=[{"a":random.randrange(s["cups"]),"b":random.randrange(s["cups"])} for _ in range(18 if s["difficulty"] in ("صعب","مستحيل") else 12)]
                     perm=list(range(s["cups"]))
                     for move in st["shuffle"]: perm[move["a"]],perm[move["b"]]=perm[move["b"]],perm[move["a"]]
