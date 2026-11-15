@@ -110,8 +110,9 @@ async def game_action(uid,raw,move):
             idx=int(move.get("cup",-1))
             if not 0<=idx<int(s["cups"]): raise ValueError("اختر كوبًا صحيحًا")
             if me not in st["active_players"]: raise ValueError("تم استبعادك")
+            if str(me) in st["choices"]: raise ValueError("تم تسجيل اختيارك بالفعل")
             st["choices"][str(me)]=idx
-            if r["mode"]=="bot" and -1 in st["active_players"]:
+            if r["mode"]=="bot" and -1 in st["active_players"] and "-1" not in st["choices"]:
                 d=s["difficulty"]; chance={"سهل":.25,"متوسط":.5,"صعب":.75,"مستحيل":.92}[d]
                 st["choices"]["-1"]=st["ball_index"] if random.random()<chance else random.choice([i for i in range(s["cups"]) if i!=st["ball_index"]])
             if all(str(i) in st["choices"] for i in st["active_players"]):
@@ -146,7 +147,7 @@ async def game_action(uid,raw,move):
                 st["stops"][str(me)]=None; st["eliminated"].append(me)
             else: st["stops"][str(me)]=elapsed
             if r["mode"]=="bot" and "-1" not in st["stops"]:
-                d=random.choice([-.8,-.35,.2,.65]) if s.get("difficulty")=="سهل" else random.choice([-.2,.12,.3]) if s.get("difficulty")=="متوسط" else random.choice([-.08,.06,.11])
+                d=random.choice([-.8,-.35,.2,.65]) if s.get("difficulty")=="سهل" else random.choice([-.2,.12,.3]) if s.get("difficulty")=="متوسط" else random.choice([-.02,.015,.035])
                 st["stops"]["-1"]=max(1,int(target*(1+d)))
             active=[i for i in st["active_players"] if str(i) in st["stops"]]
             if len(active)==len(st["active_players"]):
