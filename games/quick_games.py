@@ -122,6 +122,7 @@ async def game_action(uid,raw,move):
                     result.append({"id":i,"name":x["name"],"correct":ok})
                 st["results"]=result
                 alive=[x["id"] for x in result if x["correct"]]
+                for survivor in alive: st["scores"][str(survivor)]=int(st["scores"].get(str(survivor),0))+1
                 if len(alive)<=1:
                     st["winner_id"]=alive[0] if alive else 0
                     st["phase"]="finished"; st["eliminated"]=[x["id"] for x in result if not x["correct"]]
