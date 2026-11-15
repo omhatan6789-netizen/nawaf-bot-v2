@@ -424,7 +424,7 @@ def handle_connect4_post(handler):
         "/api/minigames/solo/state", "/api/minigames/solo/action",
         "/api/minigames/solo/bot-move",
         "/api/online/restart", "/api/online/spectate", "/api/online/lobby", "/api/online/withdraw",
-        "/api/extra-games", "/api/casual-games", "/api/number-sort",
+        "/api/extra-games", "/api/casual-games", "/api/number-sort", "/api/quick-games",
     ):
         return False
     try:
@@ -447,7 +447,7 @@ def handle_connect4_post(handler):
         if _bot is None:
             raise RuntimeError("البوت ما زال يستعد، حاول بعد قليل")
         user = verify_init_data(payload.get("initData", ""), _bot.token)
-        is_challenge_api = path.startswith("/api/connect4/challenge/") or path.startswith("/api/minigames/") or path in ("/api/extra-games", "/api/casual-games", "/api/number-sort")
+        is_challenge_api = path.startswith("/api/connect4/challenge/") or path.startswith("/api/minigames/") or path in ("/api/extra-games", "/api/casual-games", "/api/number-sort", "/api/quick-games")
         is_online_api = path in ("/api/online/restart", "/api/online/spectate", "/api/online/lobby", "/api/online/withdraw")
         if path == "/api/number-sort":
             from games import number_sort as ns
@@ -470,6 +470,26 @@ def handle_connect4_post(handler):
                 result = _run(ns.leave(uid, payload.get("game_id", "")))
             else:
                 result = _run(ns.state(uid, payload.get("game_id", "")))
+            body = json.dumps({"ok": True, "result": result}, ensure_ascii=False).encode()
+            handler.send_response(200)
+        elif path == "/api/quick-games":
+            from games import quick_games as quick
+            action = str(payload.get("action") or "state")
+            uid = int(user["id"])
+            name = " ".join(x for x in (user.get("first_name"), user.get("last_name")) if x) or user.get("username") or "مستخدم"
+            if action == "create":
+                me = _run(_bot.get_me())
+                result = _run(quick.create_game(uid, name, payload.get("game_type","cups"), payload.get("mode","online"), payload.get("settings") or {}, me.first_name or me.username or "البوت"))
+            elif action == "join":
+                result = _run(quick.join_game(uid, name, payload.get("game_id","")))
+            elif action == "configure":
+                result = _run(quick.configure_game(uid, payload.get("game_id",""), payload.get("settings") or {}))
+            elif action == "start":
+                result = _run(quick.start_game(uid, payload.get("game_id","")))
+            elif action == "action":
+                result = _run(quick.game_action(uid, payload.get("game_id",""), payload.get("move") or {}))
+            else:
+                result = _run(quick.get_state(uid, payload.get("game_id","")))
             body = json.dumps({"ok": True, "result": result}, ensure_ascii=False).encode()
             handler.send_response(200)
         elif path == "/api/casual-games":

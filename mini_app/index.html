@@ -135,6 +135,7 @@ body.c4-active #page{padding-left:10px;padding-right:10px}
 </main>
 <script src="/mini_app/ambient.js?v=20261106-7"></script>
 <script src="/mini_app/casual-games.js?v=7"></script>
+<script src="/mini_app/quick-games.js?v=1"></script>
 <script src="/mini_app/number-sort.js?v=1"></script>
 <script>
 const tg=window.Telegram?.WebApp;tg?.ready();tg?.expand();
@@ -206,6 +207,8 @@ function showGames(){
   ['🃏','تطابق البطاقات','طابق الأزواج ضد البوت أو أصدقائك','match'],
   ['🔢','ترتيب الأرقام','رتّب اللوحة قبل انتهاء الوقت','sort'],
   ['🎯','خمن الرقم','اكتشف الرقم مع تلميحات أعلى أو أقل','number'],
+  ['🥤','الأكواب','راقب حركة الأكواب واكتشف مكان الكرة','cups'],
+  ['⏱️','المؤقت','أوقف الوقت عند الهدف دون رؤية العداد','timer'],
  ];
  games.forEach(([emoji,name,hint,type])=>{
   const card=document.createElement('button');card.className='custom-card game-card';card.type='button';card.style.width='100%';card.style.cursor='pointer';
@@ -218,7 +221,7 @@ function showGames(){
    const placeholder=document.createElement('div');placeholder.className='game-cover-placeholder';placeholder.textContent=emoji;card.appendChild(placeholder);
   }
   const label=document.createElement('span');label.className='label';label.textContent=name;card.appendChild(label);
-  card.onclick=()=>{if(type==='sort'){startNumberSortSetup();return;}if(type==='connect'){showConnect4Setup();return;}if(type==='word'){showWordSetup();return;}if(type==='match'||type==='number'){startCasualSetup(type);return;}showMiniGameInstructions(type);};
+  card.onclick=()=>{if(type==='cups'||type==='timer'){startQuickGameSetup(type);return;}if(type==='sort'){startNumberSortSetup();return;}if(type==='connect'){showConnect4Setup();return;}if(type==='word'){showWordSetup();return;}if(type==='match'||type==='number'){startCasualSetup(type);return;}showMiniGameInstructions(type);};
   pageContent.appendChild(card);
  });
 }
