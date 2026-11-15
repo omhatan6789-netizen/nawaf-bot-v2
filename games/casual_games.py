@@ -286,7 +286,6 @@ async def leave_game(user_id, raw_id):
         if not any(int(p["id"])==uid for p in players): raise ValueError("أنت لست لاعبًا في هذه اللعبة")
         leaving_index = next(i for i,p in enumerate(players) if int(p["id"]) == uid)
         state["withdrawn_id"] = uid
-        state["end_reason"] = "withdraw"
         if len(players) > 2:
             players.pop(leaving_index)
             if row["game_type"] == "match":
@@ -304,12 +303,14 @@ async def leave_game(user_id, raw_id):
                 next_index = _next_number_player(players, state, _obj(row["settings"]), old_turn - 1)
                 if next_index is not None: state["turn_index"] = next_index
             if len(players) == 1:
+                state["end_reason"] = "withdraw"
                 state["winner_id"] = int(players[0]["id"])
                 row=await c.fetchrow("UPDATE casual_game_rooms SET status='finished',players=$2::jsonb,state=$3::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,json.dumps(players,ensure_ascii=False),json.dumps(state,ensure_ascii=False))
             else:
                 _reset_deadline(state, _obj(row["settings"]))
                 row=await c.fetchrow("UPDATE casual_game_rooms SET players=$2::jsonb,state=$3::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,json.dumps(players,ensure_ascii=False),json.dumps(state,ensure_ascii=False))
         else:
+            state["end_reason"] = "withdraw"
             winner=next((p for p in players if int(p["id"])!=uid),None)
             state["winner_id"]=int(winner["id"]) if winner else None
             row=await c.fetchrow("UPDATE casual_game_rooms SET status='finished',state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,json.dumps(state,ensure_ascii=False))
