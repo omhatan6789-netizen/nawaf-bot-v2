@@ -5,7 +5,7 @@ from database.pool import get_pool
 def _j(v): return json.loads(v) if isinstance(v,str) else (v or {})
 def _public(r, uid):
     p,s,st=_j(r["players"]),_j(r["settings"]),_j(r["state"])
-    out={"id":r["id"].hex,"game_type":r["game_type"],"mode":r["mode"],"status":r["status"],"owner_id":int(r["owner_id"]),"is_owner":int(r["owner_id"])==int(uid),"players":p,"settings":s,"round":int(st.get("round",1)),"phase":st.get("phase","waiting"),"scores":st.get("scores",{}),"target_ms":st.get("target_ms") if st.get("phase") in ("show_target","results") else None,"deadline":st.get("deadline"),"results":st.get("results",[]),"winner_id":st.get("winner_id"),"eliminated":st.get("eliminated",[]),"shuffle":st.get("shuffle",[]),"cups":s.get("cups",5),"difficulty":s.get("difficulty","متوسط"),"win_target":s.get("win_target",5)}
+    out={"id":r["id"].hex,"game_type":r["game_type"],"mode":r["mode"],"status":r["status"],"owner_id":int(r["owner_id"]),"is_owner":int(r["owner_id"])==int(uid),"players":p,"settings":s,"round":int(st.get("round",1)),"phase":st.get("phase","waiting"),"scores":st.get("scores",{}),"target_ms":st.get("target_ms") if st.get("phase") in ("show_target","results","finished") else None,"deadline":st.get("deadline"),"results":st.get("results",[]),"winner_id":st.get("winner_id"),"eliminated":st.get("eliminated",[]),"shuffle":st.get("shuffle",[]),"cups":s.get("cups",5),"difficulty":s.get("difficulty","متوسط"),"win_target":s.get("win_target",5)}
     me=str(uid)
     out["my_choice"]=st.get("choices",{}).get(me)
     out["my_elapsed_ms"]=st.get("stops",{}).get(me)
