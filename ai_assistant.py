@@ -15,9 +15,9 @@ from html import unescape
 import httpx
 
 OWNER_ID = 8453977662
-GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
-GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b").strip()
-GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash").strip()
+GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
 _HISTORY = {}
 _HISTORY_MAX_MESSAGES = 10
@@ -322,39 +322,72 @@ async def _web_search(query):
         return []
 
 
-async def _groq_chat(messages):
-    if not GROQ_API_KEY:
-        raise RuntimeError("مفتاح الذكاء غير مضبوط. أضف GROQ_API_KEY في إعدادات الاستضافة.")
-    payload = {"model": GROQ_MODEL, "messages": messages, "temperature": 0.5, "max_completion_tokens": 900}
+async def _gemini_chat(messages):
+    if not GEMINI_API_KEY:
+        raise RuntimeError("مفتاح Gemini غير مضبوط. أضف GEMINI_API_KEY في إعدادات Render.")
+
+    system_text = ""
+    contents = []
+    for item in messages:
+        role = item.get("role")
+        content = str(item.get("content") or "")
+        if role == "system":
+            system_text = content
+        elif role in ("user", "assistant"):
+            contents.append({
+                "role": "user" if role == "user" else "model",
+                "parts": [{"text": content}],
+            })
+
+    payload = {
+        "contents": contents,
+        "generationConfig": {
+            "temperature": 0.5,
+            "maxOutputTokens": 900,
+        },
+    }
+    if system_text:
+        payload["systemInstruction"] = {"parts": [{"text": system_text}]}
+
     try:
-        async with httpx.AsyncClient(timeout=35, headers={
-            "Authorization": f"Bearer {GROQ_API_KEY}",
+        async with httpx.AsyncClient(timeout=45, headers={
+            "x-goog-api-key": GEMINI_API_KEY,
             "Content-Type": "application/json",
             "User-Agent": "NyoufTelegramBot/1.0",
         }) as client:
-            response = await client.post(GROQ_API_URL, json=payload)
+            response = await client.post(
+                GEMINI_API_URL.format(model=GEMINI_MODEL),
+                json=payload,
+            )
             if response.status_code >= 400:
-                print(f"[AI] Groq HTTP {response.status_code}: {response.text[:700]}")
+                print(f"[AI] Gemini HTTP {response.status_code}: {response.text[:700]}")
                 if response.status_code == 429:
-                    raise RuntimeError("وصلنا إلى حد الاستخدام المؤقت؛ جرّب بعد قليل.")
+                    raise RuntimeError("وصلنا إلى حد استخدام Gemini المؤقت؛ جرّب بعد قليل.")
                 if response.status_code in (401, 403):
-                    raise RuntimeError("مفتاح Groq غير صحيح أو غير مفعّل.")
-                raise RuntimeError("تعذر الاتصال بمحرك الذكاء حاليًا.")
+                    raise RuntimeError("مفتاح Gemini غير صحيح أو غير مفعّل.")
+                if response.status_code == 400:
+                    raise RuntimeError("إعدادات Gemini أو اسم النموذج غير صالح.")
+                raise RuntimeError("تعذر الاتصال بمحرك Gemini حاليًا.")
             data = response.json()
     except RuntimeError:
         raise
     except Exception as exc:
-        print(f"[AI] Groq request error: {exc}")
-        raise RuntimeError("تعذر الاتصال بمحرك الذكاء حاليًا.") from exc
-    choices = data.get("choices") or []
-    if not choices:
-        raise RuntimeError("محرك الذكاء لم يرجع إجابة.")
-    content = choices[0].get("message", {}).get("content", "")
-    if isinstance(content, list):
-        content = "".join(part.get("text", "") for part in content if isinstance(part, dict))
-    content = str(content).strip()
+        print(f"[AI] Gemini request error: {exc}")
+        raise RuntimeError("تعذر الاتصال بمحرك Gemini حاليًا.") from exc
+
+    candidates = data.get("candidates") or []
+    if not candidates:
+        feedback = data.get("promptFeedback") or {}
+        print(f"[AI] Gemini returned no candidates: {feedback}")
+        raise RuntimeError("Gemini لم يرجع إجابة؛ قد يكون الطلب مخالفًا لسياسات المحتوى.")
+    parts = (candidates[0].get("content") or {}).get("parts") or []
+    content = "".join(
+        str(part.get("text") or "")
+        for part in parts
+        if isinstance(part, dict) and part.get("text")
+    ).strip()
     if not content:
-        raise RuntimeError("وصل رد فارغ من محرك الذكاء.")
+        raise RuntimeError("وصل رد فارغ من Gemini.")
     return content[:3800]
 
 def _history_key(chat_id, user_id):
@@ -558,7 +591,7 @@ async def ai_assistant_message(
     messages.append({"role": "user", "content": question})
 
     try:
-        answer = await _groq_chat(messages)
+        answer = await _gemini_chat(messages)
     except RuntimeError as exc:
         await message.reply_text(f"يا هلا، {exc}")
         raise ApplicationHandlerStop()
