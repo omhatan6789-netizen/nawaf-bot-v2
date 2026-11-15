@@ -184,6 +184,15 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
                     InlineKeyboardButton("فتح غرفة اللعبة", url=room_url)
                 ]]),
             }
+            photo_file_id = await pool.fetchval(
+                "SELECT photo_file_id FROM online_game_images WHERE game_type=$1",
+                game_type,
+            )
+            if photo_file_id:
+                base_url = os.environ.get("PUBLIC_BASE_URL", "https://nawaf-bot-frankfurt.onrender.com").rstrip("/")
+                result_kwargs["thumbnail_url"] = f"{base_url}/tg-file/{photo_file_id}"
+                result_kwargs["thumbnail_width"] = 80
+                result_kwargs["thumbnail_height"] = 80
             results.append(InlineQueryResultArticle(**result_kwargs))
             continue
         elif game_type in ("match", "number"):
