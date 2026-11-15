@@ -293,12 +293,12 @@ def handle_mini_app_request(handler):
         try:
             game_type = parse_qs(urlparse(handler.path).query).get("game_type", [""])[0].strip()
             sound = _run(get_pool().fetchrow(
-                """SELECT scope_key,file_id,mime_type,media_kind FROM game_end_sounds
+                """SELECT scope_key,file_id,mime_type,media_kind,muted FROM game_end_sounds
                    WHERE scope_key IN ($1,'all')
                    ORDER BY CASE WHEN scope_key=$1 THEN 0 ELSE 1 END LIMIT 1""",
                 game_type,
             ))
-            payload = {"ok": True, "url": ("/mini-app/game-end-sound/" + sound["scope_key"]) if sound else None}
+            payload = {"ok": True, "url": ("/mini-app/game-end-sound/" + sound["scope_key"]) if sound and not sound["muted"] else None}
             body = json.dumps(payload, ensure_ascii=False).encode()
             handler.send_response(200)
         except Exception:
