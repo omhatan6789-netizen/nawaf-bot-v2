@@ -221,7 +221,7 @@ function showGames(){
    const placeholder=document.createElement('div');placeholder.className='game-cover-placeholder';placeholder.textContent=emoji;card.appendChild(placeholder);
   }
   const label=document.createElement('span');label.className='label';label.textContent=name;card.appendChild(label);
-  card.onclick=()=>{if(type==='cups'||type==='timer'){startQuickGameSetup(type);return;}if(type==='sort'){startNumberSortSetup();return;}if(type==='connect'){showConnect4Setup();return;}if(type==='word'){showWordSetup();return;}if(type==='match'||type==='number'){startCasualSetup(type);return;}showMiniGameInstructions(type);};
+  card.onclick=()=>{if(type==='timer'){startQuickGameSetup(type);return;}if(type==='sort'){startNumberSortSetup();return;}if(type==='connect'){showConnect4Setup();return;}if(type==='word'){showWordSetup();return;}if(type==='match'||type==='number'){startCasualSetup(type);return;}showMiniGameInstructions(type);};
   pageContent.appendChild(card);
  });
 }
@@ -1096,7 +1096,7 @@ document.getElementById('back-home').onclick=showHome;
   if(casualStartParam.startsWith('sort_')){
     startNumberSortGame(casualStartParam);
   }
-  else if(casualStartParam.startsWith('quick_cups_')||casualStartParam.startsWith('quick_timer_')){startQuickGame(casualStartParam);}
+  else if(casualStartParam.startsWith('quick_timer_')){startQuickGame(casualStartParam);}
   else if(casualStartParam.startsWith('casual_match_')||casualStartParam.startsWith('casual_number_')){
     startCasualGame(casualStartParam);
   }

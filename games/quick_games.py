@@ -13,20 +13,13 @@ def _public(r, uid):
     return out
 
 async def create_game(uid,name,game_type,mode="online",settings=None,bot_name="البوت"):
-    if game_type not in ("cups","timer") or mode not in ("online","bot"): raise ValueError("إعدادات اللعبة غير صالحة")
+    if game_type != "timer" or mode not in ("online","bot"): raise ValueError("هذه اللعبة غير متاحة")
     settings=dict(settings or {})
-    if game_type=="cups":
-        cups=int(settings.get("cups",6))
-        if not 3<=cups<=12: raise ValueError("عدد الأكواب من 3 إلى 12")
-        difficulty=settings.get("difficulty","متوسط")
-        if difficulty not in ("سهل","متوسط","صعب","مستحيل"): raise ValueError("مستوى الصعوبة غير صالح")
-        settings={"cups":cups,"difficulty":difficulty}
-    else:
-        target=int(settings.get("win_target",5))
-        if not 1<=target<=20: raise ValueError("النقاط المطلوبة من 1 إلى 20")
-        difficulty=settings.get("difficulty","متوسط")
-        if difficulty not in ("سهل","متوسط","صعب","مستحيل"): raise ValueError("مستوى الصعوبة غير صالح")
-        settings={"win_target":target,"difficulty":difficulty}
+    target=int(settings.get("win_target",5))
+    if not 1<=target<=20: raise ValueError("النقاط المطلوبة من 1 إلى 20")
+    difficulty=settings.get("difficulty","متوسط")
+    if difficulty not in ("سهل","متوسط","صعب","مستحيل"): raise ValueError("مستوى الصعوبة غير صالح")
+    settings={"win_target":target,"difficulty":difficulty}
     uid=int(uid); players=[{"id":uid,"name":str(name or "لاعب")[:80]}]
     if mode=="bot": players.append({"id":-1,"name":str(bot_name or "البوت")[:80],"bot":True})
     state={"round":1,"phase":"waiting","scores":{str(p["id"]):0 for p in players},"active_players":[int(p["id"]) for p in players],"choices":{},"stops":{},"results":[],"eliminated":[]}
@@ -41,6 +34,7 @@ async def join_game(uid,name,raw):
       async with c.transaction():
         r=await c.fetchrow("SELECT * FROM quick_game_rooms WHERE id=$1 FOR UPDATE",gid)
         if not r: raise ValueError("الغرفة غير موجودة")
+        if r["game_type"]!="timer": raise ValueError("هذه اللعبة لم تعد متاحة")
         p=_j(r["players"])
         if r["status"]=="waiting" and not any(int(x["id"])==int(uid) for x in p):
             if len(p)>=4: raise ValueError("الغرفة مكتملة، الحد الأقصى 4 لاعبين")
@@ -56,14 +50,10 @@ async def configure_game(uid,raw,settings):
         r=await c.fetchrow("SELECT * FROM quick_game_rooms WHERE id=$1 FOR UPDATE",gid)
         if not r or int(r["owner_id"])!=int(uid) or r["status"]!="waiting": raise ValueError("لا يمكن تعديل الإعدادات")
         s=_j(r["settings"])
-        if r["game_type"]=="cups":
-            n=int(settings.get("cups",s["cups"])); d=settings.get("difficulty",s["difficulty"])
-            if not 3<=n<=12 or d not in ("سهل","متوسط","صعب","مستحيل"): raise ValueError("إعدادات الأكواب غير صالحة")
-            s.update({"cups":n,"difficulty":d})
-        else:
-            n=int(settings.get("win_target",s["win_target"]))
-            if not 1<=n<=20: raise ValueError("النقاط المطلوبة من 1 إلى 20")
-            s["win_target"]=n
+        if r["game_type"]!="timer": raise ValueError("هذه اللعبة لم تعد متاحة")
+        n=int(settings.get("win_target",s["win_target"]))
+        if not 1<=n<=20: raise ValueError("النقاط المطلوبة من 1 إلى 20")
+        s["win_target"]=n
         r=await c.fetchrow("UPDATE quick_game_rooms SET settings=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,json.dumps(s,ensure_ascii=False))
     return _public(r,uid)
 
@@ -75,17 +65,12 @@ async def start_game(uid,raw):
         if not r or int(r["owner_id"])!=int(uid) or r["status"]!="waiting": raise ValueError("لا يمكن بدء الغرفة")
         p=_j(r["players"])
         if len(p)<2: raise ValueError("تحتاج لاعبين على الأقل")
-        st=_j(r["state"]); st["phase"]="show_target" if r["game_type"]=="timer" else "shuffle"
-        st["round_started"]=time.time(); st["deadline"]=time.time()+4 if r["game_type"]=="timer" else time.time()+8.5
-        if r["game_type"]=="timer": st["target_ms"]=random.randint(5000,90000)
-        else:
-            st["ball_index"]=random.randrange(int(_j(r["settings"])["cups"]))
-            st["ball_start"]=st["ball_index"]
-            st["shuffle"]=[{"a":random.randrange(int(_j(r["settings"])["cups"])),"b":random.randrange(int(_j(r["settings"])["cups"]))} for _ in range(18 if _j(r["settings"])["difficulty"] in ("صعب","مستحيل") else 12)]
-            perm=list(range(int(_j(r["settings"])["cups"])))
-            for move in st["shuffle"]: perm[move["a"]],perm[move["b"]]=perm[move["b"]],perm[move["a"]]
-            st["ball_index"]=perm.index(st["ball_index"])
-            st["choices"]={}
+        if r["game_type"]!="timer": raise ValueError("هذه اللعبة غير متاحة")
+        now=time.time()
+        st=_j(r["state"]); st["phase"]="show_target"
+        st["round_started"]=now; st["started_at"]=None; st["deadline"]=now+4
+        st["target_ms"]=random.randint(5000,40000)
+        st["stops"]={}; st["results"]=[]; st["eliminated"]=[]
         r=await c.fetchrow("UPDATE quick_game_rooms SET status='playing',state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,json.dumps(st,ensure_ascii=False))
     return _public(r,uid)
 
@@ -106,6 +91,7 @@ async def game_action(uid,raw,move):
         if not r or r["status"]!="playing": raise ValueError("اللعبة غير متاحة")
         p,st,s=_j(r["players"]),_j(r["state"]),_j(r["settings"]); me=int(uid); ids=[int(x["id"]) for x in p]
         if me not in ids: raise ValueError("أنت لست لاعبًا في الغرفة")
+        if r["game_type"]!="timer": raise ValueError("هذه اللعبة لم تعد متاحة")
         if r["game_type"]=="cups":
             if st.get("phase")!="choose": raise ValueError("انتظر انتهاء خلط الأكواب")
             idx=int(move.get("cup",-1))
@@ -142,6 +128,7 @@ async def game_action(uid,raw,move):
         else:
             if st.get("phase")!="playing": raise ValueError("انتظر بداية العد")
             if me not in st["active_players"] or str(me) in st["stops"]: raise ValueError("تم تسجيل إيقافك")
+            if now<float(st.get("started_at") or now): raise ValueError("لم يبدأ الوقت بعد")
             elapsed=int((now-float(st["started_at"]))*1000)
             target=int(st["target_ms"])
             if elapsed>target+30000:
@@ -182,7 +169,7 @@ async def get_state(uid,raw):
                     d=s["difficulty"]; st["choices"]={"-1":st["ball_index"] if random.random()<{"سهل":.25,"متوسط":.5,"صعب":.75,"مستحيل":.92}[d] else random.randrange(s["cups"])}
                 r=await c.fetchrow("UPDATE quick_game_rooms SET state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,json.dumps(st,ensure_ascii=False))
             elif r["game_type"]=="timer" and st.get("phase")=="show_target" and now>=float(st.get("deadline",0)):
-                st["phase"]="playing";st["started_at"]=now;st["deadline"]=now+int(st["target_ms"])/1000+30
+                st["phase"]="playing";st["started_at"]=float(st["deadline"]);st["deadline"]=st["started_at"]+int(st["target_ms"])/1000+30
                 r=await c.fetchrow("UPDATE quick_game_rooms SET state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,json.dumps(st,ensure_ascii=False))
             elif r["game_type"]=="timer" and st.get("phase")=="playing" and now>=float(st.get("deadline",0)):
                 for x in st["active_players"]:
@@ -190,7 +177,7 @@ async def get_state(uid,raw):
                 st["phase"]="results";st["results"]=[{"id":int(x["id"]),"name":x["name"],"elapsed_ms":st["stops"].get(str(x["id"])),"difference_ms":abs(int(st["stops"][str(x["id"])])-int(st["target_ms"])) if st["stops"].get(str(x["id"])) is not None else None,"score":int(st["scores"].get(str(x["id"]),0))} for x in p]
                 r=await c.fetchrow("UPDATE quick_game_rooms SET state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,json.dumps(st,ensure_ascii=False))
             elif r["game_type"]=="timer" and st.get("phase")=="results" and now>=float(st.get("deadline",0)):
-                st["round"]+=1;st["phase"]="show_target";st["target_ms"]=random.randint(5000,90000);st["stops"]={};st["eliminated"]=[]
+                st["round"]+=1;st["phase"]="show_target";st["target_ms"]=random.randint(5000,40000);st["stops"]={};st["eliminated"]=[]
                 st["deadline"]=now+4;st["started_at"]=None
                 r=await c.fetchrow("UPDATE quick_game_rooms SET state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,json.dumps(st,ensure_ascii=False))
     return _public(r,uid)
