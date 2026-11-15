@@ -133,6 +133,20 @@ def handle_mini_app_request(handler):
         handler.end_headers()
         handler.wfile.write(body)
         return True
+    if path == "/mini_app/quick-games.js":
+        file_path = WEB_ROOT / "quick-games.js"
+        try:
+            body = file_path.read_bytes()
+        except OSError:
+            handler.send_error(404, "Quick games script not found")
+            return True
+        handler.send_response(200)
+        handler.send_header("Content-Type", "application/javascript; charset=utf-8")
+        handler.send_header("Cache-Control", "public, max-age=300")
+        handler.send_header("Content-Length", str(len(body)))
+        handler.end_headers()
+        handler.wfile.write(body)
+        return True
     if path == "/mini_app/number-sort.js":
         file_path = WEB_ROOT / "number-sort.js"
         try:
