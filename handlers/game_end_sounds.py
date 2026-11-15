@@ -15,10 +15,13 @@ def _scope_keyboard():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🌐 لكل الألعاب", callback_data="gamesound:scope:all")],
         [InlineKeyboardButton("🎮 لعبة معينة", callback_data="gamesound:choose")],
+        [InlineKeyboardButton("🔇 إزالة صوت كل الألعاب", callback_data="gamesound:remove:all")],
+        [InlineKeyboardButton("🗑️ إزالة صوت لعبة معينة", callback_data="gamesound:remove:choose")],
         [InlineKeyboardButton("إلغاء", callback_data="gamesound:cancel")],
     ])
-def _games_keyboard():
-    rows = [[InlineKeyboardButton(label, callback_data=f"gamesound:game:{key}")] for key,label in GAMES]
+def _games_keyboard(remove=False):
+    action = "removegame" if remove else "game"
+    rows = [[InlineKeyboardButton(label, callback_data=f"gamesound:{action}:{key}")] for key,label in GAMES]
     rows.append([InlineKeyboardButton("↩️ رجوع", callback_data="gamesound:menu")])
     return InlineKeyboardMarkup(rows)
 async def game_end_sound_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -39,6 +42,13 @@ async def game_end_sound_callback(update: Update, context: ContextTypes.DEFAULT_
         await q.edit_message_text("اختر نوع التخصيص:",reply_markup=_scope_keyboard())
     elif data=="gamesound:choose":
         await q.edit_message_text("اختر اللعبة التي تبي تخصص صوتها:",reply_markup=_games_keyboard())
+    elif data=="gamesound:remove:choose":
+        await q.edit_message_text("اختر اللعبة التي تبي إزالة صوت الفوز منها:",reply_markup=_games_keyboard(remove=True))
+    elif data=="gamesound:remove:all" or data.startswith("gamesound:removegame:"):
+        scope="all" if data=="gamesound:remove:all" else data.split(":",2)[2]
+        result=await get_pool().execute("DELETE FROM game_end_sounds WHERE scope_key=$1",scope)
+        label="كل الألعاب" if scope=="all" else dict(GAMES).get(scope,"اللعبة المحددة")
+        await q.edit_message_text(f"تمت إزالة صوت الفوز من «{label}» 🔇\nستعمل اللعبة بدون صوت إلا إذا كان لها صوت عام أو خاص آخر.",reply_markup=_scope_keyboard())
     elif data.startswith("gamesound:scope:") or data.startswith("gamesound:game:"):
         scope="all" if data.startswith("gamesound:scope:") else data.split(":",2)[2]
         SESSIONS[uid]={"scope":scope,"step":"media"}
