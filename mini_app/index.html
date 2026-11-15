@@ -420,7 +420,7 @@ function startGameEndCountdown(key,soundReady){
   if(!document.body.contains(layer))return;
   number.textContent=String(remaining);
   if(remaining===1){
-   gameEndCountdownTimer=setTimeout(()=>{gameEndCountdownTimer=null;layer.remove();if(tg&&typeof tg.close==='function')tg.close();else showHome();},1000);
+   gameEndCountdownTimer=setTimeout(()=>{gameEndCountdownTimer=null;try{if(sound)sound.pause();}catch(e){}layer.remove();if(tg&&typeof tg.close==='function')tg.close();else showHome();},1000);
   }else{remaining-=1;gameEndCountdownTimer=setTimeout(tick,1000);}
  };
  Promise.resolve(soundReady).then(audio=>{
@@ -434,7 +434,6 @@ function startGameEndCountdown(key,soundReady){
     if(playback&&playback.catch)playback.catch(()=>{});
     // Play once from the beginning; short media ends naturally.
     // Long media is stopped at the end of the five-second countdown.
-    gameEndCountdownTimer=setTimeout(()=>{try{sound.pause();}catch(e){}},5000);
    }catch(e){}
   }
   if(document.body.contains(layer))tick();
