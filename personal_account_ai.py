@@ -53,9 +53,17 @@ def _profile_kind(text: str):
         return "avatar", max(1, int(match.group(1))) if match else 1
     if any(term in normalized for term in ("معلوماته", "معلومات حسابه", "بياناته")):
         return "info", None
-    if any(term in normalized for term in ("بايوه", "بايو", "نبذته", "نبذته التعريفية")):
+    if any(term in normalized for term in (
+        "بايوه", "بايوها", "بايوه", "بايوي", "بايو حقي", "بايو حسابي",
+        "البايو", "نبذته", "نبذته التعريفية", "نبذتي", "بايو"
+    )):
         return "bio", None
-    if any(term in normalized for term in ("يوزره", "معرفه", "اليوزر", "username")):
+    if any(term in normalized for term in (
+        "يوزره", "يوزراته", "يوزراتها", "يوزري", "يوزراتي",
+        "يوزر حقي", "يوزر حسابي", "يوزرات", "اليوزر", "يوزر",
+        "معرفه", "معرفاته", "معرفي", "معرفاتي", "المعرف", "المعرفات",
+        "username"
+    )):
         return "username", None
     if any(term in normalized for term in ("اسمه", "اسم حسابه")):
         return "name", None
@@ -68,16 +76,25 @@ def _display_name(user, chat=None) -> str:
     return " ".join(x.strip() for x in (first, last) if x and x.strip()) or "غير معروف"
 
 
+def _usernames(user, chat=None) -> list[str]:
+    values = []
+    primary = getattr(user, "username", None) or getattr(chat, "username", None)
+    if primary:
+        values.append(str(primary).lstrip("@"))
+
+    for source in (getattr(user, "usernames", None), getattr(chat, "usernames", None)):
+        for item in source or []:
+            value = getattr(item, "username", None) or (item if isinstance(item, str) else None)
+            if value:
+                value = str(value).lstrip("@")
+                if value not in values:
+                    values.append(value)
+    return values
+
+
 def _username(user, chat=None) -> str | None:
-    value = getattr(user, "username", None) or getattr(chat, "username", None)
-    if value:
-        return str(value).lstrip("@")
-    usernames = getattr(user, "usernames", None) or getattr(chat, "usernames", None) or []
-    for item in usernames:
-        value = getattr(item, "username", None) or (item if isinstance(item, str) else None)
-        if value:
-            return str(value).lstrip("@")
-    return None
+    values = _usernames(user, chat)
+    return values[0] if values else None
 
 
 def _profile_button(user_id: int, username: str | None):
@@ -104,31 +121,37 @@ async def _fetch_profile(client, user_id: int):
 async def _handle_profile(client, message, kind: str, value):
     replied = getattr(message, "reply_to_message", None)
     target = getattr(replied, "from_user", None) if replied else None
+    # Without a reply, profile commands refer to the connected personal account.
     if target is None:
-        await message.reply_text("رد على رسالة الشخص أول، وبعدها اكتب الأمر.")
-        return
+        target = await client.get_me()
 
     target_id = int(target.id)
     user, chat = await _fetch_profile(client, target_id)
     user = user or target
     display_name = _display_name(user, chat)
-    username = _username(user, chat)
+    usernames = _usernames(user, chat)
+    username = usernames[0] if usernames else None
     keyboard = _profile_button(target_id, username)
 
     if kind == "avatar":
         index = int(value or 1)
         try:
-            # This PyrogramMod build does not accept the offset argument.
-            # Fetch up to the requested position; Telegram returns newest photos first.
-            if index > 100:
-                await message.reply_text("أقدر أجيب الصور من 1 إلى 100 فقط.")
-                return
-            photos = await client.get_chat_photos(target_id, limit=index)
-            if len(photos) < index:
+            # get_chat_photos is an async generator in PyrogramMod.
+            # Its iterator paginates through Telegram photos, so indices above 100 work too.
+            selected_photo = None
+            count = 0
+            async for photo in client.get_chat_photos(target_id, limit=index):
+                count += 1
+                if count == index:
+                    selected_photo = photo
+                    break
+
+            if selected_photo is None:
                 await message.reply_text(f"ما لقيت الصورة رقم {index} لهذا الحساب.")
                 return
+
             await message.reply_photo(
-                photos[index - 1].file_id,
+                selected_photo.file_id,
                 caption=f"افتاره رقم {index} — {display_name}",
                 reply_markup=keyboard,
             )
@@ -138,7 +161,7 @@ async def _handle_profile(client, message, kind: str, value):
         return
 
     bio = str(getattr(chat, "bio", None) or getattr(user, "bio", None) or "").strip()
-    username_text = f"@{username}" if username else "ما عنده يوزر"
+    username_text = "\n".join(f"@{item}" for item in usernames) if usernames else "ما عنده يوزر"
 
     if kind == "name":
         text = f"الاسم: {display_name}"
