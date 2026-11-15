@@ -86,6 +86,15 @@ async def start_music_call():
         await _calls.start()
         _started = True
 
+        # Personal-account commands and AI run on this same Telegram session.
+        try:
+            from personal_account_ai import register_personal_account_handlers
+            register_personal_account_handlers(_client)
+        except Exception:
+            print("[PERSONAL AI] Failed to register personal-account handlers.")
+            import traceback
+            traceback.print_exc()
+
         print("[MUSIC] Second Telegram account connected successfully.")
         return True
 
