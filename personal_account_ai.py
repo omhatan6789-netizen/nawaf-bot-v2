@@ -97,10 +97,12 @@ def _username(user, chat=None) -> str | None:
     return values[0] if values else None
 
 
-def _profile_button(user_id: int, username: str | None):
-    url = f"https://t.me/{username}" if username else f"tg://user?id={user_id}"
+def _profile_button(user_id: int, display_name: str, username: str | None):
+    # Open the exact Telegram account, including accounts without a username.
+    url = f"tg://user?id={user_id}"
+    label = (display_name or "فتح الحساب").strip()[:64]
     return InlineKeyboardMarkup(
-        [[InlineKeyboardButton("أونلاين", url=url)]]
+        [[InlineKeyboardButton(label, url=url)]]
     )
 
 
@@ -131,7 +133,7 @@ async def _handle_profile(client, message, kind: str, value):
     display_name = _display_name(user, chat)
     usernames = _usernames(user, chat)
     username = usernames[0] if usernames else None
-    keyboard = _profile_button(target_id, username)
+    keyboard = _profile_button(target_id, display_name, username)
 
     if kind == "avatar":
         index = int(value or 1)
