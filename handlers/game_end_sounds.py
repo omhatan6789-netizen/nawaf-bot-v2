@@ -46,9 +46,16 @@ async def game_end_sound_callback(update: Update, context: ContextTypes.DEFAULT_
         await q.edit_message_text("اختر اللعبة التي تبي إزالة صوت الفوز منها:",reply_markup=_games_keyboard(remove=True))
     elif data=="gamesound:remove:all" or data.startswith("gamesound:removegame:"):
         scope="all" if data=="gamesound:remove:all" else data.split(":",2)[2]
-        result=await get_pool().execute("DELETE FROM game_end_sounds WHERE scope_key=$1",scope)
+        if scope=="all":
+            await get_pool().execute("DELETE FROM game_end_sounds")
+        else:
+            await get_pool().execute(
+                """INSERT INTO game_end_sounds(scope_key,file_id,mime_type,media_kind,muted,updated_by,updated_at)
+                   VALUES($1,'','audio/mpeg','audio',TRUE,$2,NOW())
+                   ON CONFLICT(scope_key) DO UPDATE SET muted=TRUE,updated_by=EXCLUDED.updated_by,updated_at=NOW()""",
+                scope,uid)
         label="كل الألعاب" if scope=="all" else dict(GAMES).get(scope,"اللعبة المحددة")
-        await q.edit_message_text(f"تمت إزالة صوت الفوز من «{label}» 🔇\nستعمل اللعبة بدون صوت إلا إذا كان لها صوت عام أو خاص آخر.",reply_markup=_scope_keyboard())
+        await q.edit_message_text(f"تمت إزالة صوت الفوز من «{label}» 🔇\nلن يعمل أي صوت لهذه اللعبة.",reply_markup=_scope_keyboard())
     elif data.startswith("gamesound:scope:") or data.startswith("gamesound:game:"):
         scope="all" if data.startswith("gamesound:scope:") else data.split(":",2)[2]
         SESSIONS[uid]={"scope":scope,"step":"media"}
@@ -71,10 +78,10 @@ async def game_end_sound_message(update: Update, context: ContextTypes.DEFAULT_T
     mime=getattr(media,"mime_type",None) or ("video/mp4" if msg.video else "audio/ogg" if msg.voice else "audio/mpeg")
     scope=session["scope"]
     await get_pool().execute(
-      """INSERT INTO game_end_sounds(scope_key,file_id,mime_type,media_kind,updated_by,updated_at)
-         VALUES($1,$2,$3,$4,$5,NOW()) ON CONFLICT(scope_key) DO UPDATE SET
+      """INSERT INTO game_end_sounds(scope_key,file_id,mime_type,media_kind,muted,updated_by,updated_at)
+         VALUES($1,$2,$3,$4,FALSE,$5,NOW()) ON CONFLICT(scope_key) DO UPDATE SET
          file_id=EXCLUDED.file_id,mime_type=EXCLUDED.mime_type,media_kind=EXCLUDED.media_kind,
-         updated_by=EXCLUDED.updated_by,updated_at=NOW()""",
+         muted=FALSE,updated_by=EXCLUDED.updated_by,updated_at=NOW()""",
       scope,media.file_id,mime,"video" if mime.startswith("video/") or msg.video else "audio",user.id)
     SESSIONS.pop(user.id,None)
     label="كل الألعاب" if scope=="all" else dict(GAMES).get(scope,"اللعبة المحددة")
