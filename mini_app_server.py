@@ -455,7 +455,7 @@ def handle_connect4_post(handler):
             uid = int(user["id"])
             name = " ".join(x for x in (user.get("first_name"), user.get("last_name")) if x) or user.get("username") or "مستخدم"
             if action == "create":
-                result = _run(ns.create_game(uid, name, payload.get("mode", "bot"), payload.get("size", 3), payload.get("duration", 60)))
+                result = _run(ns.create_game(uid, name, payload.get("mode", "bot"), payload.get("size", 3), payload.get("duration", 60), payload.get("difficulty", "متوسط")))
             elif action == "join":
                 result = _run(ns.join_game(uid, name, payload.get("game_id", "")))
             elif action == "configure":

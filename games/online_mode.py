@@ -66,6 +66,7 @@ async def online_image_add_start(update: Update, context: ContextTypes.DEFAULT_T
         [InlineKeyboardButton("خمن الكلمة 🔤", callback_data="online_image:word")],
         [InlineKeyboardButton("تطابق البطاقات 🃏", callback_data="online_image:match")],
         [InlineKeyboardButton("خمن الرقم 🔢", callback_data="online_image:number")],
+        [InlineKeyboardButton("ترتيب الأرقام 🔢", callback_data="online_image:sort")],
     ])
     await message.reply_text("اختر اللعبة التي تريد إضافة صورتها، وبعدها أرسل الصورة:", reply_markup=keyboard)
 

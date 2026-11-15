@@ -92,8 +92,9 @@ async def get_background_file():
     return await get_pool().fetchval("SELECT background_file_id FROM number_sort_settings WHERE id=1")
 
 
-async def create_game(user_id, name, mode, size, duration):
+async def create_game(user_id, name, mode, size, duration, difficulty="متوسط"):
     if mode not in ("bot", "online"): raise ValueError("طريقة اللعب غير صحيحة")
+    if difficulty not in ("سهل", "متوسط", "صعب"): raise ValueError("اختر مستوى سهل أو متوسط أو صعب")
     size, duration = int(size), int(duration)
     if size not in SIZES: raise ValueError("اختر لوحة 3×3 أو 4×4 أو 5×5")
     if not 30 <= duration <= 420: raise ValueError("مدة القيم من 30 ثانية إلى 7 دقائق")
@@ -108,7 +109,7 @@ async def create_game(user_id, name, mode, size, duration):
         """INSERT INTO number_sort_rooms(id,owner_id,mode,status,players,settings,state)
            VALUES($1,$2,$3,$4,$5::jsonb,$6::jsonb,$7::jsonb) RETURNING *""",
         gid, uid, mode, status, json.dumps(players, ensure_ascii=False),
-        json.dumps({"size": size, "duration": duration}, ensure_ascii=False),
+        json.dumps({"size": size, "duration": duration, "difficulty": difficulty if mode == "bot" else "متوسط"}, ensure_ascii=False),
         json.dumps(state, ensure_ascii=False))
     return _public(row, uid)
 
@@ -244,17 +245,50 @@ async def bot_move(user_id, raw_id):
             if not bot: return _public(row, uid)
             board, size = bot["board"], int(settings["size"])
             blank = board.index(0); r, col = divmod(blank, size)
-            opts = []
+            options = []
+            previous_blank = bot.get("previous_blank")
             for idx in (blank-size, blank+size, blank-1, blank+1):
                 if idx < 0 or idx >= len(board): continue
                 rr, cc = divmod(idx, size)
-                if abs(rr-r)+abs(cc-col) != 1: continue
+                if abs(rr-r)+abs(cc-col) != 1 or idx == previous_blank: continue
                 candidate = board[:]; candidate[blank], candidate[idx] = candidate[idx], candidate[blank]
                 distance = sum(abs((v-1)//size-i//size)+abs((v-1)%size-i%size)
                                for i,v in enumerate(candidate) if v)
-                opts.append((distance, random.random(), candidate))
-            if opts:
-                bot["board"] = min(opts, key=lambda x: (x[0], x[1]))[2]
+                options.append((distance, random.random(), idx, candidate))
+            difficulty = settings.get("difficulty", "متوسط")
+            chosen = None
+            if options and difficulty == "سهل":
+                chosen = random.choice(options)
+            elif options and difficulty == "متوسط":
+                chosen = min(options, key=lambda x: (x[0], x[1]))
+            elif options:
+                beam = [(board, blank, previous_blank, [])]
+                for _depth in range(5):
+                    expanded = []
+                    for current, empty, prev, path in beam:
+                        er, ec = divmod(empty, size)
+                        for idx in (empty-size, empty+size, empty-1, empty+1):
+                            if idx < 0 or idx >= len(current): continue
+                            ir, ic = divmod(idx, size)
+                            if abs(er-ir)+abs(ec-ic) != 1 or idx == prev: continue
+                            candidate = current[:]
+                            candidate[empty], candidate[idx] = candidate[idx], candidate[empty]
+                            score = sum(abs((v-1)//size-i//size)+abs((v-1)%size-i%size)
+                                        for i,v in enumerate(candidate) if v)
+                            expanded.append((score, random.random(), candidate, idx, empty, path + [idx]))
+                    if not expanded: break
+                    expanded.sort(key=lambda x: (x[0], x[1]))
+                    beam = [(x[2], x[3], x[4], x[5]) for x in expanded[:18]]
+                if beam:
+                    best = min(beam, key=lambda node: sum(
+                        abs((v-1)//size-i//size)+abs((v-1)%size-i%size)
+                        for i,v in enumerate(node[0]) if v
+                    ))
+                    first_index = best[3][0] if best[3] else None
+                    chosen = next((item for item in options if item[2] == first_index), None)
+            if chosen:
+                bot["board"] = chosen[3]
+                bot["previous_blank"] = blank
                 bot["moves"] = int(bot.get("moves", 0)) + 1
                 row = await c.fetchrow(
                     "UPDATE number_sort_rooms SET players=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",
