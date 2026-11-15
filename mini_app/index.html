@@ -1096,6 +1096,7 @@ document.getElementById('back-home').onclick=showHome;
   if(casualStartParam.startsWith('sort_')){
     startNumberSortGame(casualStartParam);
   }
+  else if(casualStartParam.startsWith('quick_cups_')||casualStartParam.startsWith('quick_timer_')){startQuickGame(casualStartParam);}
   else if(casualStartParam.startsWith('casual_match_')||casualStartParam.startsWith('casual_number_')){
     startCasualGame(casualStartParam);
   }
