@@ -404,7 +404,7 @@ function showGameEndOverlay({winnerName='',isDraw=false,title='',subtitle='',gam
    .then(r=>r.json()).then(data=>{if(data&&data.url){const audio=new Audio(data.url);audio.preload='auto';audio.load();return audio;}return null;}).catch(()=>null);
   gameEndCountdownTimer=setTimeout(()=>{gameEndCountdownTimer=null;startGameEndCountdown(key,soundReady);},3000);
  };
- gameEndCountdownTimer=setTimeout(()=>{gameEndCountdownTimer=null;displayResult();},2000);
+ displayResult();
 }
 function startGameEndCountdown(key,soundReady){
  if(!document.querySelector('.online-end-overlay'))return;
