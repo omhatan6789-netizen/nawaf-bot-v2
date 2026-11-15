@@ -272,7 +272,7 @@ async def personal_account_message(client, message):
 
     original = message.text.strip()
     match = re.match(
-        r"^\\s*نيوف(?:\\s*[,،:!؟\\-]\\s*|\\s+|$)([\\s\\S]*)$",
+        r"^\s*نيوف(?:\s*[,،:!؟\-]\s*|\s+|$)([\s\S]*)$",
         original,
         flags=re.IGNORECASE,
     )
