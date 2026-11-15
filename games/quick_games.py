@@ -5,7 +5,7 @@ from database.pool import get_pool
 def _j(v): return json.loads(v) if isinstance(v,str) else (v or {})
 def _public(r, uid):
     p,s,st=_j(r["players"]),_j(r["settings"]),_j(r["state"])
-    out={"id":r["id"].hex,"game_type":r["game_type"],"mode":r["mode"],"status":r["status"],"owner_id":int(r["owner_id"]),"is_owner":int(r["owner_id"])==int(uid),"players":p,"settings":s,"round":int(st.get("round",1)),"phase":st.get("phase","waiting"),"scores":st.get("scores",{}),"target_ms":st.get("target_ms") if st.get("phase") in ("show_target","results","finished") else None,"deadline":st.get("deadline"),"results":st.get("results",[]),"winner_id":st.get("winner_id"),"eliminated":st.get("eliminated",[]),"shuffle":st.get("shuffle",[]),"cups":s.get("cups",5),"difficulty":s.get("difficulty","متوسط"),"win_target":s.get("win_target",5)}
+    out={"id":r["id"].hex,"game_type":r["game_type"],"mode":r["mode"],"status":r["status"],"owner_id":int(r["owner_id"]),"is_owner":int(r["owner_id"])==int(uid),"players":p,"settings":s,"round":int(st.get("round",1)),"phase":st.get("phase","waiting"),"scores":st.get("scores",{}),"target_ms":st.get("target_ms") if st.get("phase") in ("show_target","results","finished") else None,"deadline":st.get("deadline"),"results":st.get("results",[]),"winner_id":st.get("winner_id"),"eliminated":st.get("eliminated",[]),"shuffle":st.get("shuffle",[]),"ball_start":st.get("ball_start") if st.get("phase")=="shuffle" else None,"cups":s.get("cups",5),"difficulty":s.get("difficulty","متوسط"),"win_target":s.get("win_target",5)}
     me=str(uid)
     out["my_choice"]=st.get("choices",{}).get(me)
     out["my_elapsed_ms"]=st.get("stops",{}).get(me)
@@ -80,6 +80,7 @@ async def start_game(uid,raw):
         if r["game_type"]=="timer": st["target_ms"]=random.randint(5000,90000)
         else:
             st["ball_index"]=random.randrange(int(_j(r["settings"])["cups"]))
+            st["ball_start"]=st["ball_index"]
             st["shuffle"]=[{"a":random.randrange(int(_j(r["settings"])["cups"])),"b":random.randrange(int(_j(r["settings"])["cups"]))} for _ in range(18 if _j(r["settings"])["difficulty"] in ("صعب","مستحيل") else 12)]
             perm=list(range(int(_j(r["settings"])["cups"])))
             for move in st["shuffle"]: perm[move["a"]],perm[move["b"]]=perm[move["b"]],perm[move["a"]]
@@ -131,7 +132,7 @@ async def game_action(uid,raw,move):
                     await _finish(c,r,p,st)
                 else:
                     st["eliminated"]=[x["id"] for x in result if not x["correct"]]; st["active_players"]=alive; st["round"]+=1
-                    st["ball_index"]=random.randrange(s["cups"]); st["choices"]={}; st["phase"]="shuffle"; st["deadline"]=now+8.5
+                    st["ball_index"]=random.randrange(s["cups"]); st["ball_start"]=st["ball_index"]; st["choices"]={}; st["phase"]="shuffle"; st["deadline"]=now+8.5
                     st["shuffle"]=[{"a":random.randrange(s["cups"]),"b":random.randrange(s["cups"])} for _ in range(18 if s["difficulty"] in ("صعب","مستحيل") else 12)]
                     perm=list(range(s["cups"]))
                     for move in st["shuffle"]: perm[move["a"]],perm[move["b"]]=perm[move["b"]],perm[move["a"]]

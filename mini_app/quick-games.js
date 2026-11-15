@@ -53,8 +53,7 @@ async function animateCupShuffle(stage,state){
  const row=stage.querySelector("#cup-row"),ball=stage.querySelector("#cup-ball"),message=stage.querySelector("#cup-message");
  if(!row)return;
  const count=Number(state.cups)||6,steps=state.shuffle||[],cups=[...row.querySelectorAll(".red-cup")],atSlot=Array.from({length:count},(_,i)=>i);
- const finalBall=Number(state.ball_index??0);let initialBall=finalBall;
- for(let i=steps.length-1;i>=0;i--){const m=steps[i];if(initialBall===Number(m.a))initialBall=Number(m.b);else if(initialBall===Number(m.b))initialBall=Number(m.a);}
+ const initialBall=Number(state.ball_start??0);
  const slotWidth=row.getBoundingClientRect().width/count;
  const place=(cup,slot)=>{cup.style.left=((slot+.5)/count*100)+"%";cup.style.transform="translateX(-50%)";};
  cups.forEach((cup,i)=>place(cup,i));
