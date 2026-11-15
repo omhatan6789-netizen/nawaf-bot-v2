@@ -419,12 +419,26 @@ function startGameEndCountdown(key,soundReady){
  const tick=()=>{
   if(!document.body.contains(layer))return;
   number.textContent=String(remaining);
-  if(sound){try{sound.pause();sound.currentTime=0;const p=sound.play();if(p&&p.catch)p.catch(()=>{});}catch(e){}}
   if(remaining===1){
    gameEndCountdownTimer=setTimeout(()=>{gameEndCountdownTimer=null;layer.remove();if(tg&&typeof tg.close==='function')tg.close();else showHome();},1000);
   }else{remaining-=1;gameEndCountdownTimer=setTimeout(tick,1000);}
  };
- Promise.resolve(soundReady).then(audio=>{sound=audio;if(document.body.contains(layer))tick();}).catch(()=>{if(document.body.contains(layer))tick();});
+ Promise.resolve(soundReady).then(audio=>{
+  sound=audio;
+  if(document.body.contains(layer)&&sound){
+   try{
+    sound.loop=false;
+    sound.currentTime=0;
+    sound.preload='auto';
+    const playback=sound.play();
+    if(playback&&playback.catch)playback.catch(()=>{});
+    // Play once from the beginning; short media ends naturally.
+    // Long media is stopped at the end of the five-second countdown.
+    gameEndCountdownTimer=setTimeout(()=>{try{sound.pause();}catch(e){}},5000);
+   }catch(e){}
+  }
+  if(document.body.contains(layer))tick();
+ }).catch(()=>{if(document.body.contains(layer))tick();});
 }
 function showOnlineEndOverlay(gameType,gameId,resultText){
  const draw=String(resultText||'').includes('تعادل');
