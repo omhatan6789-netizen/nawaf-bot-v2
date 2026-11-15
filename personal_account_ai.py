@@ -23,6 +23,7 @@ from ai_assistant import (
     _gemini_chat,
     _get_time_answer,
     _history_key,
+    _is_prayer_question,
     _markdown_to_telegram_html,
     _needs_search,
     _now_makkah,
@@ -161,7 +162,7 @@ async def _handle_ai(client, message, question: str):
         await message.reply_text("سؤالك طويل جدًا؛ اختصره شوي وأرسله مرة ثانية.")
         return
 
-    if question.lower() in ("الو", "هلا", "السلام عليكم", "مرحبا", "يا هلا"):
+    if question.lower() in ("الو", "هلا", "هلا نيوف", "السلام عليكم", "مرحبا", "يا هلا"):
         await message.reply_text("هلا والله، كيف أقدر أخدمك؟")
         return
 
@@ -230,7 +231,7 @@ async def _handle_ai(client, message, question: str):
             )
 
     me = await client.get_me()
-    key = _history_key(f"personal:{message.chat.id}", me.id)
+    key = _history_key(message.chat.id, me.id)
     messages = [{
         "role": "system",
         "content": SYSTEM_PROMPT + "\nالوقت الحالي في مكة المكرمة: "
@@ -269,20 +270,28 @@ async def personal_account_message(client, message):
     if message.chat.type not in (ChatType.GROUP, ChatType.SUPERGROUP, ChatType.PRIVATE):
         return
 
-    text = message.text.strip()
-    profile = _profile_kind(text)
+    original = message.text.strip()
+    match = re.match(
+        r"^\\s*نيوف(?:\\s*[,،:!؟\\-]\\s*|\\s+|$)([\\s\\S]*)$",
+        original,
+        flags=re.IGNORECASE,
+    )
+    # Keep the personal account's AI trigger identical to the bot: every
+    # assistant command/question starts with "نيوف".
+    if not match:
+        return
+
+    question = (match.group(1) or "").strip() or "الو"
+
+    # Profile commands are part of the assistant command set and must be
+    # issued as a reply to the target user's message.
+    profile = _profile_kind(question)
     if profile:
         kind, value = profile
         await _handle_profile(client, message, kind, value)
         return
 
-    match = re.match(
-        r"^\s*نيوف(?:\s*[,،:!؟\-]\s*|\s+|$)([\s\S]*)$",
-        text,
-        flags=re.IGNORECASE,
-    )
-    if match:
-        await _handle_ai(client, message, match.group(1))
+    await _handle_ai(client, message, question)
 
 
 def register_personal_account_handlers(client):
