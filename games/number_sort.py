@@ -259,31 +259,70 @@ async def bot_move(user_id, raw_id):
             chosen = None
             if options and difficulty == "سهل":
                 chosen = random.choice(options)
-            elif options and difficulty == "متوسط":
-                chosen = min(options, key=lambda x: (x[0], x[1]))
             elif options:
+                # Medium keeps the previous hard AI. Hard searches much deeper
+                # and uses Manhattan distance plus linear-conflict penalties.
+                search_depth = 5 if difficulty == "متوسط" else 14
+                beam_width = 18 if difficulty == "متوسط" else 72
+
+                def heuristic(candidate):
+                    distance = 0
+                    for pos, value in enumerate(candidate):
+                        if not value:
+                            continue
+                        goal = value - 1
+                        row, col = divmod(pos, size)
+                        goal_row, goal_col = divmod(goal, size)
+                        distance += abs(row - goal_row) + abs(col - goal_col)
+
+                    conflicts = 0
+                    # Two tiles in their goal row but reversed order must
+                    # force at least two extra moves.
+                    for row in range(size):
+                        for left in range(size):
+                            a = candidate[row * size + left]
+                            if not a or (a - 1) // size != row:
+                                continue
+                            for right in range(left + 1, size):
+                                b = candidate[row * size + right]
+                                if b and (b - 1) // size == row and a > b:
+                                    conflicts += 1
+                    # Same rule for columns.
+                    for col in range(size):
+                        for top in range(size):
+                            a = candidate[top * size + col]
+                            if not a or (a - 1) % size != col:
+                                continue
+                            for bottom in range(top + 1, size):
+                                b = candidate[bottom * size + col]
+                                if b and (b - 1) % size == col and a > b:
+                                    conflicts += 1
+                    return distance + 2 * conflicts
+
                 beam = [(board, blank, previous_blank, [])]
-                for _depth in range(5):
+                for _depth in range(search_depth):
                     expanded = []
                     for current, empty, prev, path in beam:
                         er, ec = divmod(empty, size)
                         for idx in (empty-size, empty+size, empty-1, empty+1):
-                            if idx < 0 or idx >= len(current): continue
+                            if idx < 0 or idx >= len(current):
+                                continue
                             ir, ic = divmod(idx, size)
-                            if abs(er-ir)+abs(ec-ic) != 1 or idx == prev: continue
+                            if abs(er-ir)+abs(ec-ic) != 1 or idx == prev:
+                                continue
                             candidate = current[:]
                             candidate[empty], candidate[idx] = candidate[idx], candidate[empty]
-                            score = sum(abs((v-1)//size-i//size)+abs((v-1)%size-i%size)
-                                        for i,v in enumerate(candidate) if v)
+                            score = heuristic(candidate)
                             expanded.append((score, random.random(), candidate, idx, empty, path + [idx]))
-                    if not expanded: break
+                    if not expanded:
+                        break
                     expanded.sort(key=lambda x: (x[0], x[1]))
-                    beam = [(x[2], x[3], x[4], x[5]) for x in expanded[:18]]
+                    beam = [(x[2], x[3], x[4], x[5]) for x in expanded[:beam_width]]
+                    if any(heuristic(node[0]) == 0 for node in beam):
+                        break
+
                 if beam:
-                    best = min(beam, key=lambda node: sum(
-                        abs((v-1)//size-i//size)+abs((v-1)%size-i%size)
-                        for i,v in enumerate(node[0]) if v
-                    ))
+                    best = min(beam, key=lambda node: (heuristic(node[0]), random.random()))
                     first_index = best[3][0] if best[3] else None
                     chosen = next((item for item in options if item[2] == first_index), None)
             if chosen:
