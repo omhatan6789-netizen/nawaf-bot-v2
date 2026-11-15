@@ -128,7 +128,7 @@ async def game_action(uid,raw,move):
                     st["winner_id"]=alive[0] if alive else 0
                     st["phase"]="finished"; st["eliminated"]=[x["id"] for x in result if not x["correct"]]
                     r=await c.fetchrow("UPDATE quick_game_rooms SET status='finished',state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,json.dumps(st,ensure_ascii=False))
-                    if st["winner_id"]: await _finish(c,r,p,st)
+                    await _finish(c,r,p,st)
                 else:
                     st["eliminated"]=[x["id"] for x in result if not x["correct"]]; st["active_players"]=alive; st["round"]+=1
                     st["ball_index"]=random.randrange(s["cups"]); st["choices"]={}; st["phase"]="shuffle"; st["deadline"]=now+2
