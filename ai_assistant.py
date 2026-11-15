@@ -11,8 +11,10 @@ from telegram.ext import ContextTypes, ApplicationHandlerStop
 
 from database.pool import get_pool
 from urllib.parse import urlencode, parse_qs, urlparse
-from html import unescape
+from html import unescape, escape as html_escape
+from html.parser import HTMLParser
 import httpx
+from markdown_it import MarkdownIt
 
 OWNER_ID = 8453977662
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
@@ -390,6 +392,129 @@ async def _gemini_chat(messages):
         raise RuntimeError("وصل رد فارغ من Gemini.")
     return content[:3800]
 
+
+_MARKDOWN = MarkdownIt("commonmark", {"html": False}).enable(["table", "strikethrough"])
+
+
+class _TelegramHTMLRenderer(HTMLParser):
+    """Convert MarkdownIt HTML into the safe subset supported by Telegram."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.parts = []
+        self.in_pre = False
+        self.table_cells = []
+
+    def handle_data(self, data):
+        self.parts.append(html_escape(data, quote=False))
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if tag in ("strong", "b"):
+            self.parts.append("<b>")
+        elif tag in ("em", "i"):
+            self.parts.append("<i>")
+        elif tag in ("del", "s", "strike"):
+            self.parts.append("<s>")
+        elif tag in ("u", "ins"):
+            self.parts.append("<u>")
+        elif tag == "code":
+            if self.in_pre:
+                lang = ""
+                for key, value in attrs.items():
+                    if key == "class" and value and value.startswith("language-"):
+                        lang = value[len("language-"):]
+                        break
+                self.parts.append(f'<code class="language-{html_escape(lang, quote=True)}">' if lang else "<code>")
+            else:
+                self.parts.append("<code>")
+        elif tag == "pre":
+            self.in_pre = True
+            self.parts.append("<pre>")
+        elif tag == "a":
+            href = attrs.get("href", "")
+            if href.startswith(("https://", "http://", "tg://", "mailto:")):
+                self.parts.append(f'<a href="{html_escape(href, quote=True)}">')
+            else:
+                self.parts.append("")
+        elif tag == "blockquote":
+            self.parts.append("<blockquote>")
+        elif tag in ("p", "h1", "h2", "h3", "h4", "h5", "h6"):
+            if tag.startswith("h"):
+                self.parts.append("<b>")
+        elif tag == "li":
+            self.parts.append("• ")
+        elif tag == "br":
+            self.parts.append("\n")
+        elif tag == "hr":
+            self.parts.append("\n────────\n")
+        elif tag == "tr":
+            self.table_cells.append(0)
+        elif tag in ("td", "th"):
+            if self.table_cells and self.table_cells[-1]:
+                self.parts.append(" | ")
+            if self.table_cells:
+                self.table_cells[-1] += 1
+            if tag == "th":
+                self.parts.append("<b>")
+
+    def handle_endtag(self, tag):
+        close = {
+            "strong": "</b>", "b": "</b>",
+            "em": "</i>", "i": "</i>",
+            "del": "</s>", "s": "</s>", "strike": "</s>",
+            "u": "</u>", "ins": "</u>",
+            "a": "</a>", "blockquote": "</blockquote>",
+        }
+        if tag == "code":
+            self.parts.append("</code>")
+        elif tag == "pre":
+            self.parts.append("</pre>")
+            self.in_pre = False
+        elif tag in close:
+            self.parts.append(close[tag])
+        elif tag in ("p", "li", "tr"):
+            self.parts.append("\n")
+            if tag == "tr" and self.table_cells:
+                self.table_cells.pop()
+        elif tag in ("h1", "h2", "h3", "h4", "h5", "h6"):
+            self.parts.append("</b>\n")
+        elif tag == "th":
+            self.parts.append("</b>")
+
+    def result(self):
+        return "".join(self.parts).strip()
+
+
+def _markdown_to_telegram_html(markdown_text):
+    rendered = _MARKDOWN.render(str(markdown_text or ""))
+    parser = _TelegramHTMLRenderer()
+    parser.feed(rendered)
+    parser.close()
+    return parser.result()
+
+
+def _split_markdown_for_telegram(markdown_text, limit=3000):
+    """Keep Markdown blocks together where possible before formatting."""
+    blocks = str(markdown_text or "").split("\n\n")
+    chunks = []
+    current = ""
+    for block in blocks:
+        candidate = f"{current}\n\n{block}" if current else block
+        if len(candidate) <= limit:
+            current = candidate
+        else:
+            if current:
+                chunks.append(current)
+            while len(block) > limit:
+                chunks.append(block[:limit])
+                block = block[limit:]
+            current = block
+    if current:
+        chunks.append(current)
+    return chunks
+
+
 def _history_key(chat_id, user_id):
     return f"{chat_id}:{user_id}"
 
@@ -604,11 +729,22 @@ async def ai_assistant_message(
 
     _add_history(key, question, answer)
 
-    for start in range(0, len(answer), 3900):
-        await message.reply_text(
-            answer[start:start + 3900],
-            disable_web_page_preview=True,
-        )
+    for markdown_chunk in _split_markdown_for_telegram(answer):
+        formatted_chunk = _markdown_to_telegram_html(markdown_chunk)
+        try:
+            await message.reply_text(
+                formatted_chunk,
+                parse_mode="HTML",
+                disable_web_page_preview=True,
+            )
+        except Exception as exc:
+            # If an unusual Markdown construct produces invalid Telegram HTML,
+            # send the original text safely rather than losing the answer.
+            print(f"[AI] Telegram formatting fallback: {exc}")
+            await message.reply_text(
+                markdown_chunk[:3900],
+                disable_web_page_preview=True,
+            )
 
     raise ApplicationHandlerStop()
 
