@@ -5,7 +5,7 @@ from database.pool import get_pool
 def _j(v): return json.loads(v) if isinstance(v,str) else (v or {})
 def _public(r, uid):
     p,s,st=_j(r["players"]),_j(r["settings"]),_j(r["state"])
-    out={"id":r["id"].hex,"game_type":r["game_type"],"mode":r["mode"],"status":r["status"],"owner_id":int(r["owner_id"]),"is_owner":int(r["owner_id"])==int(uid),"players":p,"settings":s,"round":int(st.get("round",1)),"phase":st.get("phase","waiting"),"scores":st.get("scores",{}),"target_ms":st.get("target_ms") if st.get("phase")=="show_target" else None,"deadline":st.get("deadline"),"results":st.get("results",[]),"eliminated":st.get("eliminated",[]),"shuffle":st.get("shuffle",[]),"cups":s.get("cups",5),"difficulty":s.get("difficulty","متوسط"),"win_target":s.get("win_target",5)}
+    out={"id":r["id"].hex,"game_type":r["game_type"],"mode":r["mode"],"status":r["status"],"owner_id":int(r["owner_id"]),"is_owner":int(r["owner_id"])==int(uid),"players":p,"settings":s,"round":int(st.get("round",1)),"phase":st.get("phase","waiting"),"scores":st.get("scores",{}),"target_ms":st.get("target_ms") if st.get("phase") in ("show_target","results") else None,"deadline":st.get("deadline"),"results":st.get("results",[]),"eliminated":st.get("eliminated",[]),"shuffle":st.get("shuffle",[]),"cups":s.get("cups",5),"difficulty":s.get("difficulty","متوسط"),"win_target":s.get("win_target",5)}
     me=str(uid)
     out["my_choice"]=st.get("choices",{}).get(me)
     out["my_elapsed_ms"]=st.get("stops",{}).get(me)
@@ -24,7 +24,9 @@ async def create_game(uid,name,game_type,mode="online",settings=None,bot_name="�
     else:
         target=int(settings.get("win_target",5))
         if not 1<=target<=20: raise ValueError("النقاط المطلوبة من 1 إلى 20")
-        settings={"win_target":target}
+        difficulty=settings.get("difficulty","متوسط")
+        if difficulty not in ("سهل","متوسط","صعب","مستحيل"): raise ValueError("مستوى الصعوبة غير صالح")
+        settings={"win_target":target,"difficulty":difficulty}
     uid=int(uid); players=[{"id":uid,"name":str(name or "لاعب")[:80]}]
     if mode=="bot": players.append({"id":-1,"name":str(bot_name or "البوت")[:80],"bot":True})
     state={"round":1,"phase":"waiting","scores":{str(p["id"]):0 for p in players},"active_players":[int(p["id"]) for p in players],"choices":{},"stops":{},"results":[],"eliminated":[]}
@@ -79,6 +81,9 @@ async def start_game(uid,raw):
         else:
             st["ball_index"]=random.randrange(int(_j(r["settings"])["cups"]))
             st["shuffle"]=[{"a":random.randrange(int(_j(r["settings"])["cups"])),"b":random.randrange(int(_j(r["settings"])["cups"]))} for _ in range(18 if _j(r["settings"])["difficulty"] in ("صعب","مستحيل") else 12)]
+            perm=list(range(int(_j(r["settings"])["cups"])))
+            for move in st["shuffle"]: perm[move["a"]],perm[move["b"]]=perm[move["b"]],perm[move["a"]]
+            st["ball_index"]=perm.index(st["ball_index"])
             st["choices"]={}
         r=await c.fetchrow("UPDATE quick_game_rooms SET status='playing',state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,json.dumps(st,ensure_ascii=False))
     return _public(r,uid)
@@ -126,6 +131,9 @@ async def game_action(uid,raw,move):
                     st["eliminated"]=[x["id"] for x in result if not x["correct"]]; st["active_players"]=alive; st["round"]+=1
                     st["ball_index"]=random.randrange(s["cups"]); st["choices"]={}; st["phase"]="shuffle"; st["deadline"]=now+2
                     st["shuffle"]=[{"a":random.randrange(s["cups"]),"b":random.randrange(s["cups"])} for _ in range(18 if s["difficulty"] in ("صعب","مستحيل") else 12)]
+                    perm=list(range(s["cups"]))
+                    for move in st["shuffle"]: perm[move["a"]],perm[move["b"]]=perm[move["b"]],perm[move["a"]]
+                    st["ball_index"]=perm.index(st["ball_index"])
                     r=await c.fetchrow("UPDATE quick_game_rooms SET state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,json.dumps(st,ensure_ascii=False))
             else: r=await c.fetchrow("UPDATE quick_game_rooms SET state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,json.dumps(st,ensure_ascii=False))
         else:
