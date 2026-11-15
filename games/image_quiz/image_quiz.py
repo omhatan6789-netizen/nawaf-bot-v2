@@ -811,6 +811,19 @@ async def _update_board(
         reverse=True
     )
 
+    if winner_id is not None and winner_id in state.players:
+        winner = state.players[winner_id]
+        winners = [{"id": int(winner.user_id), "name": winner.name}]
+        losers = [
+            {"id": int(player.user_id), "name": player.name}
+            for player in players if int(player.user_id) != int(winner_id)
+        ]
+        from database.game_stats import record_game_results
+        await record_game_results(
+            f"image-quiz:{state.chat_id}:{state.board_message_id or state.image_message_id or state.current_round}",
+            "image_quiz", winners, losers,
+        )
+
     lines = [
         "🖼️ *توقع الصورة*",
         ""

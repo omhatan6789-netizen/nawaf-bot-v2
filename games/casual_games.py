@@ -66,6 +66,40 @@ def _expired(players, state, settings, game_type):
     _reset_deadline(state, settings)
     return True
 
+async def _record_finished(conn, row):
+    """Record every human participant when a casual game reaches finished."""
+    if not row or row.get("status") != "finished":
+        return
+    players, state = _obj(row["players"]), _obj(row["state"])
+    humans = [p for p in players if not p.get("bot") and int(p.get("id", 0)) > 0]
+    winners, losers = [], []
+    if row["game_type"] == "number":
+        winner_id = state.get("winner_id")
+        if winner_id is not None:
+            winners = [p for p in humans if int(p["id"]) == int(winner_id)]
+            losers = [p for p in humans if int(p["id"]) != int(winner_id)]
+        elif state.get("end_reason") == "attempts_exhausted":
+            losers = humans[:]
+    else:
+        winner_id = state.get("winner_id")
+        if winner_id is not None:
+            winners = [p for p in humans if int(p["id"]) == int(winner_id)]
+            losers = [p for p in humans if int(p["id"]) != int(winner_id)]
+        else:
+            scores = list(state.get("scores") or [])
+            if scores and players:
+                high = max(scores)
+                winning_indexes = {i for i, score in enumerate(scores) if score == high}
+                winners = [p for i, p in enumerate(players) if i in winning_indexes and not p.get("bot") and int(p.get("id", 0)) > 0]
+                losers = [p for i, p in enumerate(players) if i not in winning_indexes and not p.get("bot") and int(p.get("id", 0)) > 0]
+    withdrawn_id = state.get("withdrawn_id")
+    if withdrawn_id and int(withdrawn_id) > 0 and not any(int(p["id"]) == int(withdrawn_id) for p in humans):
+        losers.append({"id": int(withdrawn_id), "name": "منسحب"})
+    if winners or losers:
+        from database.game_stats import record_game_results
+        await record_game_results(f"casual:{row['id']}", str(row["game_type"]), winners, losers, conn=conn)
+
+
 def _public(row, uid):
     players = _obj(row["players"]); settings = _obj(row["settings"]); state = _obj(row["state"])
     result = {"id": row["id"].hex, "game_type": row["game_type"], "mode": row["mode"],
@@ -150,6 +184,7 @@ async def game_action(user_id, raw_id, action):
         if _expired(players, state, settings, row["game_type"]):
             status = "finished" if state.get("end_reason") else "playing"
             row=await c.fetchrow("UPDATE casual_game_rooms SET status=$2,state=$3::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,status,json.dumps(state,ensure_ascii=False))
+            await _record_finished(c, row)
             return _public(row,uid)
         if row["game_type"]=="match":
             if action.get("action") == "continue":
@@ -185,6 +220,7 @@ async def game_action(user_id, raw_id, action):
                     state["next_turn"]= (player_index+1)%len(players)
             if state["matched"]>=len(cards)//2:
                 row=await c.fetchrow("UPDATE casual_game_rooms SET status='finished',state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,json.dumps(state,ensure_ascii=False))
+                await _record_finished(c, row)
             else:
                 row=await c.fetchrow("UPDATE casual_game_rooms SET state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,json.dumps(state,ensure_ascii=False))
         else:
@@ -201,12 +237,14 @@ async def game_action(user_id, raw_id, action):
             if guess==state["secret"]:
                 state["winner_id"]=uid
                 row=await c.fetchrow("UPDATE casual_game_rooms SET status='finished',state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,json.dumps(state,ensure_ascii=False))
+                await _record_finished(c, row)
             else:
                 next_index = _next_number_player(players, state, settings, player_index) if row["mode"]=="online" else None
                 if row["mode"]=="online" and next_index is None:
                     state["winner_id"] = None
                     state["end_reason"] = "attempts_exhausted"
                     row=await c.fetchrow("UPDATE casual_game_rooms SET status='finished',state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,json.dumps(state,ensure_ascii=False))
+                    await _record_finished(c, row)
                 else:
                     if row["mode"]=="online": state["turn_index"]=next_index
                     _reset_deadline(state,settings)
@@ -263,6 +301,7 @@ async def bot_turn(user_id, raw_id):
             _reset_deadline(state, _obj(row["settings"]))
         status="finished" if state["matched"]>=len(cards)//2 else "playing"
         row=await c.fetchrow("UPDATE casual_game_rooms SET status=$2,state=$3::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,status,json.dumps(state,ensure_ascii=False))
+        await _record_finished(c, row)
     return _public(row,uid)
 async def get_state(user_id, raw_id):
     gid=uuid.UUID(hex=str(raw_id).replace("-","")); uid=int(user_id); pool=get_pool()
@@ -274,6 +313,7 @@ async def get_state(user_id, raw_id):
         if row["status"]=="playing" and _expired(players, state, _obj(row["settings"]), row["game_type"]):
             status = "finished" if state.get("end_reason") else "playing"
             row=await c.fetchrow("UPDATE casual_game_rooms SET status=$2,state=$3::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,status,json.dumps(state,ensure_ascii=False))
+            await _record_finished(c, row)
     return _public(row,uid)
 
 async def leave_game(user_id, raw_id):
@@ -306,6 +346,7 @@ async def leave_game(user_id, raw_id):
                 state["end_reason"] = "withdraw"
                 state["winner_id"] = int(players[0]["id"])
                 row=await c.fetchrow("UPDATE casual_game_rooms SET status='finished',players=$2::jsonb,state=$3::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,json.dumps(players,ensure_ascii=False),json.dumps(state,ensure_ascii=False))
+                await _record_finished(c, row)
             else:
                 _reset_deadline(state, _obj(row["settings"]))
                 row=await c.fetchrow("UPDATE casual_game_rooms SET players=$2::jsonb,state=$3::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,json.dumps(players,ensure_ascii=False),json.dumps(state,ensure_ascii=False))
@@ -314,6 +355,7 @@ async def leave_game(user_id, raw_id):
             winner=next((p for p in players if int(p["id"])!=uid),None)
             state["winner_id"]=int(winner["id"]) if winner else None
             row=await c.fetchrow("UPDATE casual_game_rooms SET status='finished',state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,json.dumps(state,ensure_ascii=False))
+            await _record_finished(c, row)
     return _public(row,uid)
 
 async def configure_game(user_id, raw_id, settings):
@@ -352,4 +394,5 @@ async def start_game(user_id, raw_id):
         state=_initial(row["game_type"],_obj(row["settings"]),players,"online")
         state["turn_deadline"] = int(time.time()) + int(_obj(row["settings"]).get("turn_seconds",20))
         row=await c.fetchrow("UPDATE casual_game_rooms SET status='playing',mode='online',state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,json.dumps(state,ensure_ascii=False))
+        await _record_finished(c, row)
     return _public(row,uid)

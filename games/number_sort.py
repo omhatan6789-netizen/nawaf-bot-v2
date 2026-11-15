@@ -198,9 +198,16 @@ async def _finish_if_needed(c, row):
         state["winner_id"], state["end_reason"] = _score(players, int(settings["size"])), "timeout"
     else:
         return row
-    return await c.fetchrow(
+    finished = await c.fetchrow(
         "UPDATE number_sort_rooms SET status='finished',state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",
         row["id"], json.dumps(state, ensure_ascii=False))
+    winner_id = state.get("winner_id")
+    human_players = [p for p in players if not p.get("bot") and int(p.get("id", 0)) > 0]
+    winners = [p for p in human_players if winner_id is not None and int(p["id"]) == int(winner_id)]
+    losers = [p for p in human_players if winner_id is not None and int(p["id"]) != int(winner_id)]
+    from database.game_stats import record_game_results
+    await record_game_results(f"number-sort:{row['id']}", "number_sort", winners, losers, conn=c)
+    return finished
 
 
 async def move(user_id, raw_id, index):
@@ -362,4 +369,10 @@ async def leave(user_id, raw_id):
             row = await c.fetchrow(
                 "UPDATE number_sort_rooms SET status='finished',state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",
                 gid, json.dumps(state, ensure_ascii=False))
+            human_players = [p for p in players if not p.get("bot") and int(p.get("id", 0)) > 0]
+            winner_id = state.get("winner_id")
+            winners = [p for p in human_players if winner_id is not None and int(p["id"]) == int(winner_id)]
+            losers = [p for p in human_players if (winner_id is not None and int(p["id"]) != int(winner_id)) or int(p["id"]) == uid]
+            from database.game_stats import record_game_results
+            await record_game_results(f"number-sort:{gid}", "number_sort", winners, losers, conn=c)
     return _public(row, uid)

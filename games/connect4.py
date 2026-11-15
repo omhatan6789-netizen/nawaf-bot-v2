@@ -296,6 +296,13 @@ async def get_game_state(user_id: int, game_id: str):
                             parsed_id, json.dumps(board), status, chosen,
                             json.dumps(cells), winner_id, next_player,
                         )
+                        if status == "won":
+                            from database.game_stats import record_game_results
+                            first = {"id": int(row["user_id"]), "name": row.get("player1_name") or "اللاعب الأول"}
+                            second = {"id": int(row["player2_id"]), "name": row.get("player2_name") or "اللاعب الثاني"}
+                            winner = first if winner_id == first["id"] else second
+                            loser = second if winner_id == first["id"] else first
+                            await record_game_results(f"connect4:{row['id']}", "connect", [winner], [loser], conn=conn)
             return public_state(row, user_id)
 
 
