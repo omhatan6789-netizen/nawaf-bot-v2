@@ -117,14 +117,17 @@ async def _handle_profile(client, message, kind: str, value):
     if kind == "avatar":
         index = int(value or 1)
         try:
-            photos = await client.get_chat_photos(
-                target_id, limit=1, offset=index - 1
-            )
-            if not photos:
+            # This PyrogramMod build does not accept the offset argument.
+            # Fetch up to the requested position; Telegram returns newest photos first.
+            if index > 100:
+                await message.reply_text("أقدر أجيب الصور من 1 إلى 100 فقط.")
+                return
+            photos = await client.get_chat_photos(target_id, limit=index)
+            if len(photos) < index:
                 await message.reply_text(f"ما لقيت الصورة رقم {index} لهذا الحساب.")
                 return
             await message.reply_photo(
-                photos[0].file_id,
+                photos[index - 1].file_id,
                 caption=f"افتاره رقم {index} — {display_name}",
                 reply_markup=keyboard,
             )
