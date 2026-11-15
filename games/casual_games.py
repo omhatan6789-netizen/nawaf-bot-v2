@@ -326,6 +326,12 @@ async def leave_game(user_id, raw_id):
         if not any(int(p["id"])==uid for p in players): raise ValueError("أنت لست لاعبًا في هذه اللعبة")
         leaving_index = next(i for i,p in enumerate(players) if int(p["id"]) == uid)
         state["withdrawn_id"] = uid
+        from database.game_stats import record_game_results
+        await record_game_results(
+            f"casual:{gid}", str(row["game_type"]), [],
+            [{"id": uid, "name": next(p.get("name") or "منسحب" for p in players if int(p["id"]) == uid)}],
+            conn=c,
+        )
         if len(players) > 2:
             players.pop(leaving_index)
             if row["game_type"] == "match":
