@@ -94,13 +94,14 @@ function addTurnControls(root,isPlayer,myTurn){
 }
 function safe(v){return String(v||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
 function schedulePoll(){
- if(poll)clearTimeout(poll);poll=setTimeout(async()=>{try{if(!current)return;const next=await api("state",current.id);if(JSON.stringify(next)!==JSON.stringify(current)){current=next;if(current.status==="waiting")renderLobby();else renderGame();return;}}catch(e){}if(current&&current.status!=="finished")schedulePoll();},1400);
+ if(poll)clearTimeout(poll);poll=setTimeout(async()=>{try{if(!current)return;let next=await api("state",current.id);if(next.game_type==="find"&&next.mode==="bot"&&next.status==="playing")next=await api("bot-turn",next.id);if(JSON.stringify(next)!==JSON.stringify(current)){current=next;if(current.status==="waiting")renderLobby();else renderGame();return;}}catch(e){}if(current&&current.status!=="finished")schedulePoll();},800);
 }
 function renderGame(){
- const root=shell(),isMatch=gameType==="match";
+ const root=shell(),isMatch=gameType==="match",isFind=gameType==="find";
  const mainBackButton=document.getElementById("back-home");
  if(mainBackButton)mainBackButton.hidden=gameType==="number";
  if(current.status==="finished"){finishGame();return;}
+ if(isFind){renderFind(root);schedulePoll();return;}
  if(isMatch){
   const me=Number(tg?.initDataUnsafe?.user?.id||0),players=current.players||[],turn=players[current.turn_index]||players[0],isPlayer=players.some(p=>Number(p.id)===me),myTurn=isPlayer&&Number(turn?.id)===me;
   root.innerHTML=heading("تطابق البطاقات 🃏","طابق الأزواج واجمع أكبر عدد")+
@@ -175,10 +176,26 @@ function renderGame(){
  }
  schedulePoll();
 }
+function renderFind(root){
+ const me=Number(tg?.initDataUnsafe?.user?.id||0),players=current.players||[],isPlayer=players.some(p=>Number(p.id)===me);
+ const score=(current.scores||[]).map((v,i)=>'<span>'+safe(players[i]?.name||"لاعب")+': '+v+'</span>').join("");
+ root.innerHTML=heading("Find Match 🔎","ابحث عن الغرض المتكرر في الدائرتين واضغط عليه أولًا")+
+ '<div class="mg-score find-score">'+score+'</div><div class="find-status" id="find-status">'+(isPlayer?(current.wrong_by===me?"❌ مو هذا! جرّب غرضًا ثانيًا":"🎯 أول من يكتشف الغرض المشترك يحصل على نقطة"):"👀 مشاهدة فقط")+'</div>'+
+ '<div class="find-duel"><div class="find-side"><div class="find-side-title">الدائرة الأولى</div><div class="find-circle" id="find-left"></div></div><div class="find-side"><div class="find-side-title">الدائرة الثانية</div><div class="find-circle" id="find-right"></div></div></div>'+
+ '<div class="c4-hint">الفوز عند جمع 10 نقاط</div><button class="c4-secondary" id="casual-back">رجوع للألعاب</button>';
+ const add=(id,items)=>{const board=root.querySelector("#"+id);(items||[]).forEach(value=>{const b=document.createElement("button");b.className="find-item";b.type="button";b.textContent=value;b.disabled=!isPlayer||lock;b.onclick=()=>findPick(value);board.append(b);});};
+ add("find-left",current.left_items);add("find-right",current.right_items);
+ root.querySelector("#casual-back").onclick=()=>{stop();showGames();};
+}
+async function findPick(value){if(lock||current?.status!=="playing")return;lock=true;try{current=await request("action",{move:{value,round:current.round}});renderGame();}catch(e){err(e);}finally{lock=false;}}
 async function flip(index){if(lock)return;lock=true;try{current=await request("action",{move:{index}});lock=false;renderGame();}catch(e){lock=false;err(e);}}
 function finishGame(){
  if(poll)clearTimeout(poll);poll=null;
- if(gameType==="match"){
+ if(gameType==="find"){
+  const players=current.players||[],winner=players.find(p=>Number(p.id)===Number(current.winner_id));
+  const win=Number(current.winner_id)===Number(tg?.initDataUnsafe?.user?.id||0);
+  showGameEndOverlay({winnerName:winner?.name||"الفائز",isDraw:false,gameType,title:"🏆 انتهت Find Match",subtitle:win?"فزت! أسرع عين 👀🏆":"فاز "+(winner?.name||"خصمك")+"! حاول مرة ثانية"});
+ }else if(gameType==="match"){
   const players=current.players||[],scores=current.scores||[],high=Math.max(...scores),winners=players.filter((p,i)=>scores[i]===high);
   if(current.winner_id!==null&&current.winner_id!==undefined){const winner=players.find(p=>Number(p.id)===Number(current.winner_id));const reason=current.end_reason==="timeout"?"لأن خصمه انتهى وقته ⏰":current.end_reason==="withdraw"?"بعد انسحاب خصمه 🏳️":"فاز بالمباراة";showGameEndOverlay({winnerName:winner?.name||"الفائز",isDraw:false,gameType,subtitle:"فاز "+(winner?.name||"اللاعب")+" "+reason+" 🏆"});}
   else {const draw=winners.length!==1;showGameEndOverlay({winnerName:draw?"":winners[0]?.name,isDraw:draw,gameType,subtitle:draw?"تعادل! أحسنتم جميعًا 👏":("أبدع "+winners[0].name+" وجمع "+high+" أزواج 🏆")});}
@@ -189,7 +206,7 @@ function finishGame(){
 }
 window.startCasualGame=async function(startParam){
  stop();const parts=String(startParam||"").split("_");gameType=parts[1];const id=parts[2];
- home.hidden=true;page.hidden=false;pageTitle.textContent=gameType==="match"?"تطابق البطاقات":"خمن الرقم";
+ home.hidden=true;page.hidden=false;pageTitle.textContent=gameType==="find"?"Find Match":gameType==="match"?"تطابق البطاقات":"خمن الرقم";
  try{current=await api("join",id);if(current.status==="waiting")renderLobby();else renderGame();}catch(e){const root=shell();root.innerHTML='<div class="c4-panel"></div>';err(e);}
 };
 window.stopCasualGame=stop;
