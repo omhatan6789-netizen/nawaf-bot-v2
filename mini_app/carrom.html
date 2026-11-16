@@ -91,15 +91,18 @@ async function startOnlineCarrom(){
  try{const result=await onlineApi('state');applyOnlineState(result);if(!gameOver){loop();scheduleOnlinePoll();}}catch(e){$('hint').textContent=e.message;toast(e.message);}
 }
 function scheduleOnlinePoll(){if(onlinePollTimer)clearTimeout(onlinePollTimer);onlinePollTimer=setTimeout(async()=>{try{if(!shotMoving&&!onlineSubmitting){const result=await onlineApi('state');const localId=Number(tg?.initDataUnsafe?.user?.id||0);const remoteMotion=result.state?.motion?.active&&Number(result.state.motion.owner_id)!==localId;const motionChanged=remoteMotion&&Number(result.state.motion.seq||0)!==Number(onlineState?.state?.motion?.seq||0);if(!onlineState||result.move_no!==onlineState.move_no||result.status!==onlineState.status||motionChanged)applyOnlineState(result);else if(result.remaining!==null&&result.remaining!==undefined)$('hint').textContent='الوقت المتبقي: '+Math.floor(result.remaining/60)+':'+String(result.remaining%60).padStart(2,'0')+' · '+(result.your_turn?'دورك':'دور '+players[turn].name);}}catch(_){}if(!gameOver)scheduleOnlinePoll();},900);}
+let onlineMotionSyncInFlight=null;
 async function syncOnlineMotion(){
- if(mode!=='online'||!onlineState?.your_turn||!shotMoving||onlineSubmitting)return;
- try{const discs=coins.map(c=>({x:c.position.x,y:c.position.y,vx:c.velocity.x,vy:c.velocity.y,color:c.gameColor,type:c.gameType,pocketed:!!c.pocketed}));await onlineApi('sync',{shot:{move_no:onlineState.move_no,motion:{discs,striker:{x:striker?.position.x||400,y:striker?.position.y||620,vx:striker?.velocity.x||0,vy:striker?.velocity.y||0},striker_pocketed:strikerPocketed}}});}catch(_){}
+ if(mode!=='online'||!onlineState?.your_turn||!shotMoving||onlineSubmitting||onlineMotionSyncInFlight)return;
+ onlineMotionSyncInFlight=(async()=>{const discs=coins.map(c=>({x:c.position.x,y:c.position.y,vx:c.velocity.x,vy:c.velocity.y,color:c.gameColor,type:c.gameType,pocketed:!!c.pocketed}));await onlineApi('sync',{shot:{move_no:onlineState.move_no,motion:{discs,striker:{x:striker?.position.x||400,y:striker?.position.y||620,vx:striker?.velocity.x||0,vy:striker?.velocity.y||0},striker_pocketed:strikerPocketed}}});})();
+ try{await onlineMotionSyncInFlight;}catch(_){}finally{onlineMotionSyncInFlight=null;}
 }
-function startOnlineMotionSync(){if(onlineMotionSyncTimer)clearInterval(onlineMotionSyncTimer);onlineMotionSyncTimer=setInterval(syncOnlineMotion,300);syncOnlineMotion();}
+function startOnlineMotionSync(){if(onlineMotionSyncTimer)clearInterval(onlineMotionSyncTimer);onlineMotionSyncTimer=setInterval(syncOnlineMotion,700);syncOnlineMotion();}
 async function submitOnlineShot(){
  if(onlineSubmitting||!onlineState)return;onlineSubmitting=true;if(onlineMotionSyncTimer){clearInterval(onlineMotionSyncTimer);onlineMotionSyncTimer=null;}$('hint').textContent='جاري مزامنة التسديدة...';
+ try{if(onlineMotionSyncInFlight)await onlineMotionSyncInFlight;}catch(_){}finally{onlineMotionSyncInFlight=null;}
  try{const discs=coins.map(c=>({x:c.position.x,y:c.position.y,color:c.gameColor,type:c.gameType,pocketed:!!c.pocketed}));const result=await onlineApi('shot',{shot:{move_no:onlineState.move_no,discs,striker:{x:striker?.position.x||400,y:striker?.position.y||620},striker_pocketed:strikerPocketed}});applyOnlineState(result);}
- catch(e){toast(e.message);try{applyOnlineState(await onlineApi('state'));}catch(_){}}
+ catch(e){toast(e.message);try{applyOnlineState(await onlineApi('state'));}catch(stateError){toast(stateError.message||'تعذر تحديث حالة المباراة');}}
  finally{onlineSubmitting=false;if(!gameOver)scheduleOnlinePoll();}
 }
 
