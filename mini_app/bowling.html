@@ -98,11 +98,30 @@ async function onlineRequest(action,extra={}) {
  if(!response.ok||!data.ok)throw new Error(data.error||'تعذر الاتصال بالمباراة');
  return data.result;
 }
+let endOverlayShown=false,endCountdown=null;
+function returnBowlingToMenu(){if(endCountdown){clearTimeout(endCountdown);endCountdown=null;}if(onlinePoll)clearInterval(onlinePoll);location.href='/mini-app';}
+function showBowlingEndOverlay(winnerName,isDraw,subtitle){
+ if(endOverlayShown)return;endOverlayShown=true;if(onlinePoll){clearInterval(onlinePoll);onlinePoll=null;}
+ const style=document.createElement('style');
+ style.textContent='.online-end-overlay{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:22px;background:rgba(5,3,7,.68);backdrop-filter:blur(15px) saturate(.72)}.online-end-card{width:min(100%,440px);padding:30px 20px 22px;border:1px solid #ffffff35;border-radius:28px;background:radial-gradient(ellipse at 50% 0%,#123e68 0%,transparent 58%),linear-gradient(145deg,#10263a,#070d16);box-shadow:0 22px 85px #000d;text-align:center}.online-end-card h2{font-size:clamp(25px,7vw,34px);margin:0 0 13px;font-weight:1000}.online-end-winner{margin:8px auto 12px;padding:12px 14px;border:1px solid #38a9e870;border-radius:17px;background:#080d16a8;color:#71d0ff;font-size:clamp(23px,6vw,31px);font-weight:1000}.online-end-card p{color:#ffffffd1;font-size:15px;line-height:1.8;margin:0 0 24px}.online-end-actions{display:grid;gap:11px}.online-end-actions button{width:100%;min-height:58px;border:1px solid #ffffff20;border-radius:17px;font-size:17px;font-weight:950;color:#fff;background:linear-gradient(135deg,#168fda,#07518e)}.online-end-actions button:last-child{background:linear-gradient(135deg,#45404a,#211d25)}';
+ document.head.append(style);
+ const overlay=document.createElement('div');overlay.className='online-end-overlay';
+ const card=document.createElement('div');card.className='online-end-card';
+ const h=document.createElement('h2');h.textContent=isDraw?'🤝 انتهت اللعبة بالتعادل':'🎉 انتهت اللعبة!';
+ const w=document.createElement('div');w.className='online-end-winner';w.textContent=isDraw?'تعادل بين اللاعبين':(winnerName||'انتهت اللعبة');
+ const p=document.createElement('p');p.textContent=subtitle||(isDraw?'كانت مباراة حماسية! يعطيكم العافية 👏':'🏆 الفائز: '+winnerName);
+ const actions=document.createElement('div');actions.className='online-end-actions';
+ const close=document.createElement('button');close.textContent='قفل الصفحة';close.onclick=()=>{if(tg?.close)tg.close();else returnBowlingToMenu();};
+ const home=document.createElement('button');home.textContent='الرجوع للقائمة الرئيسية';home.onclick=returnBowlingToMenu;
+ actions.append(close,home);card.append(h,w,p,actions);overlay.append(card);document.body.append(overlay);
+ const sound=fetch('/api/game-end-sound?game_type=bowling').then(r=>r.json()).then(d=>d?.url?new Audio(d.url):null).catch(()=>null);
+ endCountdown=setTimeout(()=>{const layer=document.createElement('div');layer.className='online-end-countdown';layer.style.cssText='position:fixed;inset:0;z-index:100001;display:flex;align-items:center;justify-content:center;padding:18px;background:#0008;backdrop-filter:blur(13px)';const box=document.createElement('div');box.style.cssText='width:min(100%,440px);padding:28px 20px;border:1px solid #ffffff70;border-radius:26px;background:#0a1827;text-align:center';const label=document.createElement('div');label.textContent='سيتم إغلاق الصفحة بعد:';label.style.fontSize='24px';label.style.fontWeight='900';const num=document.createElement('div');num.style.cssText='font-size:112px;font-weight:1000';const home2=document.createElement('button');home2.className='action';home2.textContent='الرجوع للقائمة الرئيسية';home2.onclick=returnBowlingToMenu;box.append(label,num,home2);layer.append(box);document.body.append(layer);let n=5;const tick=()=>{if(!layer.isConnected)return;num.textContent=n;if(n<=1){endCountdown=setTimeout(()=>{if(tg?.close)tg.close();else returnBowlingToMenu();},1000);return;}n--;endCountdown=setTimeout(tick,1000);};sound.then(a=>a?.play().catch(()=>{}));tick();},3000);
+}
 function showOnlineResult(state){
  if(state.status!=='finished')return;
- $('result-title').textContent=state.draw?'تعادل!':'فاز '+(state.winner_name||'اللاعب');
- $('result-text').textContent=state.players.map((p,i)=>p.name+': '+(state.scores?.[i]||0)+' نقطة').join(' — ');
- $('result').style.display='flex';
+ const winner=state.draw?'':state.winner_name||'الفائز';
+ const details=state.players.map((p,i)=>p.name+': '+(state.scores?.[i]||0)+' نقطة').join(' — ');
+ showBowlingEndOverlay(winner,!!state.draw,details);
 }
 function applyOnlineState(state,resetRack=false){
  const oldKey=lastOnlineTurn;onlineState=state;frame=state.frame||1;
@@ -148,7 +167,7 @@ async function loadOnlineBowling(){
 }
 function nextFrame(){
  frame++;
- if(frame>10){$('result-title').textContent='انتهت اللعبة!';$('result-text').textContent='نتيجتك الرسمية: '+score+' نقطة — أسقطت '+total+' قارورة';$('result').style.display='flex';return;}
+ if(frame>10){showBowlingEndOverlay('نتيجتك: '+score+' نقطة',false,'أسقطت '+total+' قارورة خلال 10 جولات.');return;}
  $('next').disabled=true;$('next').style.opacity='.5';shots=0;resetShot();
 }
 canvas.addEventListener('pointerdown',e=>{if(locked||(onlineMode&&!onlineState?.your_turn)||!ball)return;const r=canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;if(Math.hypot(x-ball.x,y-ball.y)<ball.r*2.5){drag={x,y};canvas.setPointerCapture(e.pointerId)}});
