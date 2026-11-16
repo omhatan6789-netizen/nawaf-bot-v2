@@ -61,17 +61,7 @@ def _public(row, uid):
     }
 
 
-async def create_game(conn, lobby, game_id):
-    count = int(lobby["player_count"])
-    players = [{
-        "id": int(lobby["creator_id"]),
-        "name": str(lobby["creator_name"] or "لاعب")[:80],
-    }]
-    for i in range(2, count + 1):
-        players.append({
-            "id": int(lobby[f"player{i}_id"]),
-            "name": str(lobby[f"player{i}_name"] or "لاعب")[:80],
-        })
+async def _ensure_table(conn):
     await conn.execute(
         """CREATE TABLE IF NOT EXISTS bowling_online_games (
              id UUID PRIMARY KEY,
@@ -84,6 +74,20 @@ async def create_game(conn, lobby, game_id):
              updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
            )"""
     )
+
+
+async def create_game(conn, lobby, game_id):
+    count = int(lobby["player_count"])
+    players = [{
+        "id": int(lobby["creator_id"]),
+        "name": str(lobby["creator_name"] or "لاعب")[:80],
+    }]
+    for i in range(2, count + 1):
+        players.append({
+            "id": int(lobby[f"player{i}_id"]),
+            "name": str(lobby[f"player{i}_name"] or "لاعب")[:80],
+        })
+    await _ensure_table(conn)
     state = {
         "frame_index": 0,
         "turn_index": 0,
@@ -104,6 +108,8 @@ async def bowling_online_api(user_id: int, action: str, raw_game_id: str = "", p
     payload = payload or {}
     pool = get_pool()
     if action == "active":
+        async with pool.acquire() as conn:
+            await _ensure_table(conn)
         row = await pool.fetchrow(
             """SELECT id FROM bowling_online_games
                WHERE status='playing' AND players @> $1::jsonb
