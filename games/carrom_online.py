@@ -54,6 +54,7 @@ def _public(row, uid):
         "move_no": int(row["move_no"]), "deadline": deadline.timestamp() if deadline else None,
         "remaining": remaining, "winner_id": int(row["winner_id"]) if row["winner_id"] else None,
         "is_player": any(int(p["id"]) == int(uid) for p in players),
+        "you_player_index": next((i for i, p in enumerate(players) if int(p["id"]) == int(uid)), 0),
         "your_turn": row["status"] == "playing" and int(players[int(row["turn_index"])]["id"]) == int(uid),
         "scores": state.get("scores", [0] * len(players)),
     }
