@@ -71,7 +71,8 @@ async def create_game(conn, lobby, game_id):
     settings = {
         "player_count": count,
         "team_mode": lobby["team_mode"] if count == 4 else "individual",
-        "duration_seconds": int(lobby["duration_seconds"] or 300),
+        "duration_seconds": int(lobby["duration_seconds"] or 20),
+        "turn_seconds": int(lobby["duration_seconds"] or 20),
     }
     state = _initial_state()
     state["scores"] = [0 for _ in players]
@@ -80,9 +81,9 @@ async def create_game(conn, lobby, game_id):
     await conn.execute(
         """INSERT INTO carrom_online_games
            (id,lobby_id,players,settings,game_state,turn_index,move_no,deadline,turn_deadline)
-           VALUES($1,$2,$3::jsonb,$4::jsonb,$5::jsonb,0,0,NULL,NOW()+INTERVAL '20 seconds')""",
+           VALUES($1,$2,$3::jsonb,$4::jsonb,$5::jsonb,0,0,NULL,NOW()+($6 * INTERVAL '1 second'))""",
         game_id, lobby["id"], json.dumps(players, ensure_ascii=False),
-        json.dumps(settings), json.dumps(state),
+        json.dumps(settings), json.dumps(state), settings["turn_seconds"],
     )
 
 
@@ -126,9 +127,10 @@ async def _forfeit_player(conn, row, players, state, uid, reset_timer=False):
     return await conn.fetchrow(
         """UPDATE carrom_online_games SET game_state=$2::jsonb,turn_index=$3,
            move_no=move_no+1,
-           turn_deadline=CASE WHEN $4 THEN NOW()+INTERVAL '20 seconds' ELSE turn_deadline END,
+           turn_deadline=CASE WHEN $4 THEN NOW()+(($5)::text || ' seconds')::interval ELSE turn_deadline END,
            updated_at=NOW() WHERE id=$1 RETURNING *""",
         row["id"], json.dumps(state), next_index, bool(was_current or reset_timer),
+         int(_decode(row["settings"]).get("turn_seconds", 20)),
     )
 
 
@@ -323,7 +325,7 @@ async def carrom_online_api(user_id: int, action: str, raw_game_id: str, payload
                 row = await conn.fetchrow(
                     """UPDATE carrom_online_games SET game_state=$2::jsonb,turn_index=$3,
                        move_no=move_no+1,status=$4,winner_id=$5,
-                       turn_deadline=CASE WHEN $4='playing' THEN NOW()+INTERVAL '20 seconds' ELSE NULL END,
+                       turn_deadline=CASE WHEN $4='playing' THEN NOW()+((($6)::text || ' seconds')::interval) ELSE NULL END,
                        updated_at=NOW() WHERE id=$1 RETURNING *""",
                     game_id, json.dumps(state), next_index, status, winner_id,
                 )
