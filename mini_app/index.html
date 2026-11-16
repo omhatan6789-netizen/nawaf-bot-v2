@@ -331,7 +331,7 @@ function renderOnlineLobby(state){
  const status=shell.querySelector('#online-room-status');
  const counts=shell.querySelector('#online-counts'),modes=shell.querySelector('#online-modes'),durations=shell.querySelector('#online-durations');
  const supported=state.game_type==='dots'||state.game_type==='bowling'?[2,3,4]:state.game_type==='carrom'?[2,4]:[2];
- supported.forEach(n=>{const b=document.createElement('button');b.className='c4-level'+(state.player_count===n?' active':'');b.textContent=n+' لاعبين';b.disabled=!canConfigure;b.onclick=()=>onlineLobbyRequest('configure',{player_count:n,team_mode:n===4?state.team_mode:'individual',duration_seconds:state.duration_seconds}).then(loadOnlineLobby).catch(showOnlineLobbyError);counts.appendChild(b);});
+ supported.forEach(n=>{const b=document.createElement('button');b.className='c4-level'+(state.player_count===n?' active':'');b.textContent=n+' لاعبين';b.disabled=!canConfigure;b.onclick=()=>onlineLobbyRequest('configure',{player_count:n,team_mode:state.game_type==='bowling'?'individual':(n===4?state.team_mode:'individual'),duration_seconds:state.duration_seconds}).then(loadOnlineLobby).catch(showOnlineLobbyError);counts.appendChild(b);});
  if((state.game_type==='dots'||state.game_type==='carrom')&&state.player_count===4){
   [['individual','كل لاعب لحاله'],['teams','فريقين 2 ضد 2']].forEach(([v,t])=>{const b=document.createElement('button');b.className='c4-level'+(state.team_mode===v?' active':'');b.textContent=t;b.disabled=!canConfigure;b.onclick=()=>onlineLobbyRequest('configure',{player_count:4,team_mode:v,duration_seconds:state.duration_seconds}).then(loadOnlineLobby).catch(showOnlineLobbyError);modes.appendChild(b);});
  }else{modes.remove();}
