@@ -458,11 +458,12 @@ def handle_connect4_post(handler):
             play_mini_game_solo_bot_move,
         )
         from games.online_mode import restart_online_game, get_online_spectator_state, online_lobby_api, withdraw_online_game
+        from games.carrom_online import carrom_online_api
         if _bot is None:
             raise RuntimeError("البوت ما زال يستعد، حاول بعد قليل")
         user = verify_init_data(payload.get("initData", ""), _bot.token)
         is_challenge_api = path.startswith("/api/connect4/challenge/") or path.startswith("/api/minigames/") or path in ("/api/extra-games", "/api/casual-games", "/api/number-sort", "/api/quick-games")
-        is_online_api = path in ("/api/online/restart", "/api/online/spectate", "/api/online/lobby", "/api/online/withdraw")
+        is_online_api = path in ("/api/online/restart", "/api/online/spectate", "/api/online/lobby", "/api/online/withdraw", "/api/carrom-online")
         if path == "/api/number-sort":
             from games import number_sort as ns
             action = str(payload.get("action") or "state")
@@ -567,6 +568,13 @@ def handle_connect4_post(handler):
             result = _run(online_lobby_api(
                 int(user["id"]), payload.get("action", "state"),
                 payload.get("lobby_id", ""), payload.get("settings") or {},
+            ))
+            body = json.dumps({"ok": True, "result": result}, ensure_ascii=False).encode()
+            handler.send_response(200)
+        elif path == "/api/carrom-online":
+            result = _run(carrom_online_api(
+                int(user["id"]), str(payload.get("action") or "state"),
+                payload.get("game_id", ""), payload.get("shot") or payload,
             ))
             body = json.dumps({"ok": True, "result": result}, ensure_ascii=False).encode()
             handler.send_response(200)
