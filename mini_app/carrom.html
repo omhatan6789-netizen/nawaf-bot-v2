@@ -286,7 +286,7 @@ function botShot(){
  $('hint').textContent='البوت يسدد ('+(botDifficulty==='easy'?'سهل':botDifficulty==='hard'?'صعب':'متوسط')+')...';
 }
 function clearLocalTurnTimer(){if(localTurnTimer){clearInterval(localTurnTimer);localTurnTimer=null;}localTurnDeadline=0;}
-function startLocalTurnTimer(){clearLocalTurnTimer();if(mode==='online'||gameOver||(mode==='bot'&&turn===1))return;localTurnDeadline=Date.now()+20000;const tick=()=>{const left=Math.max(0,Math.ceil((localTurnDeadline-Date.now())/1000));$('hint').textContent='دور '+players[turn].name+' · باقي '+left+' ثانية';if(left<=0){clearLocalTurnTimer();forfeitLocalTurn(true);}};tick();localTurnTimer=setInterval(tick,250);}
+function startLocalTurnTimer(){clearLocalTurnTimer();/* الوقت محدد للأونلاين فقط؛ اللعب ضد البوت أو على نفس الجهاز بدون مؤقت. */return;}
 function forfeitLocalTurn(timedOut=false){if(gameOver)return;clearLocalTurnTimer();gameOver=true;const winner=mode==='bot'?players[1]:players[(turn+1)%players.length];const message=timedOut?'انتهى وقت اللاعب ولم يلعب خلال 20 ثانية.':'انسحب اللاعب من المباراة.';$('hint').textContent=message+' الفائز: '+winner.name;showCarromEndOverlay(winner.name,false,message);}
 function withdrawFromCarrom(){if(gameOver)return;if(mode==='online'){const button=$('withdraw');button.disabled=true;onlineApi('leave').then(applyOnlineState).catch(e=>toast(e.message)).finally(()=>{button.disabled=false;});return;}forfeitLocalTurn(false);}
 function toast(s){const d=document.createElement('div');d.className='toast';d.textContent=s;document.body.appendChild(d);setTimeout(()=>d.remove(),2000);}
