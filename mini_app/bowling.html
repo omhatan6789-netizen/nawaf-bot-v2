@@ -32,7 +32,7 @@ canvas{display:block;width:100%;height:100%}
 <script>
 (()=>{
 const canvas=document.getElementById('game'),ctx=canvas.getContext('2d'),wrap=document.getElementById('lane-wrap');
-const $=id=>document.getElementById(id);let W=0,H=0,dpr=1,ball,pins=[],drag=null,anim=0,frame=1,total=0,shots=0,settle=0,locked=false,score=0;
+const $=id=>document.getElementById(id);let W=0,H=0,dpr=1,ball,pins=[],drag=null,anim=0,frame=1,total=0,shots=0,settle=0,locked=false,score=0,rolls=[],frameRolls=[],standing=10;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 function resize(){const r=wrap.getBoundingClientRect();dpr=Math.min(devicePixelRatio||1,2);W=r.width;H=r.height;canvas.width=W*dpr;canvas.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);draw()}
 function lane(){const top=H*.12,bottom=H*.91,cx=W/2,topW=W*.30,botW=W*.78;ctx.save();ctx.beginPath();ctx.moveTo(cx-topW/2,top);ctx.lineTo(cx+topW/2,top);ctx.lineTo(cx+botW/2,bottom);ctx.lineTo(cx-botW/2,bottom);ctx.closePath();let g=ctx.createLinearGradient(0,top,0,bottom);g.addColorStop(0,'#a8dfff');g.addColorStop(.35,'#438fc4');g.addColorStop(1,'#174b78');ctx.fillStyle=g;ctx.fill();ctx.strokeStyle='#5cc7ff';ctx.lineWidth=2;ctx.stroke();
@@ -42,8 +42,11 @@ ctx.fillStyle='#64caff';ctx.shadowColor='#1aa7ff';ctx.shadowBlur=18;ctx.fillRect
 function pinShape(p){ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.a);ctx.globalAlpha=p.alpha;ctx.shadowColor='#9bdcff';ctx.shadowBlur=9;let s=p.s;ctx.fillStyle='#f5fbff';ctx.beginPath();ctx.moveTo(-s*.28,s*.48);ctx.quadraticCurveTo(-s*.42,s*.08,-s*.18,-s*.13);ctx.quadraticCurveTo(-s*.28,-s*.55,0,-s*.58);ctx.quadraticCurveTo(s*.28,-s*.55,s*.18,-s*.13);ctx.quadraticCurveTo(s*.42,s*.08,s*.28,s*.48);ctx.closePath();ctx.fill();ctx.shadowBlur=0;ctx.strokeStyle='#e33d59';ctx.lineWidth=Math.max(2,s*.12);ctx.beginPath();ctx.moveTo(-s*.18,-s*.15);ctx.lineTo(s*.18,-s*.15);ctx.stroke();ctx.fillStyle='#d8efff';ctx.beginPath();ctx.ellipse(0,s*.45,s*.3,s*.1,0,0,Math.PI*2);ctx.fill();ctx.restore()}
 function ballShape(){if(!ball)return;ctx.save();ctx.shadowColor='#26baff';ctx.shadowBlur=24;let g=ctx.createRadialGradient(ball.x-ball.r*.35,ball.y-ball.r*.4,2,ball.x,ball.y,ball.r);g.addColorStop(0,'#f0fbff');g.addColorStop(.22,'#46c8ff');g.addColorStop(.65,'#0872d1');g.addColorStop(1,'#032b66');ctx.fillStyle=g;ctx.beginPath();ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;ctx.fillStyle='#dff7ff';for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(ball.x+Math.cos(i*2.1)*ball.r*.3,ball.y+Math.sin(i*2.1)*ball.r*.3,ball.r*.09,0,Math.PI*2);ctx.fill()}ctx.restore()}
 function setupPins(){pins=[];const cx=W/2,top=H*.19,step=Math.min(W*.075,H*.045);for(let row=0;row<4;row++)for(let col=0;col<=row;col++){let x=cx+(col-row/2)*step*1.65,y=top+row*step*1.25;pins.push({x,y,vx:0,vy:0,a:0,av:0,s:Math.max(13,step*.75),fallen:false,alpha:1})}ball={x:W/2,y:H*.83,vx:0,vy:0,r:Math.max(17,Math.min(W,H)*.035}}}
-function resetShot(){setupPins();drag=null;locked=false;settle=0;$('hint').textContent='اسحب من الكرة للأعلى، وحرّك إصبعك يمينًا أو يسارًا لتحديد الاتجاه';update()}
-function update(){ $('frame').textContent=frame+' / 10';$('fallen').textContent=pins.filter(p=>p.fallen).length+' / 10';$('points').textContent=score}
+function resetShot(){setupPins();drag=null;locked=false;settle=0;standing=10;frameRolls=[];$('hint').textContent='اسحب من الكرة للأعلى، وحرّك إصبعك يمينًا أو يسارًا لتحديد الاتجاه';update()}
+function update(){ $('frame').textContent=frame+' / 10';$('fallen').textContent=(10-standing)+' / 10';$('points').textContent=score}
+function scoringTotal(){let i=0,sum=0;for(let f=0;f<10;f++){if(i>=rolls.length)break;let a=rolls[i];if(a===10){sum+=10+(rolls[i+1]??0)+(rolls[i+2]??0);i++;}else if(i+1<rolls.length&&a+rolls[i+1]===10){sum+=10+(rolls[i+2]??0);i+=2;}else{sum+=a+(rolls[i+1]??0);i+=2;}}return sum}
+function resetBall(){ball={x:W/2,y:H*.83,vx:0,vy:0,r:Math.max(17,Math.min(W,H)*.035)}}
+function freshRack(){setupPins();standing=10}
 function draw(){if(!W||!H)return;ctx.clearRect(0,0,W,H);lane();pins.forEach(pinShape);ballShape();if(drag){ctx.strokeStyle='#b9ecff55';ctx.lineWidth=1;ctx.beginPath();ctx.arc(ball.x,ball.y,ball.r+7,0,Math.PI*2);ctx.stroke()}}
 function launch(){if(locked||!drag)return;let dx=drag.x-ball.x,dy=ball.y-drag.y;let power=clamp(Math.hypot(dx,dy),12,Math.min(H*.42,180));let angle=clamp(dx/Math.max(55,power),-.48,.48);let speed=7+power*.075;ball.vx=Math.sin(angle)*speed;ball.vy=-Math.cos(angle)*speed;locked=true;drag=null;$('hint').textContent='الكرة في طريقها إلى القوارير...';animate()}
 function animate(){cancelAnimationFrame(anim);let active=true;function step(){let moving=false;ball.x+=ball.vx;ball.y+=ball.vy;ball.vx*=.992;ball.vy*=.992;
@@ -55,11 +58,28 @@ if(ball.y>H*.89||ball.x<W*.1||ball.x>W*.9){ball.vx*=.92;ball.vy*=.9}
 if(Math.hypot(ball.vx,ball.vy)>.18)moving=true;else{ball.vx=0;ball.vy=0}
 draw();if(moving){anim=requestAnimationFrame(step)}else{settle++;finishShot()}}
 step()}
-function finishShot(){const down=pins.filter(p=>p.fallen).length;score+=down*10;total+=down;shots++;update();$('hint').textContent='أسقطت '+down+' من 10 قوارير';if(down===10||shots>=2||down===0){$('next').disabled=false;$('next').style.opacity='1';}else{$('hint').textContent+=' — تقدر تسدد مرة ثانية للقوارير المتبقية';ball={x:W/2,y:H*.83,vx:0,vy:0,r:ball.r};pins=pins.filter(p=>!p.fallen);pins.forEach((p,i)=>{p.x=W/2+(i-(pins.length-1)/2)*Math.min(W*.06,24);p.y=H*.23+Math.floor(i/3)*Math.min(H*.04,22)});locked=false}}
-function nextFrame(){frame++;if(frame>10){$('result-title').textContent='انتهت اللعبة!';$('result-text').textContent='نتيجتك: '+score+' نقطة — أسقطت '+total+' قارورة';$('result').style.display='flex';return}shots=0;$('next').disabled=true;$('next').style.opacity='.5';resetShot()}
+function finishShot(){
+ const down=Math.min(standing,pins.filter(p=>p.fallen).length);
+ frameRolls.push(down);rolls.push(down);standing=Math.max(0,standing-down);total+=down;shots++;score=scoringTotal();update();
+ $('hint').textContent='أسقطت '+down+' قارورة — مجموعك '+score+' نقطة';
+ let frameDone=false,bonusRack=false;
+ if(frame<10){frameDone=down===10||frameRolls.length>=2;}
+ else if(frameRolls.length===1){bonusRack=down===10;}
+ else if(frameRolls.length===2){const first=frameRolls[0],second=frameRolls[1];if(first===10)bonusRack=second===10;else if(first+second===10)bonusRack=true;else frameDone=true;}
+ else frameDone=true;
+ if(frameDone){$('next').disabled=false;$('next').style.opacity='1';$('hint').textContent+=' — انتهى دور الجولة، اضغط الجولة التالية';return;}
+ if(bonusRack||standing===0)freshRack();
+ else{pins=pins.filter(p=>!p.fallen);pins.forEach(p=>{p.vx=0;p.vy=0;p.av=0;p.alpha=1;});resetBall();}
+ locked=false;drag=null;update();$('hint').textContent+=' — باقي لك رمية';
+}
+function nextFrame(){
+ frame++;
+ if(frame>10){$('result-title').textContent='انتهت اللعبة!';$('result-text').textContent='نتيجتك الرسمية: '+score+' نقطة — أسقطت '+total+' قارورة';$('result').style.display='flex';return;}
+ $('next').disabled=true;$('next').style.opacity='.5';shots=0;resetShot();
+}
 canvas.addEventListener('pointerdown',e=>{if(locked||!ball)return;const r=canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;if(Math.hypot(x-ball.x,y-ball.y)<ball.r*2.5){drag={x,y};canvas.setPointerCapture(e.pointerId)}});
 canvas.addEventListener('pointermove',e=>{if(!drag)return;const r=canvas.getBoundingClientRect();drag.x=e.clientX-r.left;drag.y=e.clientY-r.top;draw()});
-canvas.addEventListener('pointerup',()=>{if(drag)launch()});$('throw').onclick=()=>{if(!locked){drag={x:ball.x,y:ball.y-H*.24};launch()}};$('next').onclick=nextFrame;$('reset').onclick=()=>{frame=1;total=0;score=0;shots=0;$('result').style.display='none';$('next').disabled=true;$('next').style.opacity='.5';resetShot()};$('again').onclick=()=>$('reset').click();$('back').onclick=()=>{location.href='/mini-app'};
+canvas.addEventListener('pointerup',()=>{if(drag)launch()});$('throw').onclick=()=>{if(!locked){drag={x:ball.x,y:ball.y-H*.24};launch()}};$('next').onclick=nextFrame;$('reset').onclick=()=>{frame=1;total=0;score=0;shots=0;rolls=[];frameRolls=[];$('result').style.display='none';$('next').disabled=true;$('next').style.opacity='.5';resetShot()};$('again').onclick=()=>$('reset').click();$('back').onclick=()=>{location.href='/mini-app'};
 new ResizeObserver(()=>{resize();if(!locked)setupPins()}).observe(wrap);resize();setupPins();$('next').disabled=true;$('next').style.opacity='.5';update();
 })();
 </script></body></html>
