@@ -1113,6 +1113,9 @@ document.getElementById('back-home').onclick=showHome;
   else if(miniGameChallengeIdFromStart){home.hidden=true;page.hidden=false;pageTitle.textContent='الألعاب';startMiniGameChallenge();}
   else if(c4ChallengeIdFromStart){home.hidden=true;page.hidden=false;pageTitle.textContent='كونكت 4';startConnect4Challenge();}
   else if(c4GameIdFromUrl){home.hidden=true;page.hidden=false;pageTitle.textContent='كونكت 4';startConnect4();}
+  else if(!casualStartParam&&!extraGameType&&!onlineLobbyId&&!miniGameChallengeIdFromStart&&!c4ChallengeIdFromStart){
+   try{const initData=tg?.initData||'';if(initData){const response=await fetch('/api/carrom-online',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData,action:'active'})});const data=await response.json().catch(()=>({}));const active=data?.ok?data.result:null;if(active?.id){location.replace('/carrom?online=1&game_id='+encodeURIComponent(active.id));return;}}}catch(e){console.warn('Could not check active Carrom game',e);}
+  }
  }catch(e){console.error('Mini App extensions load failed:',e);const box=document.createElement('div');box.className='empty';box.textContent='تعذر تحميل الإضافات: '+(e?.message||'خطأ غير معروف');document.getElementById('custom').replaceChildren(box);}
 
 })();
