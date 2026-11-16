@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>بولينق</title>
+<title>بولينق</title><script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#030b18;color:#fff;font-family:system-ui,-apple-system,sans-serif;touch-action:none}
 body{background:radial-gradient(ellipse at 50% 40%,#123b69 0,#07182d 48%,#020711 100%)}
@@ -24,7 +24,7 @@ canvas{display:block;width:100%;height:100%}
 </style></head>
 <body><main id="app">
 <header><button id="back">رجوع</button><h1>بولينق 🎳</h1><button id="reset">إعادة</button></header>
-<section id="score"><div class="scorebox"><small>الجولة</small><b id="frame">1 / 10</b></div><div class="scorebox"><small>إسقاطك</small><b id="fallen">0 / 10</b></div><div class="scorebox"><small>النقاط</small><b id="points">0</b></div></section>
+<section id="score"><div class="scorebox"><small>الجولة</small><b id="frame">1 / 10</b></div><div class="scorebox"><small>إسقاطك</small><b id="fallen">0 / 10</b></div><div class="scorebox"><small>النقاط</small><b id="points">0</b></div><div class="scorebox"><small>الدور</small><b id="current-player">أنت</b></div></section>
 <div id="lane-wrap"><canvas id="game"></canvas><div id="result"><div class="panel"><h2 id="result-title">رميّة رائعة!</h2><p id="result-text"></p><button class="action" id="again">العب مرة ثانية</button></div></div></div>
 <div id="hint">اسحب من الكرة للأعلى، وحرّك إصبعك يمينًا أو يسارًا لتحديد الاتجاه</div>
 <div id="bottom"><button class="action" id="throw">تسديد</button><button class="action" id="next">الجولة التالية</button></div>
@@ -34,6 +34,9 @@ canvas{display:block;width:100%;height:100%}
 const canvas=document.getElementById('game'),ctx=canvas.getContext('2d'),wrap=document.getElementById('lane-wrap');
 const $=id=>document.getElementById(id);let W=0,H=0,dpr=1,ball,pins=[],drag=null,anim=0,frame=1,total=0,shots=0,settle=0,locked=false,score=0,rolls=[],frameRolls=[],standing=10;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const tg=window.Telegram?.WebApp;tg?.ready?.();
+const onlineParams=new URLSearchParams(location.search),onlineGameId=onlineParams.get('game_id')||'',onlineMode=onlineParams.get('online')==='1';
+let onlineState=null,onlinePoll=null,lastOnlineTurn=null;
 function resize(){const r=wrap.getBoundingClientRect();dpr=Math.min(devicePixelRatio||1,2);W=r.width;H=r.height;canvas.width=W*dpr;canvas.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);draw()}
 function lane(){const top=H*.12,bottom=H*.91,cx=W/2,topW=W*.30,botW=W*.78;ctx.save();ctx.beginPath();ctx.moveTo(cx-topW/2,top);ctx.lineTo(cx+topW/2,top);ctx.lineTo(cx+botW/2,bottom);ctx.lineTo(cx-botW/2,bottom);ctx.closePath();let g=ctx.createLinearGradient(0,top,0,bottom);g.addColorStop(0,'#a8dfff');g.addColorStop(.35,'#438fc4');g.addColorStop(1,'#174b78');ctx.fillStyle=g;ctx.fill();ctx.strokeStyle='#5cc7ff';ctx.lineWidth=2;ctx.stroke();
 for(let i=-3;i<=3;i++){let x1=cx+i*topW/7,x2=cx+i*botW/7;ctx.strokeStyle='rgba(210,240,255,.17)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x1,top);ctx.lineTo(x2,bottom);ctx.stroke()}
@@ -43,7 +46,7 @@ function pinShape(p){ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.a);ctx.globa
 function ballShape(){if(!ball)return;ctx.save();ctx.shadowColor='#26baff';ctx.shadowBlur=24;let g=ctx.createRadialGradient(ball.x-ball.r*.35,ball.y-ball.r*.4,2,ball.x,ball.y,ball.r);g.addColorStop(0,'#f0fbff');g.addColorStop(.22,'#46c8ff');g.addColorStop(.65,'#0872d1');g.addColorStop(1,'#032b66');ctx.fillStyle=g;ctx.beginPath();ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;ctx.fillStyle='#dff7ff';for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(ball.x+Math.cos(i*2.1)*ball.r*.3,ball.y+Math.sin(i*2.1)*ball.r*.3,ball.r*.09,0,Math.PI*2);ctx.fill()}ctx.restore()}
 function setupPins(){pins=[];const cx=W/2,top=H*.19,step=Math.min(W*.075,H*.045);for(let row=0;row<4;row++)for(let col=0;col<=row;col++){let x=cx+(col-row/2)*step*1.65,y=top+row*step*1.25;pins.push({x,y,vx:0,vy:0,a:0,av:0,s:Math.max(13,step*.75),fallen:false,alpha:1})}ball={x:W/2,y:H*.83,vx:0,vy:0,r:Math.max(17,Math.min(W,H)*.035}}}
 function resetShot(){setupPins();drag=null;locked=false;settle=0;standing=10;frameRolls=[];$('hint').textContent='اسحب من الكرة للأعلى، وحرّك إصبعك يمينًا أو يسارًا لتحديد الاتجاه';update()}
-function update(){ $('frame').textContent=frame+' / 10';$('fallen').textContent=(10-standing)+' / 10';$('points').textContent=score}
+function update(){ $('frame').textContent=frame+' / 10';$('fallen').textContent=(10-standing)+' / 10';$('points').textContent=score;if(onlineState){const p=onlineState.players?.[onlineState.turn_index];$('current-player').textContent=p?.name||'—';}}
 function scoringTotal(){let i=0,sum=0;for(let f=0;f<10;f++){if(i>=rolls.length)break;let a=rolls[i];if(a===10){sum+=10+(rolls[i+1]??0)+(rolls[i+2]??0);i++;}else if(i+1<rolls.length&&a+rolls[i+1]===10){sum+=10+(rolls[i+2]??0);i+=2;}else{sum+=a+(rolls[i+1]??0);i+=2;}}return sum}
 function resetBall(){ball={x:W/2,y:H*.83,vx:0,vy:0,r:Math.max(17,Math.min(W,H)*.035)}}
 function freshRack(){setupPins();standing=10}
@@ -58,8 +61,9 @@ if(ball.y>H*.89||ball.x<W*.1||ball.x>W*.9){ball.vx*=.92;ball.vy*=.9}
 if(Math.hypot(ball.vx,ball.vy)>.18)moving=true;else{ball.vx=0;ball.vy=0}
 draw();if(moving){anim=requestAnimationFrame(step)}else{settle++;finishShot()}}
 step()}
-function finishShot(){
+async function finishShot(){
  const down=Math.min(standing,pins.filter(p=>p.fallen).length);
+ if(onlineMode){await submitOnlineShot(down);return;}
  frameRolls.push(down);rolls.push(down);standing=Math.max(0,standing-down);total+=down;shots++;score=scoringTotal();update();
  $('hint').textContent='أسقطت '+down+' قارورة — مجموعك '+score+' نقطة';
  let frameDone=false,bonusRack=false;
@@ -72,14 +76,70 @@ function finishShot(){
  else{pins=pins.filter(p=>!p.fallen);pins.forEach(p=>{p.vx=0;p.vy=0;p.av=0;p.alpha=1;});resetBall();}
  locked=false;drag=null;update();$('hint').textContent+=' — باقي لك رمية';
 }
+async function onlineRequest(action,extra={}) {
+ const initData=tg?.initData||'';
+ if(!initData)throw new Error('افتح اللعبة من داخل تيليجرام');
+ const response=await fetch('/api/bowling-online',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData,action,game_id:onlineGameId,...extra})});
+ const data=await response.json().catch(()=>({}));
+ if(!response.ok||!data.ok)throw new Error(data.error||'تعذر الاتصال بالمباراة');
+ return data.result;
+}
+function showOnlineResult(state){
+ if(state.status!=='finished')return;
+ $('result-title').textContent=state.draw?'تعادل!':'فاز '+(state.winner_name||'اللاعب');
+ $('result-text').textContent=state.players.map((p,i)=>p.name+': '+(state.scores?.[i]||0)+' نقطة').join(' — ');
+ $('result').style.display='flex';
+}
+function applyOnlineState(state,resetRack=false){
+ const oldKey=lastOnlineTurn;onlineState=state;frame=state.frame||1;
+ const me=Number(tg?.initDataUnsafe?.user?.id||0),myIndex=state.players?.findIndex(p=>Number(p.id)===me)??-1;
+ score=myIndex>=0?(state.scores?.[myIndex]||0):0;standing=Number(state.standing??10);
+ const key=String(state.frame)+':'+String(state.turn_index);
+ if(resetRack||(!oldKey&&key)|| (oldKey&&oldKey!==key)){setupPins();resetBall();}
+ lastOnlineTurn=key;locked=!state.your_turn||state.status!=='playing';
+ $('throw').disabled=locked;update();
+ const current=state.players?.[state.turn_index];$('current-player').textContent=current?.name||'—';
+ if(state.status==='finished')showOnlineResult(state);
+ else $('hint').textContent=state.your_turn?'دورك — اسحب الكرة للتسديد':'بانتظار دور '+(current?.name||'اللاعب');
+}
+async function submitOnlineShot(pinsDown){
+ const oldKey=lastOnlineTurn,oldStanding=standing;
+ try{
+  const state=await onlineRequest('shot',{pins:pinsDown});
+  const key=String(state.frame)+':'+String(state.turn_index);
+  const sameTurn=key===oldKey&&state.your_turn;
+  onlineState=state;frame=state.frame||1;
+  const me=Number(tg?.initDataUnsafe?.user?.id||0),myIndex=state.players?.findIndex(p=>Number(p.id)===me)??-1;
+  score=myIndex>=0?(state.scores?.[myIndex]||0):0;standing=Number(state.standing??10);lastOnlineTurn=key;
+  if(sameTurn&&standing===Math.max(0,oldStanding-pinsDown)){pins=pins.filter(p=>!p.fallen);resetBall();}
+  else{setupPins();resetBall();}
+  locked=!state.your_turn||state.status!=='playing';$('throw').disabled=locked;update();showOnlineResult(state);
+  if(state.status!=='finished')$('hint').textContent=state.your_turn?'باقي لك رمية':'بانتظار دور '+(state.players?.[state.turn_index]?.name||'اللاعب');
+ }catch(e){locked=true;$('throw').disabled=true;$('hint').textContent=e.message;}
+}
+async function loadOnlineBowling(){
+ try{
+  if(!onlineGameId)throw new Error('معرّف المباراة غير موجود');
+  const state=await onlineRequest('state');applyOnlineState(state,true);
+  if(onlinePoll)clearInterval(onlinePoll);
+  onlinePoll=setInterval(async()=>{
+   try{
+    const fresh=await onlineRequest('state');
+    const key=String(fresh.frame)+':'+String(fresh.turn_index);
+    if(key!==lastOnlineTurn)applyOnlineState(fresh,true);
+    else{onlineState=fresh;standing=Number(fresh.standing??10);score=fresh.scores?.[fresh.players.findIndex(p=>Number(p.id)===Number(tg?.initDataUnsafe?.user?.id))]||score;locked=!fresh.your_turn;$('throw').disabled=locked;update();showOnlineResult(fresh);}
+   }catch(e){}
+  },1800);
+ }catch(e){$('hint').textContent=e.message;}
+}
 function nextFrame(){
  frame++;
  if(frame>10){$('result-title').textContent='انتهت اللعبة!';$('result-text').textContent='نتيجتك الرسمية: '+score+' نقطة — أسقطت '+total+' قارورة';$('result').style.display='flex';return;}
  $('next').disabled=true;$('next').style.opacity='.5';shots=0;resetShot();
 }
-canvas.addEventListener('pointerdown',e=>{if(locked||!ball)return;const r=canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;if(Math.hypot(x-ball.x,y-ball.y)<ball.r*2.5){drag={x,y};canvas.setPointerCapture(e.pointerId)}});
+canvas.addEventListener('pointerdown',e=>{if(locked||(onlineMode&&!onlineState?.your_turn)||!ball)return;const r=canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;if(Math.hypot(x-ball.x,y-ball.y)<ball.r*2.5){drag={x,y};canvas.setPointerCapture(e.pointerId)}});
 canvas.addEventListener('pointermove',e=>{if(!drag)return;const r=canvas.getBoundingClientRect();drag.x=e.clientX-r.left;drag.y=e.clientY-r.top;draw()});
-canvas.addEventListener('pointerup',()=>{if(drag)launch()});$('throw').onclick=()=>{if(!locked){drag={x:ball.x,y:ball.y-H*.24};launch()}};$('next').onclick=nextFrame;$('reset').onclick=()=>{frame=1;total=0;score=0;shots=0;rolls=[];frameRolls=[];$('result').style.display='none';$('next').disabled=true;$('next').style.opacity='.5';resetShot()};$('again').onclick=()=>$('reset').click();$('back').onclick=()=>{location.href='/mini-app'};
-new ResizeObserver(()=>{resize();if(!locked)setupPins()}).observe(wrap);resize();setupPins();$('next').disabled=true;$('next').style.opacity='.5';update();
+canvas.addEventListener('pointerup',()=>{if(drag)launch()});$('throw').onclick=()=>{if(!locked){drag={x:ball.x,y:ball.y-H*.24};launch()}};$('next').onclick=nextFrame;$('reset').onclick=()=>{if(onlineMode)return;frame=1;total=0;score=0;shots=0;rolls=[];frameRolls=[];$('result').style.display='none';$('next').disabled=true;$('next').style.opacity='.5';resetShot()};$('again').onclick=()=>$('reset').click();$('back').onclick=()=>{if(onlinePoll)clearInterval(onlinePoll);location.href='/mini-app'};
+new ResizeObserver(()=>{resize();if(!locked)setupPins()}).observe(wrap);resize();setupPins();$('next').disabled=true;$('next').style.opacity='.5';update();if(onlineMode){$('reset').hidden=true;$('next').hidden=true;loadOnlineBowling();}
 })();
 </script></body></html>
