@@ -118,9 +118,11 @@ async def online_image_receive(update: Update, context: ContextTypes.DEFAULT_TYP
 
 def _select_games(query: str):
     value = (query or "").strip().lower()
-    supported_inline = ["connect", "dots", "memory", "word", "match", "number", "sort"]
+    supported_inline = ["connect", "dots", "memory", "word", "match", "number", "sort", "carrom"]
     if not value:
         return supported_inline
+    if any(word in value for word in ("كيرم", "carrom", "carom")):
+        return ["carrom"]
     if any(word in value for word in ("كونكت", "connect", "4")):
         return ["connect"]
     if any(word in value for word in ("مربع", "المربعات", "dots", "dot")):
@@ -546,20 +548,29 @@ async def online_lobby_api(user_id: int, action: str, raw_lobby_id: str, setting
                     raise ValueError("لا يمكن تغيير الإعدادات بعد بدء اللعبة")
                 count = int(settings.get("player_count", 2))
                 mode = str(settings.get("team_mode", "individual"))
+                duration = int(settings.get("duration_seconds", lobby["duration_seconds"] or 300))
                 if lobby["game_type"] == "dots":
                     if count not in (2, 3, 4):
                         raise ValueError("اختر لاعبين أو ثلاثة أو أربعة")
                     if mode not in ("individual", "teams") or (count != 4 and mode != "individual"):
                         raise ValueError("نظام الفرق متاح لأربعة لاعبين فقط")
+                elif lobby["game_type"] == "carrom":
+                    if count not in (2, 4):
+                        raise ValueError("الكيرم تدعم لاعبين أو أربعة لاعبين")
+                    if mode not in ("individual", "teams") or (count != 4 and mode != "individual"):
+                        raise ValueError("اختر نظام اللعب المناسب")
+                    if duration not in (180, 300, 600, 900):
+                        raise ValueError("اختر مدة 3 أو 5 أو 10 أو 15 دقيقة")
                 else:
                     if count != 2 or mode != "individual":
                         raise ValueError("هذه اللعبة تدعم لاعبين فقط")
+                    duration = 300
                 await conn.execute(
-                    """UPDATE online_game_lobbies SET player_count=$2,team_mode=$3,
+                    """UPDATE online_game_lobbies SET player_count=$2,team_mode=$3,duration_seconds=$4,
                        player2_id=NULL,player2_name=NULL,player3_id=NULL,player3_name=NULL,
                        player4_id=NULL,player4_name=NULL,creator_joined=FALSE,updated_at=NOW()
                        WHERE id=$1""",
-                    lobby_id, count, mode,
+                    lobby_id, count, mode, duration,
                 )
             elif action == "leave":
                 if lobby["status"] != "pending":
@@ -588,7 +599,10 @@ async def online_lobby_api(user_id: int, action: str, raw_lobby_id: str, setting
                     *[_safe_player_name(lobby[f"player{i}_name"], "مستخدم") for i in range(2, count+1)]
                 ]
                 game_id = uuid.uuid4()
-                if lobby["game_type"] == "connect":
+                if lobby["game_type"] == "carrom":
+                    from games.carrom_online import create_game
+                    await create_game(conn, lobby, game_id)
+                elif lobby["game_type"] == "connect":
                     from games.connect4 import ROWS, COLS
                     board = [[0 for _ in range(COLS)] for _ in range(ROWS)]
                     await conn.execute(
@@ -654,7 +668,8 @@ async def online_lobby_api(user_id: int, action: str, raw_lobby_id: str, setting
     return {
         "id": lobby_id.hex, "game_type": lobby["game_type"], "status": lobby["status"],
         "creator_id": int(lobby["creator_id"]), "player_count": count,
-        "team_mode": lobby["team_mode"], "players": player_rows,
+        "team_mode": lobby["team_mode"], "duration_seconds": int(lobby["duration_seconds"] or 300),
+        "players": player_rows,
         "is_creator": user_id == int(lobby["creator_id"]),
         "is_joined": user_id in [p["id"] for p in player_rows],
         "game_id": lobby["game_id"].hex if lobby["game_id"] else None,
