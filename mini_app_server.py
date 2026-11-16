@@ -124,9 +124,8 @@ def _run(coro, timeout=20):
 
 def handle_mini_app_request(handler):
     path = handler.path.split("?", 1)[0]
-    if path in ("/", "/mini-app", "/mini-app/", "/carrom", "/bowling"):
-        file_name = "carrom.html" if path == "/carrom" else ("bowling.html" if path == "/bowling" else "index.html")
-        file_path = WEB_ROOT / file_name
+    if path in ("/", "/mini-app", "/mini-app/", "/carrom"):
+        file_path = WEB_ROOT / ("carrom.html" if path == "/carrom" else "index.html")
         body = file_path.read_bytes()
         handler.send_response(200)
         handler.send_header("Content-Type", "text/html; charset=utf-8")
@@ -440,7 +439,7 @@ def handle_connect4_post(handler):
         "/api/minigames/solo/bot-move",
         "/api/online/restart", "/api/online/spectate", "/api/online/lobby", "/api/online/withdraw",
         "/api/extra-games", "/api/casual-games", "/api/number-sort", "/api/quick-games",
-        "/api/carrom-online", "/api/bowling-online",
+        "/api/carrom-online",
     ):
         return False
     try:
@@ -461,12 +460,11 @@ def handle_connect4_post(handler):
         )
         from games.online_mode import restart_online_game, get_online_spectator_state, online_lobby_api, withdraw_online_game
         from games.carrom_online import carrom_online_api
-        from games.bowling_online import bowling_online_api
         if _bot is None:
             raise RuntimeError("البوت ما زال يستعد، حاول بعد قليل")
         user = verify_init_data(payload.get("initData", ""), _bot.token)
         is_challenge_api = path.startswith("/api/connect4/challenge/") or path.startswith("/api/minigames/") or path in ("/api/extra-games", "/api/casual-games", "/api/number-sort", "/api/quick-games")
-        is_online_api = path in ("/api/online/restart", "/api/online/spectate", "/api/online/lobby", "/api/online/withdraw", "/api/carrom-online", "/api/bowling-online")
+        is_online_api = path in ("/api/online/restart", "/api/online/spectate", "/api/online/lobby", "/api/online/withdraw", "/api/carrom-online")
         if path == "/api/number-sort":
             from games import number_sort as ns
             action = str(payload.get("action") or "state")
@@ -578,13 +576,6 @@ def handle_connect4_post(handler):
             result = _run(carrom_online_api(
                 int(user["id"]), str(payload.get("action") or "state"),
                 payload.get("game_id", ""), payload.get("shot") or payload,
-            ))
-            body = json.dumps({"ok": True, "result": result}, ensure_ascii=False).encode()
-            handler.send_response(200)
-        elif path == "/api/bowling-online":
-            result = _run(bowling_online_api(
-                int(user["id"]), str(payload.get("action") or "state"),
-                payload.get("game_id", ""), payload,
             ))
             body = json.dumps({"ok": True, "result": result}, ensure_ascii=False).encode()
             handler.send_response(200)
