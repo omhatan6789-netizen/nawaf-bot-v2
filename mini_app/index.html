@@ -338,7 +338,7 @@ function renderOnlineLobby(state){
  join.onclick=()=>onlineLobbyRequest('join',{name:telegramDisplayName()}).then(loadOnlineLobby).catch(showOnlineLobbyError);
  start.hidden=!isCreator||state.status!=='pending';
  start.disabled=joined.length<state.player_count;
- start.onclick=()=>onlineLobbyRequest('start').then(result=>{onlineLobbyState=result;loadOnlineLobby();}).catch(showOnlineLobbyError);
+ start.onclick=()=>onlineLobbyRequest('start').then(result=>{onlineLobbyState=result;if(result.game_type==='carrom'&&result.game_id){if(onlineLobbyPoll)clearInterval(onlineLobbyPoll);location.replace('/carrom?online=1&game_id='+encodeURIComponent(result.game_id));return;}loadOnlineLobby();}).catch(showOnlineLobbyError);
  leave.hidden=state.status!=='pending'||!state.is_joined;
  leave.onclick=()=>onlineLobbyRequest('leave').then(loadOnlineLobby).catch(showOnlineLobbyError);
  if(state.status==='playing'){
