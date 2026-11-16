@@ -52,7 +52,7 @@ def _public(row, uid):
     return {
         "id": row["id"].hex, "status": row["status"],
         "players": players, "settings": _decode(row["settings"]),
-        "state": state, "turn_index": int(row["turn_index"]),
+        "state": state, "motion": state.get("motion"), "turn_index": int(row["turn_index"]),
         "move_no": int(row["move_no"]), "deadline": deadline.timestamp() if deadline else None,
         "remaining": remaining, "winner_id": int(row["winner_id"]) if row["winner_id"] else None,
         "is_player": any(int(p["id"]) == int(uid) for p in players),
@@ -166,6 +166,47 @@ async def carrom_online_api(user_id: int, action: str, raw_game_id: str, payload
                     and row["turn_deadline"] <= datetime.now(timezone.utc)):
                 current_uid = ids[int(row["turn_index"])]
                 row = await _forfeit_player(conn, row, players, state, current_uid, reset_timer=True)
+            elif action == "motion":
+                if row["status"] != "playing" or ids[int(row["turn_index"])] != uid:
+                    raise ValueError("ليس دورك لإرسال الحركة")
+                incoming = payload.get("motion") or {}
+                discs_in = incoming.get("discs")
+                if not isinstance(discs_in, list) or len(discs_in) != len(state.get("discs", [])):
+                    raise ValueError("بيانات حركة الأقراص غير مكتملة")
+                clean_motion = []
+                for index, item in enumerate(discs_in):
+                    if not isinstance(item, dict):
+                        raise ValueError("حركة قرص غير صالحة")
+                    x, y = float(item.get("x", 400)), float(item.get("y", 400))
+                    if not math.isfinite(x) or not math.isfinite(y) or not (25 <= x <= 775 and 25 <= y <= 775):
+                        raise ValueError("موضع قرص الحركة غير صالح")
+                    original = state["discs"][index]
+                    color = str(item.get("color", ""))
+                    disc_type = str(item.get("type", "coin"))
+                    if color != original["color"] or disc_type != original["type"]:
+                        raise ValueError("تعريف قرص الحركة غير صالح")
+                    clean_motion.append({"x": x, "y": y, "color": color, "type": disc_type,
+                                         "pocketed": bool(item.get("pocketed", False))})
+                striker_in = incoming.get("striker") or {}
+                sx, sy = float(striker_in.get("x", 400)), float(striker_in.get("y", 620))
+                if not math.isfinite(sx) or not math.isfinite(sy) or not (25 <= sx <= 775 and 25 <= sy <= 775):
+                    raise ValueError("موضع المضرب غير صالح")
+                aim_in = incoming.get("aim")
+                clean_aim = None
+                if isinstance(aim_in, dict):
+                    ax, ay = float(aim_in.get("x", sx)), float(aim_in.get("y", sy))
+                    if math.isfinite(ax) and math.isfinite(ay) and 0 <= ax <= 800 and 0 <= ay <= 800:
+                        clean_aim = {"x": ax, "y": ay}
+                state["motion"] = {
+                    "player_id": uid, "discs": clean_motion,
+                    "striker": {"x": sx, "y": sy}, "aim": clean_aim,
+                    "moving": bool(incoming.get("moving")),
+                    "sent_at": datetime.now(timezone.utc).timestamp(),
+                }
+                row = await conn.fetchrow(
+                    "UPDATE carrom_online_games SET game_state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",
+                    game_id, json.dumps(state),
+                )
             elif action == "shot":
                 if row["status"] != "playing":
                     raise ValueError("انتهت المباراة")
