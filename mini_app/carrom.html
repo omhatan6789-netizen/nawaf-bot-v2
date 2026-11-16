@@ -39,7 +39,7 @@ const {Engine,World,Bodies,Body,Sleeping}=Matter;
 const $=id=>document.getElementById(id),canvas=$('board'),ctx=canvas.getContext('2d');
 const W=800,H=800,engine=Engine.create({enableSleeping:true}),world=engine.world;
 engine.gravity.x=0;engine.gravity.y=0;engine.positionIterations=8;engine.velocityIterations=8;engine.constraintIterations=4;
-let mode='bot',botDifficulty='medium',count=2,fourMode='teams',players=[],turn=0,coins=[],striker=null,strikerPlacementInvalid=false,aim=null,dragging=false,activePointerId=null,shotMoving=false,turnPocketed=0,strikerPocketed=false,queenPocketed=false,queenPendingCover=false,queenCoverShot=false,gameOver=false,lastT=0,raf=0,lastImpactAt=0,localTurnTimer=null,localTurnDeadline=0,collectedCoins=[],pocketAnimations=[];
+let mode='bot',botDifficulty='medium',count=2,fourMode='teams',players=[],turn=0,coins=[],striker=null,strikerPlacementInvalid=false,placementNotice=null,aim=null,dragging=false,activePointerId=null,shotMoving=false,turnPocketed=0,strikerPocketed=false,queenPocketed=false,queenPendingCover=false,queenCoverShot=false,gameOver=false,lastT=0,raf=0,lastImpactAt=0,localTurnTimer=null,localTurnDeadline=0,collectedCoins=[],pocketAnimations=[];
 const onlineGameId=new URLSearchParams(location.search).get('game_id')||'';let onlineState=null,onlinePollTimer=null,onlineSubmitting=false,onlineEndShown=false,gameEndCountdownTimer=null,viewRotation=0,onlineMotionTimer=null,onlineMotionInFlight=false,onlinePositionDirty=false,remoteMotionActive=false,remoteAim=null,remoteMotionSeq=0,remoteMotionTargets=null,remoteStrikerTarget=null;
 const cx=400,cy=400,inner={l:62,r:738,t:62,b:738},pocketR=51;
 function choose(group,attr,val){document.querySelectorAll('#'+group+' .choice').forEach(b=>b.classList.toggle('active',b.dataset[attr]===val));}
@@ -136,6 +136,10 @@ function strikerPositionIsBlocked(position){
 }
 function updateStrikerPlacementState(){
  strikerPlacementInvalid=!!striker&&strikerPositionIsBlocked(striker.position);
+ if(striker)striker.isSensor=strikerPlacementInvalid;
+ if(strikerPlacementInvalid){
+  if(!placementNotice){placementNotice=document.createElement('div');placementNotice.className='toast';placementNotice.id='striker-placement-notice';placementNotice.textContent='المكان مشغول — حرّك قرص التسديد إلى مكان فاضي';document.body.appendChild(placementNotice);}
+ }else if(placementNotice){placementNotice.remove();placementNotice=null;}
  return strikerPlacementInvalid;
 }
 function placeStriker(){
@@ -143,7 +147,7 @@ function placeStriker(){
  const slider=$('striker-position');if(slider)slider.value=50;
  const p=baselinePosition(50);
  striker=Bodies.circle(p.x,p.y,30,{label:'striker',restitution:.82,friction:.035,frictionAir:.016,density:.002});
- striker.gameColor='#d8a64f';striker.isStriker=true;World.add(world,striker);strikerPlacementInvalid=false;
+ striker.gameColor='#d8a64f';striker.isStriker=true;striker.isSensor=false;World.add(world,striker);strikerPlacementInvalid=false;if(placementNotice){placementNotice.remove();placementNotice=null;}
 }
 function renderScores(){const el=$('scorebar');el.innerHTML='';if(mode==='online'){players.forEach((p,i)=>{const d=document.createElement('div');d.className='player'+(i===turn?' active':'');if(p.id){const im=document.createElement('img');im.src='/number-sort/avatar/'+p.id;im.alt='';im.style.cssText='width:25px;height:25px;border-radius:50%;vertical-align:middle;margin-left:5px';im.onerror=()=>im.remove();d.appendChild(im);}const name=document.createElement('strong');name.textContent=p.name;const score=document.createElement('span');score.textContent=p.forfeited?'مستبعد من المباراة':p.score+' نقطة';d.append(name,score);el.appendChild(d);if(i===0&&players.length===2){const vs=document.createElement('div');vs.className='vs';vs.textContent='VS';el.appendChild(vs);}});return;}if(players.length===4&&fourMode==='teams'){[0,1].forEach(team=>{const members=players.filter(p=>p.team===team),score=members.reduce((n,p)=>n+p.score,0),active=players[turn]?.team===team;const d=document.createElement('div');d.className='player'+(active?' active':'');d.innerHTML='<strong>'+(team===0?'الفريق الأول':'الفريق الثاني')+'</strong><span>'+score+' نقطة · '+members.map(p=>p.name.split(' · ').pop()).join(' و ')+'</span>';el.appendChild(d);});const vs=document.createElement('div');vs.className='vs';vs.textContent='VS';el.appendChild(vs);return;}players.forEach((p,i)=>{const d=document.createElement('div');d.className='player'+(i===turn?' active':'');d.innerHTML='<strong>'+p.name+'</strong><span>'+p.score+' نقطة</span>';el.appendChild(d);if(i===0&&players.length===2){const vs=document.createElement('div');vs.className='vs';vs.textContent='VS';el.appendChild(vs);}});if(players.length===4){const vs=document.createElement('div');vs.className='vs';vs.textContent='الدور '+(turn+1);el.appendChild(vs);}}
 function drawBoard(){
@@ -245,7 +249,7 @@ function enforceBoardBounds(){
   }
  }
 }
-function loop(t){if(!document.getElementById('game').classList.contains('show'))return;const dt=Math.min(33,t-(lastT||t));lastT=t;if(mode==='online'&&!onlineState?.your_turn&&remoteMotionActive){applyRemoteMotionFrame();}else if(!strikerPlacementInvalid){const step=(dt||16.67)/3;Engine.update(engine,step);Engine.update(engine,step);Engine.update(engine,step);detectPockets();enforceBoardBounds();}draw();if(!shotMoving&&striker&&striker.speed>.2)shotMoving=true;if(shotMoving&&allStopped()){shotMoving=false;finishTurn();}raf=requestAnimationFrame(loop);}
+function loop(t){if(!document.getElementById('game').classList.contains('show'))return;const dt=Math.min(33,t-(lastT||t));lastT=t;if(mode==='online'&&!onlineState?.your_turn&&remoteMotionActive){applyRemoteMotionFrame();}else{const step=(dt||16.67)/3;Engine.update(engine,step);Engine.update(engine,step);Engine.update(engine,step);detectPockets();enforceBoardBounds();}draw();if(!shotMoving&&striker&&striker.speed>.2)shotMoving=true;if(shotMoving&&allStopped()){shotMoving=false;finishTurn();}raf=requestAnimationFrame(loop);}
 function allStopped(){return [striker,...coins].filter(b=>b&&!b.pocketed).every(b=>Math.abs(b.velocity.x)<.13&&Math.abs(b.velocity.y)<.13&&Math.abs(b.angularVelocity)<.02);}
 function detectPockets(){const ps=[[77,77],[723,77],[77,723],[723,723]];[striker,...coins].filter(Boolean).forEach(b=>{if(b.pocketed)return;for(const [x,y] of ps){if(Math.hypot(b.position.x-x,b.position.y-y)<pocketR){queuePocketAnimation(b.position.x,b.position.y,b.gameColor,b.circleRadius||20,Math.hypot(b.velocity.x,b.velocity.y));b.pocketed=true;World.remove(world,b);playPocketSound();if(b===striker){strikerPocketed=true;setTimeout(()=>{placeStriker();draw();},180);}else if(b.gameType==='queen'){queenPocketed=true;toast('دخلت الملكة! لازم تدخل قرص أبيض أو أسود في الضربة القادمة');}else{turnPocketed++;const points=b.gameColor==='#080808'?5:10;if(mode!=='online'){players[turn].score+=points;collectedCoins[turn]=(collectedCoins[turn]||0)+1;}toast((points===5?'الأسود':'الأبيض')+' +'+points+' نقاط');}break;}}});}
 function finishTurn(){if(mode==='online'){submitOnlineShot();return;}clearLocalTurnTimer();if(strikerPocketed){players[turn].score=Math.max(0,players[turn].score-5);toast('دخل المضرب! -5 نقاط');if((collectedCoins[turn]||0)>0){collectedCoins[turn]--;addCoin(400,455,'#080808');toast('رجع قرص أسود إلى وسط الملعب');}}if(queenCoverShot){if(turnPocketed>0){players[turn].score+=50;toast('تم تثبيت الملكة! +50 نقطة');queenPendingCover=false;}else{addCoin(cx,cy,'#ed172b','queen');queenPendingCover=false;toast('الملكة رجعت بالنص ماجبت شي بعدها');}queenCoverShot=false;}if(queenPocketed){queenPendingCover=true;queenPocketed=false;}renderScores();if(coins.every(c=>c.pocketed)&&!queenPendingCover){gameOver=true;const winner=players.reduce((a,b)=>a.score>=b.score?a:b);const tied=players.filter(p=>p.score===winner.score).length>1;$('hint').textContent=tied?'انتهت المباراة بالتعادل 🤝':'انتهت المباراة — الفائز: '+winner.name+' 🏆';showCarromEndOverlay(tied?'':winner.name,tied,tied?'تعادل اللاعبان في النقاط.':('🏆 الفائز: '+winner.name+' — '+winner.score+' نقطة'));return;}if((turnPocketed===0&&!queenPendingCover)||strikerPocketed)turn=(turn+1)%players.length;turnPocketed=0;strikerPocketed=false;placeStriker();renderScores();$('hint').textContent='دور '+players[turn].name+' — اسحب القرص للخلف ثم اتركه';startLocalTurnTimer();if(mode==='bot'&&turn===1&&!gameOver)setTimeout(botShot,1500);}
@@ -306,8 +310,7 @@ $('striker-position').addEventListener('input',e=>{
  const target=baselinePosition(requested);
  Body.setPosition(striker,target);Sleeping.set(striker,false);Body.setVelocity(striker,{x:0,y:0});
  const blocked=updateStrikerPlacementState();
- if(blocked){$('hint').textContent='المكان مشغول — حرّك قرص التسديد إلى مكان فاضي';}
- else {$('hint').textContent=mode==='online'?'مكان القرص صالح — تقدر تسدد':'مكان القرص صالح — تقدر تسدد';}
+ /* Keep the player-turn hint unchanged; the persistent placement notice is shown above the board. */
  if(mode==='online'){onlinePositionDirty=true;sendOnlineMotion();}
  draw();
 });
