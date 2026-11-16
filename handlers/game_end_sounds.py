@@ -10,6 +10,7 @@ GAMES = [
     ("connect", "كونكت 4 🔴"), ("dots", "المربعات"),
     ("memory", "الذاكرة 🧠"), ("word_guess", "خمن الكلمة"),
     ("image_guess", "توقع الصورة"), ("demon", "ديمون نواف"),
+    ("carrom", "الكيرم 🎯"),
 ]
 def _scope_keyboard():
     return InlineKeyboardMarkup([
