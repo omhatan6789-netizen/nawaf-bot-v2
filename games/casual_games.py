@@ -28,7 +28,7 @@ def _find_board():
 def _find_reset_round(state, settings, players, mode):
     left, right, target = _find_board()
     state.update({"left_items": left, "right_items": right, "target": target,
-                  "round": int(state.get("round", 0)) + 1, "round_winner_id": None})
+                  "round": int(state.get("round", 0)) + 1, "round_winner_id": None, "wrong_by": None})
     if mode == "bot":
         delays = {"سهل": (3.2, 4.8), "متوسط": (1.9, 3.0),
                   "صعب": (1.0, 1.7), "مستحيل": (0.45, 0.85)}
@@ -207,7 +207,8 @@ async def join_game(user_id, name, raw_id):
         if row["status"]=="waiting":
             players=_obj(row["players"])
             if not any(int(p["id"])==uid for p in players):
-                if len(players)>=4: raise ValueError("الغرفة مكتملة، الحد الأقصى 4 لاعبين")
+                max_players = 2 if row["game_type"] == "find" else 4
+                if len(players)>=max_players: raise ValueError(f"الغرفة مكتملة، الحد الأقصى {max_players} لاعبين")
                 players.append({"id":uid,"name":str(name or "لاعب")[:80]})
                 await c.execute("UPDATE casual_game_rooms SET players=$2::jsonb,updated_at=NOW() WHERE id=$1",gid,json.dumps(players,ensure_ascii=False))
                 row=await c.fetchrow("SELECT * FROM casual_game_rooms WHERE id=$1",gid)
