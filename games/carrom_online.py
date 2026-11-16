@@ -187,9 +187,11 @@ async def carrom_online_api(user_id: int, action: str, raw_game_id: str, payload
                     if color != original["color"] or disc_type != original["type"]:
                         raise ValueError("تعريف قرص الحركة غير صالح")
                     angle = float(item.get("angle", 0))
-                    if not math.isfinite(angle):
-                        raise ValueError("زاوية قرص الحركة غير صالحة")
-                    clean_motion.append({"x": x, "y": y, "angle": angle, "color": color, "type": disc_type,
+                    vx, vy = float(item.get("vx", 0)), float(item.get("vy", 0))
+                    if not all(math.isfinite(v) for v in (angle, vx, vy)):
+                        raise ValueError("سرعة أو زاوية قرص الحركة غير صالحة")
+                    clean_motion.append({"x": x, "y": y, "angle": angle, "vx": vx, "vy": vy,
+                                         "color": color, "type": disc_type,
                                          "pocketed": bool(item.get("pocketed", False))})
                 striker_in = incoming.get("striker") or {}
                 sx, sy = float(striker_in.get("x", 400)), float(striker_in.get("y", 620))
