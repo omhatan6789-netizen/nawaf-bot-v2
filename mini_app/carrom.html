@@ -22,7 +22,7 @@ h1{font-size:26px;margin:4px 0 5px;text-align:center} .sub{text-align:center;col
 .vs{font-size:11px;color:#ffffff70;font-weight:900}
 .board-wrap{position:relative;width:min(100%,430px);margin:0 auto;filter:drop-shadow(0 13px 18px #0009);touch-action:none;overscroll-behavior:contain;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 #board{display:block;width:100%;height:auto;aspect-ratio:1/1;touch-action:none;border-radius:18px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
-.hint{text-align:center;color:#ffffff9b;font-size:12px;min-height:22px;margin:9px 0 0}
+.position-control{width:min(100%,430px);margin:12px auto 4px;padding:12px 14px;border:1px solid #ffffff2b;border-radius:15px;background:#ffffff0d;touch-action:pan-x;user-select:none}.position-control label{display:flex;justify-content:space-between;gap:8px;font-size:13px;font-weight:850;color:#ffe0ad;margin-bottom:8px}.position-control input{display:block;width:100%;height:28px;margin:0;accent-color:#e8b66d;touch-action:pan-x}.position-control small{display:block;text-align:center;color:#ffffff80;font-size:11px;margin-top:5px}.hint{text-align:center;color:#ffffff9b;font-size:12px;min-height:22px;margin:9px 0 0}
 .controls{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px}
 .controls button{border:1px solid #ffffff30;background:#ffffff12;color:#fff;border-radius:12px;min-height:43px;font-weight:800}
 #setup,#game{display:none}#setup.show,#game.show{display:block}
@@ -43,10 +43,10 @@ h1{font-size:26px;margin:4px 0 5px;text-align:center} .sub{text-align:center;col
 </div></div>
 <button class="primary" id="start">ابدأ اللعب</button>
 <p class="sub" style="margin:12px 0 0">اللعب أونلاين بالغرف قيد بناء نظام المزامنة الخاص به.</p></section>
-<section id="game"><div class="scorebar" id="scorebar"></div><div class="board-wrap"><canvas id="board" width="800" height="800"></canvas></div><div class="hint" id="hint">اسحب من القرص الضارب للخلف ثم اتركه للتسديد</div><div class="controls"><button id="change">تبديل اللاعب</button><button id="new">مباراة جديدة</button></div></section>
+<section id="game"><div class="scorebar" id="scorebar"></div><div class="board-wrap"><canvas id="board" width="800" height="800"></canvas></div><div class="position-control"><label for="striker-position"><span>مكان قرص التسديد</span><span>↔</span></label><input id="striker-position" type="range" min="0" max="100" value="50" step="1"><small>حرّك المؤشر لتحديد مكان القرص على خطك فقط</small></div><div class="hint" id="hint">اسحب من القرص الضارب للخلف ثم اتركه للتسديد</div><div class="controls"><button id="change">تبديل اللاعب</button><button id="new">مباراة جديدة</button></div></section>
 </main>
 <script>
-const {Engine,World,Bodies,Body,Events}=Matter;
+const {Engine,World,Bodies,Body,Sleeping}=Matter;
 const $=id=>document.getElementById(id),canvas=$('board'),ctx=canvas.getContext('2d');
 const W=800,H=800,engine=Engine.create({enableSleeping:true}),world=engine.world;
 engine.gravity.x=0;engine.gravity.y=0;engine.positionIterations=8;engine.velocityIterations=8;engine.constraintIterations=4;
@@ -69,13 +69,16 @@ function addCoin(x,y,color,type='coin'){const b=Bodies.circle(x,y,type==='queen'
 function resetBoard(){clearWorld();addWalls();const colors=['#080808','#f7f7f7'];addCoin(cx,cy,'#ed172b','queen');
  const rings=[{r:38,n:6,start:-Math.PI/2},{r:76,n:12,start:-Math.PI/2}];rings.forEach((ring,ri)=>{for(let i=0;i<ring.n;i++){const a=ring.start+i*Math.PI*2/ring.n+(ri?Math.PI/12:0);addCoin(cx+Math.cos(a)*ring.r,cy+Math.sin(a)*ring.r,colors[(i+ri)%2]);}});
  placeStriker();turnPocketed=0;queenPocketed=false;shotMoving=false;aim=null;draw();}
-function baselinePosition(){
- if(count===2)return {x:cx,y:turn%2===0?680:120};
- return [{x:cx,y:680},{x:120,y:cy},{x:cx,y:120},{x:680,y:cy}][turn%4];
+function baselinePosition(value=50){
+ const v=Math.max(0,Math.min(100,Number(value)))/100;
+ if(count===2)return {x:205+390*v,y:turn%2===0?680:120};
+ const bases=[{x:205+390*v,y:680},{x:120,y:205+390*v},{x:205+390*v,y:120},{x:680,y:205+390*v}];
+ return bases[turn%4];
 }
 function placeStriker(){
  if(striker)World.remove(world,striker);
- const p=baselinePosition();
+ const slider=$('striker-position');if(slider)slider.value=50;
+ const p=baselinePosition(50);
  striker=Bodies.circle(p.x,p.y,28,{label:'striker',restitution:.82,friction:.035,frictionAir:.016,density:.002});
  striker.gameColor='#d8a64f';striker.isStriker=true;World.add(world,striker);
 }
@@ -102,12 +105,13 @@ function finishTurn(){if(queenPocketed){players[turn].score+=3;queenPocketed=fal
 function pointerPos(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height};}
 canvas.addEventListener('pointerdown',e=>{if(!striker||shotMoving||gameOver||(mode==='bot'&&turn===1))return;const p=pointerPos(e);if(Math.hypot(p.x-striker.position.x,p.y-striker.position.y)<82){e.preventDefault();dragging=true;activePointerId=e.pointerId;aim=p;try{canvas.setPointerCapture(e.pointerId);}catch(_){}draw();}}, {passive:false});
 canvas.addEventListener('pointermove',e=>{if(!dragging||e.pointerId!==activePointerId)return;e.preventDefault();aim=pointerPos(e);draw();}, {passive:false});
-function releaseShot(e){if(!dragging||e.pointerId!==activePointerId)return;if(e.cancelable)e.preventDefault();const p=aim||pointerPos(e);dragging=false;activePointerId=null;aim=null;const dx=striker.position.x-p.x,dy=striker.position.y-p.y,len=Math.hypot(dx,dy);if(len<8){draw();return;}const power=Math.min(0.22,len*.0027);Body.setVelocity(striker,{x:dx/len*power*60,y:dy/len*power*60});shotMoving=true;$('hint').textContent='القرص يتحرك...';}
+function releaseShot(e){if(!dragging||e.pointerId!==activePointerId)return;if(e.cancelable)e.preventDefault();const p=aim||pointerPos(e);dragging=false;activePointerId=null;aim=null;const dx=striker.position.x-p.x,dy=striker.position.y-p.y,len=Math.hypot(dx,dy);if(len<8){draw();return;}const power=Math.min(0.30,len*.0042);Sleeping.set(striker,false);Body.setVelocity(striker,{x:dx/len*power*60,y:dy/len*power*60});shotMoving=true;$('hint').textContent='القرص يتحرك...';}
 canvas.addEventListener('pointerup',releaseShot,{passive:false});
 canvas.addEventListener('pointercancel',releaseShot,{passive:false});
-function botShot(){if(gameOver||turn!==1||mode!=='bot')return;const target=coins.find(c=>!c.pocketed&&c.gameType!=='queen')||coins.find(c=>!c.pocketed);if(!target)return;const dx=target.position.x-striker.position.x,dy=target.position.y-striker.position.y,len=Math.hypot(dx,dy)||1;Body.setVelocity(striker,{x:dx/len*7,y:dy/len*7});shotMoving=true;$('hint').textContent='الكمبيوتر يسدد...';}
+function botShot(){if(gameOver||turn!==1||mode!=='bot')return;const target=coins.find(c=>!c.pocketed&&c.gameType!=='queen')||coins.find(c=>!c.pocketed);if(!target)return;const dx=target.position.x-striker.position.x,dy=target.position.y-striker.position.y,len=Math.hypot(dx,dy)||1;Sleeping.set(striker,false);Body.setVelocity(striker,{x:dx/len*9,y:dy/len*9});shotMoving=true;$('hint').textContent='الكمبيوتر يسدد...';}
 function toast(s){const d=document.createElement('div');d.className='toast';d.textContent=s;document.body.appendChild(d);setTimeout(()=>d.remove(),1300);}
 function back(){cancelAnimationFrame(raf);dragging=false;aim=null;setGameSwipeLock(false);$('game').classList.remove('show');$('setup').classList.add('show');}
+$('striker-position').addEventListener('input',e=>{if(!striker||shotMoving||dragging||gameOver)return;const p=baselinePosition(e.target.value);Body.setPosition(striker,p);Sleeping.set(striker,false);Body.setVelocity(striker,{x:0,y:0});draw();});
 $('start').onclick=startGame;$('back').onclick=()=>{if($('game').classList.contains('show'))back();else location.href='/mini-app';};$('reset').onclick=()=>{if(players.length){players.forEach(p=>p.score=0);turn=0;gameOver=false;resetBoard();renderScores();$('hint').textContent='مباراة جديدة — دور '+players[0].name;}};$('new').onclick=()=>{players.forEach(p=>p.score=0);turn=0;gameOver=false;resetBoard();renderScores();$('hint').textContent='بدأت مباراة جديدة';};$('change').onclick=()=>{if(shotMoving)return;turn=(turn+1)%players.length;placeStriker();renderScores();draw();};
 if(window.Telegram?.WebApp){Telegram.WebApp.ready();Telegram.WebApp.expand();}
 </script></body></html>
