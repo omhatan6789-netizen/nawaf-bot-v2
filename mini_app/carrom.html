@@ -40,7 +40,7 @@ const $=id=>document.getElementById(id),canvas=$('board'),ctx=canvas.getContext(
 const W=800,H=800,engine=Engine.create({enableSleeping:true}),world=engine.world;
 engine.gravity.x=0;engine.gravity.y=0;engine.positionIterations=8;engine.velocityIterations=8;engine.constraintIterations=4;
 let mode='bot',count=2,fourMode='teams',players=[],turn=0,coins=[],striker=null,aim=null,dragging=false,activePointerId=null,shotMoving=false,turnPocketed=0,strikerPocketed=false,queenPocketed=false,queenPendingCover=false,queenCoverShot=false,gameOver=false,lastT=0,raf=0,lastImpactAt=0,localTurnTimer=null,localTurnDeadline=0;
-const onlineGameId=new URLSearchParams(location.search).get('game_id')||'';let onlineState=null,onlinePollTimer=null,onlineSubmitting=false,onlineEndShown=false,gameEndCountdownTimer=null,viewRotation=0,onlineMotionTimer=null,onlineMotionInFlight=false,onlinePositionDirty=false,remoteMotionActive=false,remoteAim=null,remoteMotionSeq=0;
+const onlineGameId=new URLSearchParams(location.search).get('game_id')||'';let onlineState=null,onlinePollTimer=null,onlineSubmitting=false,onlineEndShown=false,gameEndCountdownTimer=null,viewRotation=0,onlineMotionTimer=null,onlineMotionInFlight=false,onlinePositionDirty=false,remoteMotionActive=false,remoteAim=null,remoteMotionSeq=0,remoteMotionTargets=null,remoteStrikerTarget=null;
 const cx=400,cy=400,inner={l:62,r:738,t:62,b:738},pocketR=51;
 function choose(group,attr,val){document.querySelectorAll('#'+group+' .choice').forEach(b=>b.classList.toggle('active',b.dataset[attr]===val));}
 $('modes').onclick=e=>{const b=e.target.closest('[data-mode]');if(!b)return;mode=b.dataset.mode;choose('modes','mode',mode)};
@@ -57,7 +57,7 @@ function showCarromEndOverlay(winnerName,isDraw,subtitle){
 }
 function applyOnlineState(result){
  const previousMove=onlineState?.move_no;
- onlineState=result;remoteMotionActive=false;remoteAim=null;remoteMotionSeq=0;count=result.players.length;fourMode=result.settings.team_mode||'individual';turn=result.turn_index;const seat=Math.max(0,Math.min(count-1,Number(result.you_player_index)||0));viewRotation=count===2?(seat===0?0:Math.PI):([-0,-Math.PI/2,Math.PI,Math.PI/2][seat]??0);
+ onlineState=result;remoteMotionActive=false;remoteAim=null;remoteMotionSeq=0;remoteMotionTargets=null;remoteStrikerTarget=null;count=result.players.length;fourMode=result.settings.team_mode||'individual';turn=result.turn_index;const seat=Math.max(0,Math.min(count-1,Number(result.you_player_index)||0));viewRotation=count===2?(seat===0?0:Math.PI):([-0,-Math.PI/2,Math.PI,Math.PI/2][seat]??0);
  players=result.players.map((p,i)=>({id:Number(p.id),name:p.name,color:i%2?'#eee4d0':'#242326',score:Number(result.scores?.[i]||0),forfeited:!!p.forfeited,team:fourMode==='teams'?i%2:undefined}));
  clearWorld();addWalls();
  (result.state.discs||[]).forEach(d=>{const coin=addCoin(Number(d.x),Number(d.y),d.color,d.type);if(d.pocketed){coin.pocketed=true;World.remove(world,coin);}});
@@ -75,10 +75,29 @@ async function startOnlineCarrom(){
  mode='online';$('setup').classList.remove('show');$('game').classList.add('show');setGameSwipeLock(true);$('change').hidden=true;$('new').hidden=true;
  try{const result=await onlineApi('state');applyOnlineState(result);if(!gameOver){loop();startOnlineMotionSync();scheduleOnlinePoll();}}catch(e){$('hint').textContent=e.message;toast(e.message);}
 }
-function applyRemoteMotion(m){if(!m||Number(m.player_id)===Number(players[onlineState?.you_player_index||0]?.id))return;const stamp=Number(m.sent_at||0);if(stamp&&stamp<=remoteMotionSeq)return;remoteMotionSeq=stamp||remoteMotionSeq+1;(m.discs||[]).forEach((d,i)=>{const b=coins[i];if(!b)return;if(d.pocketed&&!b.pocketed){b.pocketed=true;World.remove(world,b);}else if(!d.pocketed&&b.pocketed){b.pocketed=false;World.add(world,b);}if(!b.pocketed){Body.setPosition(b,{x:+d.x,y:+d.y});Body.setAngle(b,+d.angle||0);Body.setVelocity(b,{x:0,y:0});}});if(striker&&m.striker){Body.setPosition(striker,{x:+m.striker.x,y:+m.striker.y});Body.setVelocity(striker,{x:0,y:0});}remoteAim=m.aim?{x:+m.aim.x,y:+m.aim.y}:null;remoteMotionActive=!!m.moving||!!remoteAim;draw();}
-function startOnlineMotionSync(){if(onlineMotionTimer)clearInterval(onlineMotionTimer);onlineMotionTimer=setInterval(sendOnlineMotion,180);}
+function applyRemoteMotion(m){
+ if(!m||Number(m.player_id)===Number(players[onlineState?.you_player_index||0]?.id))return;
+ const stamp=Number(m.sent_at||0);if(stamp&&stamp<=remoteMotionSeq)return;remoteMotionSeq=stamp||remoteMotionSeq+1;
+ remoteMotionTargets=(m.discs||[]).map(d=>({x:+d.x,y:+d.y,angle:+d.angle||0,pocketed:!!d.pocketed}));
+ remoteStrikerTarget=m.striker?{x:+m.striker.x,y:+m.striker.y}:null;
+ remoteAim=m.aim?{x:+m.aim.x,y:+m.aim.y}:null;remoteMotionActive=!!m.moving||!!remoteAim;
+}
+function applyRemoteMotionFrame(){
+ if(!remoteMotionActive||!remoteMotionTargets)return;
+ remoteMotionTargets.forEach((d,i)=>{
+  const b=coins[i];if(!b)return;
+  if(d.pocketed&&!b.pocketed){b.pocketed=true;World.remove(world,b);}
+  else if(!d.pocketed&&b.pocketed){b.pocketed=false;World.add(world,b);}
+  if(!b.pocketed){
+   Body.setPosition(b,{x:b.position.x+(d.x-b.position.x)*.42,y:b.position.y+(d.y-b.position.y)*.42});
+   let da=((d.angle-b.angle+Math.PI*3)%(Math.PI*2))-Math.PI;Body.setAngle(b,b.angle+da*.42);Body.setVelocity(b,{x:0,y:0});
+  }
+ });
+ if(striker&&remoteStrikerTarget){Body.setPosition(striker,{x:striker.position.x+(remoteStrikerTarget.x-striker.position.x)*.48,y:striker.position.y+(remoteStrikerTarget.y-striker.position.y)*.48});Body.setVelocity(striker,{x:0,y:0});}
+}
+function startOnlineMotionSync(){if(onlineMotionTimer)clearInterval(onlineMotionTimer);onlineMotionTimer=setInterval(sendOnlineMotion,150);}
 async function sendOnlineMotion(){if(mode!=='online'||!onlineState?.your_turn||gameOver||onlineMotionInFlight||(!dragging&&!shotMoving&&!onlinePositionDirty))return;onlineMotionInFlight=true;onlinePositionDirty=false;const motion={discs:coins.map(b=>({x:b.position.x,y:b.position.y,angle:b.angle,color:b.gameColor,type:b.gameType,pocketed:!!b.pocketed})),striker:{x:striker?.position.x||400,y:striker?.position.y||620},aim:dragging&&aim?aim:null,moving:!!shotMoving};try{await onlineApi('motion',{motion});}catch(_){}finally{onlineMotionInFlight=false;}}
-function scheduleOnlinePoll(){if(onlinePollTimer)clearTimeout(onlinePollTimer);onlinePollTimer=setTimeout(async()=>{try{if(!shotMoving&&!onlineSubmitting){const result=await onlineApi('state');if(!onlineState||result.move_no!==onlineState.move_no||result.status!==onlineState.status)applyOnlineState(result);else{applyRemoteMotion(result.motion);if(result.remaining!==null&&result.remaining!==undefined)$('hint').textContent='باقي '+result.remaining+' ثانية · '+(result.your_turn?'دورك':'دور '+players[turn].name);}}}catch(_){}if(!gameOver)scheduleOnlinePoll();},250);}
+function scheduleOnlinePoll(){if(onlinePollTimer)clearTimeout(onlinePollTimer);onlinePollTimer=setTimeout(async()=>{try{if(!shotMoving&&!onlineSubmitting){const result=await onlineApi('state');if(!onlineState||result.move_no!==onlineState.move_no||result.status!==onlineState.status)applyOnlineState(result);else{applyRemoteMotion(result.motion);if(result.remaining!==null&&result.remaining!==undefined)$('hint').textContent='باقي '+result.remaining+' ثانية · '+(result.your_turn?'دورك':'دور '+players[turn].name);}}}catch(_){}if(!gameOver)scheduleOnlinePoll();},180);}
 async function submitOnlineShot(){
  if(onlineSubmitting||!onlineState)return;
  if(onlineMotionTimer){clearInterval(onlineMotionTimer);onlineMotionTimer=null;}if(onlineMotionInFlight)await new Promise(resolve=>{const w=()=>onlineMotionInFlight?setTimeout(w,25):resolve();w();});
@@ -215,7 +234,7 @@ function enforceBoardBounds(){
   }
  }
 }
-function loop(t){if(!document.getElementById('game').classList.contains('show'))return;const dt=Math.min(33,t-(lastT||t));lastT=t;if(!(mode==='online'&&!onlineState?.your_turn&&remoteMotionActive)){const step=(dt||16.67)/3;Engine.update(engine,step);Engine.update(engine,step);Engine.update(engine,step);detectPockets();enforceBoardBounds();}draw();if(!shotMoving&&striker&&striker.speed>.2)shotMoving=true;if(shotMoving&&allStopped()){shotMoving=false;finishTurn();}raf=requestAnimationFrame(loop);}
+function loop(t){if(!document.getElementById('game').classList.contains('show'))return;const dt=Math.min(33,t-(lastT||t));lastT=t;if(mode==='online'&&!onlineState?.your_turn&&remoteMotionActive){applyRemoteMotionFrame();}else{const step=(dt||16.67)/3;Engine.update(engine,step);Engine.update(engine,step);Engine.update(engine,step);detectPockets();enforceBoardBounds();}draw();if(!shotMoving&&striker&&striker.speed>.2)shotMoving=true;if(shotMoving&&allStopped()){shotMoving=false;finishTurn();}raf=requestAnimationFrame(loop);}
 function allStopped(){return [striker,...coins].filter(b=>b&&!b.pocketed).every(b=>Math.abs(b.velocity.x)<.13&&Math.abs(b.velocity.y)<.13&&Math.abs(b.angularVelocity)<.02);}
 function detectPockets(){const ps=[[77,77],[723,77],[77,723],[723,723]];[striker,...coins].filter(Boolean).forEach(b=>{if(b.pocketed)return;for(const [x,y] of ps){if(Math.hypot(b.position.x-x,b.position.y-y)<pocketR){b.pocketed=true;World.remove(world,b);playPocketSound();if(b===striker){strikerPocketed=true;setTimeout(()=>{placeStriker();draw();},180);}else if(b.gameType==='queen'){queenPocketed=true;toast('دخلت الملكة! لازم تدخل قرص أبيض أو أسود في الضربة القادمة');}else{turnPocketed++;const points=b.gameColor==='#080808'?5:10;if(mode!=='online')players[turn].score+=points;toast((points===5?'الأسود':'الأبيض')+' +'+points+' نقاط');}break;}}});}
 function finishTurn(){if(mode==='online'){submitOnlineShot();return;}clearLocalTurnTimer();if(strikerPocketed){players[turn].score=Math.max(0,players[turn].score-5);toast('دخل المضرب! -5 نقاط');}if(queenCoverShot){if(turnPocketed>0){players[turn].score+=50;toast('تم تثبيت الملكة! +50 نقطة');queenPendingCover=false;}else{addCoin(cx,cy,'#ed172b','queen');queenPendingCover=false;toast('الملكة رجعت بالنص ماجبت شي بعدها');}queenCoverShot=false;}if(queenPocketed){queenPendingCover=true;queenPocketed=false;}renderScores();if(coins.every(c=>c.pocketed)&&!queenPendingCover){gameOver=true;const winner=players.reduce((a,b)=>a.score>=b.score?a:b);const tied=players.filter(p=>p.score===winner.score).length>1;$('hint').textContent=tied?'انتهت المباراة بالتعادل 🤝':'انتهت المباراة — الفائز: '+winner.name+' 🏆';showCarromEndOverlay(tied?'':winner.name,tied,tied?'تعادل اللاعبان في النقاط.':('🏆 الفائز: '+winner.name+' — '+winner.score+' نقطة'));return;}if((turnPocketed===0&&!queenPendingCover)||strikerPocketed)turn=(turn+1)%players.length;turnPocketed=0;strikerPocketed=false;placeStriker();renderScores();$('hint').textContent='دور '+players[turn].name+' — اسحب القرص للخلف ثم اتركه';startLocalTurnTimer();if(mode==='bot'&&turn===1&&!gameOver)setTimeout(botShot,700);}
