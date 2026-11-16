@@ -163,21 +163,32 @@ async def carrom_online_api(user_id: int, action: str, raw_game_id: str, payload
                 striker_foul = bool(payload.get("striker_pocketed"))
                 scores = list(state.get("scores", [0] * len(players)))
                 scores += [0] * (len(players) - len(scores))
-                for i in newly_normal:
-                    scores[turn_index] += 5 if clean[i]["color"] == "#080808" else 10
                 pending = bool(state.get("queen_pending_cover"))
                 queen_new = queen_index in newly_pocketed
+                event = None
+                regular_before = [i for i, d in enumerate(old_discs) if d["type"] != "queen" and not d.get("pocketed")]
+                if len(regular_before) == 1 and newly_normal and not queen_new and not pending:
+                    last_idx = newly_normal[0]
+                    clean[last_idx].update({"x": 400.0, "y": 455.0, "pocketed": False})
+                    newly_normal = [i for i in newly_normal if i != last_idx]
+                    event = "last_coin_returned"
+                for i in newly_normal:
+                    scores[turn_index] += 5 if clean[i]["color"] == "#080808" else 10
                 if pending:
                     if newly_normal and not striker_foul:
                         scores[turn_index] += 50
                         pending = False
+                        event = "queen_covered"
                     else:
                         clean[queen_index].update({"x": 400.0, "y": 400.0, "pocketed": False})
                         pending = False
+                        event = "queen_returned"
                 elif queen_new:
                     pending = True
+                    event = "queen_pocketed"
                 if striker_foul:
                     scores[turn_index] = max(0, scores[turn_index] - 5)
+                    event = "striker_foul"
                 has_pot = bool(newly_normal)
                 keep_turn = (has_pot or pending) and not striker_foul
                 if striker_foul or not keep_turn:
@@ -187,7 +198,8 @@ async def carrom_online_api(user_id: int, action: str, raw_game_id: str, payload
                 else:
                     next_index = (turn_index + 1) % len(players)
                 state = {"discs": clean, "striker": _striker_baseline(next_index, len(players)),
-                          "scores": scores, "queen_pending_cover": pending}
+                          "scores": scores, "queen_pending_cover": pending,
+                          "last_event": event, "event_move_no": int(row["move_no"]) + 1}
                 all_regular_pocketed = all(d["pocketed"] for d in clean if d["type"] != "queen")
                 queen_done = clean[queen_index]["pocketed"] and not pending
                 status = "finished" if all_regular_pocketed and queen_done else "playing"
