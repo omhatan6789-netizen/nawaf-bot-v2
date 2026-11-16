@@ -19,6 +19,7 @@ GAME_INFO = {
     "memory": ("Memory Match 🧠", "اختبر ذاكرتك وطابق الألوان والتسلسل"),
     "word": ("خمن الكلمة 🔤", "تحدَّ حتى 10 لاعبين واكتشفوا الكلمة قبل انتهاء الوقت"),
     "match": ("تطابق البطاقات 🃏", "طابق أكبر عدد من أزواج البطاقات ضد لاعب أو البوت"),
+    "find": ("Find Match 🔎", "اعثر على الغرض المشترك في الدائرتين قبل خصمك"),
     "number": ("خمن الرقم 🔢", "اخمن الرقم الصحيح مع تلميحات أعلى أو أقل"),
     "sort": ("ترتيب الأرقام 🔢", "رتّب الأرقام قبل انتهاء الوقت وتنافس مع 5 لاعبين"),
     "carrom": ("الكيرم 🎯", "لعبة الكيرم"),
@@ -66,6 +67,7 @@ async def online_image_add_start(update: Update, context: ContextTypes.DEFAULT_T
         [InlineKeyboardButton("اختبر ذاكرتك 🧠", callback_data="online_image:memory")],
         [InlineKeyboardButton("خمن الكلمة 🔤", callback_data="online_image:word")],
         [InlineKeyboardButton("تطابق البطاقات 🃏", callback_data="online_image:match")],
+        [InlineKeyboardButton("Find Match 🔎", callback_data="online_image:find")],
         [InlineKeyboardButton("خمن الرقم 🔢", callback_data="online_image:number")],
         [InlineKeyboardButton("ترتيب الأرقام 🔢", callback_data="online_image:sort")],
         [InlineKeyboardButton("الكيرم 🎯", callback_data="online_image:carrom")],
@@ -118,7 +120,7 @@ async def online_image_receive(update: Update, context: ContextTypes.DEFAULT_TYP
 
 def _select_games(query: str):
     value = (query or "").strip().lower()
-    supported_inline = ["connect", "dots", "memory", "word", "match", "number", "sort", "carrom"]
+    supported_inline = ["connect", "dots", "memory", "word", "match", "find", "number", "sort", "carrom"]
     if not value:
         return supported_inline
     if any(word in value for word in ("كيرم", "carrom", "carom")):
@@ -129,6 +131,8 @@ def _select_games(query: str):
         return ["dots"]
     if any(word in value for word in ("ذاكرة", "ذاكرت", "memory")):
         return ["memory"]
+    if any(word in value for word in ("find", "find match", "ابحث عن المتشابه", "الغرض المشترك")):
+        return ["find"]
     if any(word in value for word in ("بطاقات", "تطابق", "match", "كروت")):
         return ["match"]
     if any(word in value for word in ("ترتيب", "الأرقام", "ارقام", "أرقام", "sort", "slide")):
@@ -199,7 +203,7 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
                 result_kwargs["thumbnail_height"] = 80
             results.append(InlineQueryResultArticle(**result_kwargs))
             continue
-        elif game_type in ("match", "number"):
+        elif game_type in ("match", "number", "find"):
             from games.casual_games import create_game
             game = await create_game(
                 inline.from_user.id,
