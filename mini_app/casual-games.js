@@ -189,7 +189,7 @@ function renderFind(root){
  add("find-left",current.left_items);add("find-right",current.right_items);
  root.querySelector("#casual-back").onclick=()=>{stop();showGames();};
 }
-async function findPick(value){if(lock||current?.status!=="playing")return;lock=true;try{current=await request("action",{move:{value,round:current.round}});renderGame();}catch(e){err(e);}finally{lock=false;}}
+async function findPick(value){if(lock||current?.status!=="playing")return;lock=true;try{current=await request("action",{move:{value,round:current.round}});lock=false;renderGame();}catch(e){lock=false;err(e);}}
 async function flip(index){if(lock)return;lock=true;try{current=await request("action",{move:{index}});lock=false;renderGame();}catch(e){lock=false;err(e);}}
 function finishGame(){
  if(poll)clearTimeout(poll);poll=null;
