@@ -50,7 +50,7 @@ const {Engine,World,Bodies,Body,Events}=Matter;
 const $=id=>document.getElementById(id),canvas=$('board'),ctx=canvas.getContext('2d');
 const W=800,H=800,engine=Engine.create({enableSleeping:true}),world=engine.world;
 engine.gravity.x=0;engine.gravity.y=0;engine.positionIterations=8;engine.velocityIterations=8;engine.constraintIterations=4;
-let mode='bot',count=2,fourMode='teams',players=[],turn=0,coins=[],striker=null,aim=null,dragging=false,shotMoving=false,turnPocketed=0,queenPocketed=false,gameOver=false,lastT=0,raf=0;
+let mode='bot',count=2,fourMode='teams',players=[],turn=0,coins=[],striker=null,aim=null,dragging=false,activePointerId=null,shotMoving=false,turnPocketed=0,queenPocketed=false,gameOver=false,lastT=0,raf=0;
 const cx=400,cy=400,inner={l:62,r:738,t:62,b:738},pocketR=43;
 function choose(group,attr,val){document.querySelectorAll('#'+group+' .choice').forEach(b=>b.classList.toggle('active',b.dataset[attr]===val));}
 $('modes').onclick=e=>{const b=e.target.closest('[data-mode]');if(!b)return;mode=b.dataset.mode;choose('modes','mode',mode)};
@@ -65,9 +65,9 @@ function addWalls(){const t=25,L=inner.l,R=inner.r,T=inner.t,B=inner.b,gap=100;
  rect(L,(T+B)/2,t,B-T-2*gap);rect(R,(T+B)/2,t,B-T-2*gap);
  rect(L+gap/2,T+gap/2,gap,t);rect(R-gap/2,T+gap/2,gap,t);
 }
-function addCoin(x,y,color,type='coin'){const b=Bodies.circle(x,y,type==='queen'?16:15,{label:type,restitution:.88,friction:.035,frictionStatic:.12,frictionAir:.018,density:.0012,sleepThreshold:70});b.gameColor=color;b.gameType=type;b.pocketed=false;World.add(world,b);coins.push(b);return b;}
+function addCoin(x,y,color,type='coin'){const b=Bodies.circle(x,y,type==='queen'?19:18,{label:type,restitution:.88,friction:.035,frictionStatic:.12,frictionAir:.018,density:.0012,sleepThreshold:70});b.gameColor=color;b.gameType=type;b.pocketed=false;World.add(world,b);coins.push(b);return b;}
 function resetBoard(){clearWorld();addWalls();const colors=['#080808','#f7f7f7'];addCoin(cx,cy,'#ed172b','queen');
- const rings=[{r:34,n:6,start:-Math.PI/2},{r:68,n:12,start:-Math.PI/2}];rings.forEach((ring,ri)=>{for(let i=0;i<ring.n;i++){const a=ring.start+i*Math.PI*2/ring.n+(ri?Math.PI/12:0);addCoin(cx+Math.cos(a)*ring.r,cy+Math.sin(a)*ring.r,colors[(i+ri)%2]);}});
+ const rings=[{r:38,n:6,start:-Math.PI/2},{r:76,n:12,start:-Math.PI/2}];rings.forEach((ring,ri)=>{for(let i=0;i<ring.n;i++){const a=ring.start+i*Math.PI*2/ring.n+(ri?Math.PI/12:0);addCoin(cx+Math.cos(a)*ring.r,cy+Math.sin(a)*ring.r,colors[(i+ri)%2]);}});
  placeStriker();turnPocketed=0;queenPocketed=false;shotMoving=false;aim=null;draw();}
 function baselinePosition(){
  if(count===2)return {x:cx,y:turn%2===0?680:120};
@@ -76,7 +76,7 @@ function baselinePosition(){
 function placeStriker(){
  if(striker)World.remove(world,striker);
  const p=baselinePosition();
- striker=Bodies.circle(p.x,p.y,23,{label:'striker',restitution:.82,friction:.035,frictionAir:.016,density:.002});
+ striker=Bodies.circle(p.x,p.y,28,{label:'striker',restitution:.82,friction:.035,frictionAir:.016,density:.002});
  striker.gameColor='#d8a64f';striker.isStriker=true;World.add(world,striker);
 }
 function renderScores(){const el=$('scorebar');el.innerHTML='';if(players.length===4&&fourMode==='teams'){[0,1].forEach(team=>{const members=players.filter(p=>p.team===team),score=members.reduce((n,p)=>n+p.score,0),active=players[turn]?.team===team;const d=document.createElement('div');d.className='player'+(active?' active':'');d.innerHTML='<strong>'+(team===0?'الفريق الأول':'الفريق الثاني')+'</strong><span>'+score+' نقطة · '+members.map(p=>p.name.split(' · ').pop()).join(' و ')+'</span>';el.appendChild(d);});const vs=document.createElement('div');vs.className='vs';vs.textContent='VS';el.appendChild(vs);return;}players.forEach((p,i)=>{const d=document.createElement('div');d.className='player'+(i===turn?' active':'');d.innerHTML='<strong>'+p.name+'</strong><span>'+p.score+' نقطة</span>';el.appendChild(d);if(i===0&&players.length===2){const vs=document.createElement('div');vs.className='vs';vs.textContent='VS';el.appendChild(vs);}});if(players.length===4){const vs=document.createElement('div');vs.className='vs';vs.textContent='الدور '+(turn+1);el.appendChild(vs);}}
@@ -100,9 +100,9 @@ function allStopped(){return [striker,...coins].filter(b=>b&&!b.pocketed).every(
 function detectPockets(){const ps=[[77,77],[723,77],[77,723],[723,723]];[striker,...coins].filter(Boolean).forEach(b=>{if(b.pocketed)return;for(const [x,y] of ps){if(Math.hypot(b.position.x-x,b.position.y-y)<pocketR){b.pocketed=true;World.remove(world,b);if(b===striker){setTimeout(()=>{placeStriker();draw();},180);}else{turnPocketed++;if(b.gameType==='queen')queenPocketed=true;else players[turn].score+=b.gameColor==='#272629'?1:1;toast(b.gameType==='queen'?'دخلت الملكة!':'قرص في الجيب +1');}break;}}});}
 function finishTurn(){if(queenPocketed){players[turn].score+=3;queenPocketed=false;}renderScores();if(coins.every(c=>c.pocketed)){if(players.length===4&&fourMode==='teams'){const a=players.filter(p=>p.team===0).reduce((n,p)=>n+p.score,0),b=players.filter(p=>p.team===1).reduce((n,p)=>n+p.score,0);gameOver=true;$('hint').textContent=a===b?'انتهت المباراة — تعادل الفريقين 🤝':'انتهت المباراة — الفائز: '+(a>b?'الفريق الأول':'الفريق الثاني')+' 🏆';}else{const winner=players.reduce((a,b)=>a.score>=b.score?a:b);gameOver=true;$('hint').textContent='انتهت المباراة — الفائز: '+winner.name+' 🏆';}return;}if(turnPocketed===0)turn=(turn+1)%players.length;turnPocketed=0;placeStriker();renderScores();$('hint').textContent='دور '+players[turn].name+' — اسحب القرص للخلف ثم اتركه';if(mode==='bot'&&turn===1&&!gameOver)setTimeout(botShot,700);}
 function pointerPos(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height};}
-canvas.addEventListener('pointerdown',e=>{if(!striker||shotMoving||gameOver||(mode==='bot'&&turn===1))return;const p=pointerPos(e);if(Math.hypot(p.x-striker.position.x,p.y-striker.position.y)<64){e.preventDefault();dragging=true;aim=p;try{canvas.setPointerCapture(e.pointerId);}catch(_){}draw();}}, {passive:false});
-canvas.addEventListener('pointermove',e=>{if(!dragging)return;e.preventDefault();aim=pointerPos(e);draw();}, {passive:false});
-function releaseShot(e){if(!dragging)return;if(e.cancelable)e.preventDefault();dragging=false;const p=pointerPos(e),dx=striker.position.x-p.x,dy=striker.position.y-p.y,len=Math.hypot(dx,dy);aim=null;if(len<8){draw();return;}const power=Math.min(0.22,len*.0027);Body.setVelocity(striker,{x:dx/len*power*60,y:dy/len*power*60});shotMoving=true;$('hint').textContent='القرص يتحرك...';}
+canvas.addEventListener('pointerdown',e=>{if(!striker||shotMoving||gameOver||(mode==='bot'&&turn===1))return;const p=pointerPos(e);if(Math.hypot(p.x-striker.position.x,p.y-striker.position.y)<82){e.preventDefault();dragging=true;activePointerId=e.pointerId;aim=p;try{canvas.setPointerCapture(e.pointerId);}catch(_){}draw();}}, {passive:false});
+canvas.addEventListener('pointermove',e=>{if(!dragging||e.pointerId!==activePointerId)return;e.preventDefault();aim=pointerPos(e);draw();}, {passive:false});
+function releaseShot(e){if(!dragging||e.pointerId!==activePointerId)return;if(e.cancelable)e.preventDefault();const p=aim||pointerPos(e);dragging=false;activePointerId=null;aim=null;const dx=striker.position.x-p.x,dy=striker.position.y-p.y,len=Math.hypot(dx,dy);if(len<8){draw();return;}const power=Math.min(0.22,len*.0027);Body.setVelocity(striker,{x:dx/len*power*60,y:dy/len*power*60});shotMoving=true;$('hint').textContent='القرص يتحرك...';}
 canvas.addEventListener('pointerup',releaseShot,{passive:false});
 canvas.addEventListener('pointercancel',releaseShot,{passive:false});
 function botShot(){if(gameOver||turn!==1||mode!=='bot')return;const target=coins.find(c=>!c.pocketed&&c.gameType!=='queen')||coins.find(c=>!c.pocketed);if(!target)return;const dx=target.position.x-striker.position.x,dy=target.position.y-striker.position.y,len=Math.hypot(dx,dy)||1;Body.setVelocity(striker,{x:dx/len*7,y:dy/len*7});shotMoving=true;$('hint').textContent='الكمبيوتر يسدد...';}
