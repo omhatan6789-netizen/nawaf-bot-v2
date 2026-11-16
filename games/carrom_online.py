@@ -328,6 +328,7 @@ async def carrom_online_api(user_id: int, action: str, raw_game_id: str, payload
                        turn_deadline=CASE WHEN $4='playing' THEN NOW()+((($6)::text || ' seconds')::interval) ELSE NULL END,
                        updated_at=NOW() WHERE id=$1 RETURNING *""",
                     game_id, json.dumps(state), next_index, status, winner_id,
+                    int(_decode(row["settings"]).get("turn_seconds", 20)),
                 )
             elif action not in ("state", "leave"):
                 raise ValueError("طلب غير معروف")
