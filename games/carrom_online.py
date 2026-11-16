@@ -87,6 +87,25 @@ async def create_game(conn, lobby, game_id):
     )
 
 
+async def _record_carrom_result(conn, game_id, players, winner_id, settings):
+    if not winner_id:
+        return
+    winner_index = next((i for i, p in enumerate(players) if int(p["id"]) == int(winner_id)), None)
+    if winner_index is None:
+        return
+    if len(players) == 4 and settings.get("team_mode") == "teams":
+        winning_team = winner_index % 2
+        winners = [p for i, p in enumerate(players) if i % 2 == winning_team]
+        losers = [p for i, p in enumerate(players) if i % 2 != winning_team]
+    else:
+        winners = [players[winner_index]]
+        losers = [p for i, p in enumerate(players) if i != winner_index]
+    from database.game_stats import record_game_results
+    await record_game_results(
+        f"carrom:{game_id}", "carrom", winners, losers, conn=conn
+    )
+
+
 async def _forfeit_player(conn, row, players, state, uid, reset_timer=False):
     ids = [int(p["id"]) for p in players]
     forfeited = {int(x) for x in state.get("forfeited", [])}
@@ -113,12 +132,14 @@ async def _forfeit_player(conn, row, players, state, uid, reset_timer=False):
         if active:
             winner_id = ids[active[0]]
     if finished:
-        return await conn.fetchrow(
+        finished_row = await conn.fetchrow(
             """UPDATE carrom_online_games SET status='finished',winner_id=$2,
                game_state=$3::jsonb,move_no=move_no+1,turn_deadline=NULL,updated_at=NOW()
                WHERE id=$1 RETURNING *""",
             row["id"], winner_id, json.dumps(state),
         )
+        await _record_carrom_result(conn, row["id"], players, winner_id, settings)
+        return finished_row
     if was_current:
         next_index = next((i for offset in range(1, len(ids) + 1)
                            for i in [(current + offset) % len(ids)] if i in active), active[0])
@@ -330,6 +351,10 @@ async def carrom_online_api(user_id: int, action: str, raw_game_id: str, payload
                     game_id, json.dumps(state), next_index, status, winner_id,
                     int(_decode(row["settings"]).get("turn_seconds", 20)),
                 )
+                if status == "finished":
+                    await _record_carrom_result(
+                        conn, game_id, players, winner_id, _decode(row["settings"])
+                    )
             elif action not in ("state", "leave"):
                 raise ValueError("طلب غير معروف")
             elif action == "leave" and row["status"] == "playing":
