@@ -94,7 +94,9 @@ function addTurnControls(root,isPlayer,myTurn){
 }
 function safe(v){return String(v||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
 function schedulePoll(){
- if(poll)clearTimeout(poll);poll=setTimeout(async()=>{try{if(!current)return;let next=await api("state",current.id);if(next.game_type==="find"&&next.mode==="bot"&&next.status==="playing")next=await api("bot-turn",next.id);if(JSON.stringify(next)!==JSON.stringify(current)){current=next;if(current.status==="waiting")renderLobby();else renderGame();return;}}catch(e){}if(current&&current.status!=="finished")schedulePoll();},800);
+ if(poll)clearTimeout(poll);
+ const delay=current?.game_type==="find"?(current?.mode==="bot"?300:700):1400;
+ poll=setTimeout(async()=>{try{if(!current)return;let next=await api("state",current.id);if(next.game_type==="find"&&next.mode==="bot"&&next.status==="playing")next=await api("bot-turn",next.id);if(JSON.stringify(next)!==JSON.stringify(current)){current=next;if(current.status==="waiting")renderLobby();else renderGame();return;}}catch(e){}if(current&&current.status!=="finished")schedulePoll();},delay);
 }
 function renderGame(){
  const root=shell(),isMatch=gameType==="match",isFind=gameType==="find";
