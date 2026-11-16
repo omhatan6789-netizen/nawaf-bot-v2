@@ -140,8 +140,9 @@ async def carrom_online_api(user_id: int, action: str, raw_game_id: str, payload
             active = await conn.fetchrow(
                 """SELECT id FROM carrom_online_games
                    WHERE status='playing' AND players @> $1::jsonb
+                     AND NOT (COALESCE(game_state->'forfeited','[]'::jsonb) @> $2::jsonb)
                    ORDER BY updated_at DESC LIMIT 1""",
-                json.dumps([{"id": uid}]),
+                json.dumps([{"id": uid}]), json.dumps([uid]),
             )
         if not active:
             return None
