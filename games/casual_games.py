@@ -143,7 +143,8 @@ def _public(row, uid):
                        "winner_id": state.get("winner_id"),
                        "scores": state.get("scores", []),
                        "target_score": int(state.get("target_score", 10)),
-                       "difficulty": settings.get("difficulty", "متوسط")})
+                       "difficulty": settings.get("difficulty", "متوسط"),
+                       "wrong_by": state.get("wrong_by")})
     elif row["game_type"] == "match":
         result.update({"cards": [{"value": c["value"] if c["matched"] or i in (state.get("first"), state.get("second")) or i in state.get("bot_reveal", []) else None,
                                    "matched": bool(c["matched"]), "matched_by": c.get("matched_by"), "index": i}
@@ -234,6 +235,8 @@ async def game_action(user_id, raw_id, action):
                 raise ValueError("انتهت اللعبة")
             if state.get("round_winner_id") is not None:
                 raise ValueError("الجولة انتهت، انتظر الجولة التالية")
+            if int(action.get("round", state.get("round", 1))) != int(state.get("round", 1)):
+                raise ValueError("تغيرت الجولة، ابحث عن الغرض الجديد")
             value = str(action.get("value", ""))
             if value != str(state.get("target", "")):
                 state["wrong_by"] = uid
