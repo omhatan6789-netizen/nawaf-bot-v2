@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>بولينق</title><script src="https://telegram.org/js/telegram-web-app.js"></script>
+<title>بولينق</title><script src="https://telegram.org/js/telegram-web-app.js"></script><script src="https://cdn.jsdelivr.net/npm/matter-js@0.20.0/build/matter.min.js"></script>
 <style>
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#030b18;color:#fff;font-family:system-ui,-apple-system,sans-serif;touch-action:none}
 body{background:radial-gradient(ellipse at 50% 40%,#123b69 0,#07182d 48%,#020711 100%)}
@@ -36,7 +36,7 @@ const $=id=>document.getElementById(id);let W=0,H=0,dpr=1,ball,pins=[],drag=null
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const tg=window.Telegram?.WebApp;tg?.ready?.();
 const onlineParams=new URLSearchParams(location.search),onlineGameId=onlineParams.get('game_id')||'',onlineMode=onlineParams.get('online')==='1';
-let onlineState=null,onlinePoll=null,lastOnlineTurn=null;
+let onlineState=null,onlinePoll=null,lastOnlineTurn=null;\nconst M=window.Matter||null;let physicsEngine=null,physicsWorld=null,ballBody=null;\nif(M){physicsEngine=M.Engine.create();physicsWorld=physicsEngine.world;physicsEngine.gravity.y=.13;physicsEngine.positionIterations=8;physicsEngine.velocityIterations=6;M.Events.on(physicsEngine,'collisionStart',event=>{if(!ballBody)return;for(const pair of event.pairs){const other=pair.bodyA===ballBody?pair.bodyB:pair.bodyB===ballBody?pair.bodyA:null;if(!other)continue;const pin=pins.find(item=>item.body===other);if(pin&&!pin.fallen){pin.fallen=true;M.Body.setStatic(other,false);M.Body.setVelocity(other,{x:ballBody.velocity.x*.42+(Math.random()-.5)*1.5,y:Math.abs(ballBody.velocity.y)*.28+1.2});M.Body.setAngularVelocity(other,(Math.random()-.5)*.24);}}});}
 function resize(){const r=wrap.getBoundingClientRect();dpr=Math.min(devicePixelRatio||1,2);W=r.width;H=r.height;canvas.width=W*dpr;canvas.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);draw()}
 function lane(){const top=H*.12,bottom=H*.91,cx=W/2,topW=W*.30,botW=W*.78;ctx.save();ctx.beginPath();ctx.moveTo(cx-topW/2,top);ctx.lineTo(cx+topW/2,top);ctx.lineTo(cx+botW/2,bottom);ctx.lineTo(cx-botW/2,bottom);ctx.closePath();let g=ctx.createLinearGradient(0,top,0,bottom);g.addColorStop(0,'#a8dfff');g.addColorStop(.35,'#438fc4');g.addColorStop(1,'#174b78');ctx.fillStyle=g;ctx.fill();ctx.strokeStyle='#5cc7ff';ctx.lineWidth=2;ctx.stroke();
 for(let i=-3;i<=3;i++){let x1=cx+i*topW/7,x2=cx+i*botW/7;ctx.strokeStyle='rgba(210,240,255,.17)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x1,top);ctx.lineTo(x2,bottom);ctx.stroke()}
@@ -44,7 +44,8 @@ ctx.strokeStyle='#a8e7ff88';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(cx-topW*.
 ctx.fillStyle='#64caff';ctx.shadowColor='#1aa7ff';ctx.shadowBlur=18;ctx.fillRect(cx-topW*.48,top-5,topW*.96,4);ctx.restore()}
 function pinShape(p){ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.a);ctx.globalAlpha=p.alpha;ctx.shadowColor='#9bdcff';ctx.shadowBlur=9;let s=p.s;ctx.fillStyle='#f5fbff';ctx.beginPath();ctx.moveTo(-s*.28,s*.48);ctx.quadraticCurveTo(-s*.42,s*.08,-s*.18,-s*.13);ctx.quadraticCurveTo(-s*.28,-s*.55,0,-s*.58);ctx.quadraticCurveTo(s*.28,-s*.55,s*.18,-s*.13);ctx.quadraticCurveTo(s*.42,s*.08,s*.28,s*.48);ctx.closePath();ctx.fill();ctx.shadowBlur=0;ctx.strokeStyle='#e33d59';ctx.lineWidth=Math.max(2,s*.12);ctx.beginPath();ctx.moveTo(-s*.18,-s*.15);ctx.lineTo(s*.18,-s*.15);ctx.stroke();ctx.fillStyle='#d8efff';ctx.beginPath();ctx.ellipse(0,s*.45,s*.3,s*.1,0,0,Math.PI*2);ctx.fill();ctx.restore()}
 function ballShape(){if(!ball)return;ctx.save();ctx.shadowColor='#26baff';ctx.shadowBlur=24;let g=ctx.createRadialGradient(ball.x-ball.r*.35,ball.y-ball.r*.4,2,ball.x,ball.y,ball.r);g.addColorStop(0,'#f0fbff');g.addColorStop(.22,'#46c8ff');g.addColorStop(.65,'#0872d1');g.addColorStop(1,'#032b66');ctx.fillStyle=g;ctx.beginPath();ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;ctx.fillStyle='#dff7ff';for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(ball.x+Math.cos(i*2.1)*ball.r*.3,ball.y+Math.sin(i*2.1)*ball.r*.3,ball.r*.09,0,Math.PI*2);ctx.fill()}ctx.restore()}
-function setupPins(){pins=[];const cx=W/2,top=H*.19,step=Math.min(W*.075,H*.045);for(let row=0;row<4;row++)for(let col=0;col<=row;col++){let x=cx+(col-row/2)*step*1.65,y=top+row*step*1.25;pins.push({x,y,vx:0,vy:0,a:0,av:0,s:Math.max(13,step*.75),fallen:false,alpha:1})}ball={x:W/2,y:H*.83,vx:0,vy:0,r:Math.max(17,Math.min(W,H)*.035)}}
+function addWall(x1,y1,x2,y2,thickness=9){const dx=x2-x1,dy=y2-y1,len=Math.hypot(dx,dy),body=M.Bodies.rectangle((x1+x2)/2,(y1+y2)/2,len,thickness,{isStatic:true,angle:Math.atan2(dy,dx),friction:.2});M.Composite.add(physicsWorld,body)}
+function setupPins(){pins=[];ballBody=null;if(M){M.Composite.clear(physicsWorld,false);const cx=W/2,top=H*.12,bottom=H*.91,topW=W*.30,botW=W*.78;addWall(cx-topW/2,top,cx-botW/2,bottom);addWall(cx+topW/2,top,cx+botW/2,bottom);addWall(cx-topW/2,top,cx+topW/2,top,7)}const cx=W/2,top=H*.19,step=Math.min(W*.075,H*.045),bodies=[];for(let row=0;row<4;row++)for(let col=0;col<=row;col++){let x=cx+(col-row/2)*step*1.65,y=top+row*step*1.25,s=Math.max(13,step*.75),pin={x,y,vx:0,vy:0,a:0,av:0,s,fallen:false,alpha:1,body:null};if(M){pin.body=M.Bodies.rectangle(x,y,s*.48,s*1.08,{isStatic:true,restitution:.12,friction:.32,frictionAir:.075,density:.001,chamfer:{radius:s*.18}});bodies.push(pin.body)}pins.push(pin)}if(M&&bodies.length)M.Composite.add(physicsWorld,bodies);resetBall()}
 function resetShot(){setupPins();drag=null;locked=false;settle=0;standing=10;frameRolls=[];$('hint').textContent='اسحب من الكرة للأعلى، وحرّك إصبعك يمينًا أو يسارًا لتحديد الاتجاه';update()}
 function update(){
  $('frame').textContent=frame+' / 10';$('fallen').textContent=(10-standing)+' / 10';$('points').textContent=score;
@@ -62,19 +63,12 @@ function update(){
  }else bar.hidden=true;
 }
 function scoringTotal(){let i=0,sum=0;for(let f=0;f<10;f++){if(i>=rolls.length)break;let a=rolls[i];if(a===10){sum+=10+(rolls[i+1]??0)+(rolls[i+2]??0);i++;}else if(i+1<rolls.length&&a+rolls[i+1]===10){sum+=10+(rolls[i+2]??0);i+=2;}else{sum+=a+(rolls[i+1]??0);i+=2;}}return sum}
-function resetBall(){ball={x:W/2,y:H*.83,vx:0,vy:0,r:Math.max(17,Math.min(W,H)*.035)}}
+function resetBall(){if(M&&ballBody){M.Composite.remove(physicsWorld,ballBody);ballBody=null;}ball={x:W/2,y:H*.83,vx:0,vy:0,r:Math.max(17,Math.min(W,H)*.035)}}
 function freshRack(){setupPins();standing=10}
 function draw(){if(!W||!H)return;ctx.clearRect(0,0,W,H);lane();pins.forEach(pinShape);ballShape();if(drag){ctx.strokeStyle='#b9ecff55';ctx.lineWidth=1;ctx.beginPath();ctx.arc(ball.x,ball.y,ball.r+7,0,Math.PI*2);ctx.stroke()}}
-function launch(){if(locked||!drag)return;let dx=drag.x-ball.x,dy=ball.y-drag.y;let power=clamp(Math.hypot(dx,dy),12,Math.min(H*.42,180));let angle=clamp(dx/Math.max(55,power),-.48,.48);let speed=7+power*.075;ball.vx=Math.sin(angle)*speed;ball.vy=-Math.cos(angle)*speed;locked=true;drag=null;$('hint').textContent='الكرة في طريقها إلى القوارير...';animate()}
-function animate(){cancelAnimationFrame(anim);let active=true;function step(){let moving=false;ball.x+=ball.vx;ball.y+=ball.vy;ball.vx*=.992;ball.vy*=.992;
-pins.forEach(p=>{if(p.fallen){p.x+=p.vx;p.y+=p.vy;p.vx*=.985;p.vy*=.985;p.a+=p.av;p.av*=.98;if(p.y>H*.96||p.x<-30||p.x>W+30)p.alpha=Math.max(0,p.alpha-.04);if(Math.hypot(p.vx,p.vy)>.15)moving=true;return}
-let d=Math.hypot(ball.x-p.x,ball.y-p.y),hit=ball.r+p.s*.34;if(d<hit&&ball.y<p.y+ball.r){let nx=(p.x-ball.x)/(d||1),ny=(p.y-ball.y)/(d||1),imp=Math.max(3,Math.abs(ball.vy)*.8);p.fallen=true;p.vx=nx*imp+ball.vx*.35;p.vy=ny*imp+Math.abs(ball.vy)*.65;p.av=(Math.random()-.5)*.28;ball.vx+=nx*1.1;ball.vy*=.84;}}
-);
-if(ball.y<H*.16){ball.vy=Math.max(ball.vy,1);ball.vx*=.98}
-if(ball.y>H*.89||ball.x<W*.1||ball.x>W*.9){ball.vx*=.92;ball.vy*=.9}
-if(Math.hypot(ball.vx,ball.vy)>.18)moving=true;else{ball.vx=0;ball.vy=0}
-draw();if(moving){anim=requestAnimationFrame(step)}else{settle++;finishShot()}}
-step()}
+function launch(){if(locked||!drag)return;let dx=drag.x-ball.x,dy=ball.y-drag.y;let power=clamp(Math.hypot(dx,dy),12,Math.min(H*.42,180));let angle=clamp(dx/Math.max(55,power),-.48,.48);let speed=7+power*.075;ball.vx=Math.sin(angle)*speed;ball.vy=-Math.cos(angle)*speed;if(M){ballBody=M.Bodies.circle(ball.x,ball.y,ball.r,{restitution:.18,friction:.025,frictionAir:.012,density:.02});M.Composite.add(physicsWorld,ballBody);M.Body.setVelocity(ballBody,{x:ball.vx,y:ball.vy});}locked=true;drag=null;$('hint').textContent='الكرة في طريقها إلى القوارير...';animate()}
+function animate(){if(!M||!ballBody){animateFallback();return;}cancelAnimationFrame(anim);let quiet=0;function step(){M.Engine.update(physicsEngine,1000/60);ball.x=ballBody.position.x;ball.y=ballBody.position.y;ball.vx=ballBody.velocity.x;ball.vy=ballBody.velocity.y;let moving=Math.hypot(ball.vx,ball.vy)>.18;pins.forEach(p=>{if(!p.body)return;p.x=p.body.position.x;p.y=p.body.position.y;p.a=p.body.angle;if(!p.body.isStatic){p.fallen=true;if(Math.hypot(p.body.velocity.x,p.body.velocity.y)>.16||Math.abs(p.body.angularVelocity)>.02)moving=true;}});draw();if(moving&&quiet<360){quiet=0;anim=requestAnimationFrame(step);}else{if(ballBody){M.Composite.remove(physicsWorld,ballBody);ballBody=null;}finishShot();}}step()}
+function animateFallback(){cancelAnimationFrame(anim);function step(){let moving=false;ball.x+=ball.vx;ball.y+=ball.vy;ball.vx*=.992;ball.vy*=.992;pins.forEach(p=>{if(p.fallen){p.x+=p.vx;p.y+=p.vy;p.vx*=.985;p.vy*=.985;p.a+=p.av;p.av*=.98;if(p.y>H*.96||p.x<-30||p.x>W+30)p.alpha=Math.max(0,p.alpha-.04);if(Math.hypot(p.vx,p.vy)>.15)moving=true;return}let d=Math.hypot(ball.x-p.x,ball.y-p.y),hit=ball.r+p.s*.34;if(d<hit&&ball.y<p.y+ball.r){let nx=(p.x-ball.x)/(d||1),ny=(p.y-ball.y)/(d||1),imp=Math.max(3,Math.abs(ball.vy)*.8);p.fallen=true;p.vx=nx*imp+ball.vx*.35;p.vy=ny*imp+Math.abs(ball.vy)*.65;p.av=(Math.random()-.5)*.28;ball.vx+=nx*1.1;ball.vy*=.84;}});if(ball.y<H*.16){ball.vy=Math.max(ball.vy,1);ball.vx*=.98}if(ball.y>H*.89||ball.x<W*.1||ball.x>W*.9){ball.vx*=.92;ball.vy*=.9}if(Math.hypot(ball.vx,ball.vy)>.18)moving=true;draw();if(moving){anim=requestAnimationFrame(step)}else finishShot()}step()}
 async function finishShot(){
  const down=Math.min(standing,pins.filter(p=>p.fallen).length);
  if(onlineMode){await submitOnlineShot(down);return;}
@@ -87,7 +81,7 @@ async function finishShot(){
  else frameDone=true;
  if(frameDone){$('next').disabled=false;$('next').style.opacity='1';$('hint').textContent+=' — انتهى دور الجولة، اضغط الجولة التالية';return;}
  if(bonusRack||standing===0)freshRack();
- else{pins=pins.filter(p=>!p.fallen);pins.forEach(p=>{p.vx=0;p.vy=0;p.av=0;p.alpha=1;});resetBall();}
+ else{if(M)pins.filter(p=>p.fallen&&p.body).forEach(p=>M.Composite.remove(physicsWorld,p.body));pins=pins.filter(p=>!p.fallen);pins.forEach(p=>{p.vx=0;p.vy=0;p.av=0;p.alpha=1;});resetBall();}
  locked=false;drag=null;update();$('hint').textContent+=' — باقي لك رمية';
 }
 async function onlineRequest(action,extra={}) {
@@ -144,7 +138,7 @@ async function submitOnlineShot(pinsDown){
   onlineState=state;frame=state.frame||1;
   const me=Number(tg?.initDataUnsafe?.user?.id||0),myIndex=state.players?.findIndex(p=>Number(p.id)===me)??-1;
   score=myIndex>=0?(state.scores?.[myIndex]||0):0;standing=Number(state.standing??10);lastOnlineTurn=key;
-  if(sameTurn&&standing===Math.max(0,oldStanding-pinsDown)){pins=pins.filter(p=>!p.fallen);resetBall();}
+  if(sameTurn&&standing===Math.max(0,oldStanding-pinsDown)){if(M)pins.filter(p=>p.fallen&&p.body).forEach(p=>M.Composite.remove(physicsWorld,p.body));pins=pins.filter(p=>!p.fallen);resetBall();}
   else{setupPins();resetBall();}
   locked=!state.your_turn||state.status!=='playing';$('throw').disabled=locked;update();showOnlineResult(state);
   if(state.status!=='finished')$('hint').textContent=state.your_turn?'باقي لك رمية':'بانتظار دور '+(state.players?.[state.turn_index]?.name||'اللاعب');
