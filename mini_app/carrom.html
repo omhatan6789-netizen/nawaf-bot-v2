@@ -91,11 +91,20 @@ async function startOnlineCarrom(){
 }
 function scheduleOnlinePoll(){if(onlinePollTimer)clearTimeout(onlinePollTimer);onlinePollTimer=setTimeout(async()=>{try{if(!shotMoving&&!onlineSubmitting){const result=await onlineApi('state');if(!onlineState||result.move_no!==onlineState.move_no||result.status!==onlineState.status)applyOnlineState(result);else if(result.remaining!==null&&result.remaining!==undefined)$('hint').textContent='الوقت المتبقي: '+Math.floor(result.remaining/60)+':'+String(result.remaining%60).padStart(2,'0')+' · '+(result.your_turn?'دورك':'دور '+players[turn].name);}}catch(_){}if(!gameOver)scheduleOnlinePoll();},900);}
 async function submitOnlineShot(){
- if(onlineSubmitting||!onlineState)return;onlineSubmitting=true;if(onlineMotionSyncTimer){clearInterval(onlineMotionSyncTimer);onlineMotionSyncTimer=null;}$('hint').textContent='جاري مزامنة التسديدة...';
- try{if(onlineMotionSyncInFlight)await onlineMotionSyncInFlight;}catch(_){}finally{onlineMotionSyncInFlight=null;}
- try{const discs=coins.map(c=>({x:c.position.x,y:c.position.y,color:c.gameColor,type:c.gameType,pocketed:!!c.pocketed}));const result=await onlineApi('shot',{shot:{move_no:onlineState.move_no,discs,striker:{x:striker?.position.x||400,y:striker?.position.y||620},striker_pocketed:strikerPocketed}});applyOnlineState(result);}
- catch(e){toast(e.message);try{applyOnlineState(await onlineApi('state'));}catch(stateError){toast(stateError.message||'تعذر تحديث حالة المباراة');}}
- finally{onlineSubmitting=false;if(!gameOver)scheduleOnlinePoll();}
+ if(onlineSubmitting||!onlineState)return;
+ onlineSubmitting=true;
+ $('hint').textContent='جاري حفظ التسديدة...';
+ try{
+  const discs=coins.map(c=>({x:c.position.x,y:c.position.y,color:c.gameColor,type:c.gameType,pocketed:!!c.pocketed}));
+  const result=await onlineApi('shot',{shot:{move_no:onlineState.move_no,discs,striker:{x:striker?.position.x||400,y:striker?.position.y||620},striker_pocketed:strikerPocketed}});
+  applyOnlineState(result);
+ }catch(e){
+  toast(e.message);
+  try{applyOnlineState(await onlineApi('state'));}catch(stateError){toast(stateError.message||'تعذر تحديث حالة المباراة');}
+ }finally{
+  onlineSubmitting=false;
+  if(!gameOver)scheduleOnlinePoll();
+ }
 }
 
 function startGame(){ $('setup').classList.remove('show');$('game').classList.add('show');setGameSwipeLock(true);count=2;players=[{name:'أنت',color:'#242326',score:0},{name:mode==='bot'?'البوت':'اللاعب الثاني',color:'#eee4d0',score:0}];turn=0;gameOver=false;resetBoard();renderScores();$('hint').textContent='اسحب القرص الضارب للخلف ثم اتركه للتسديد';loop();}
