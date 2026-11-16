@@ -97,8 +97,8 @@ async def carrom_online_api(user_id: int, action: str, raw_game_id: str, payload
                 raise ValueError("غرفة الكيرم غير موجودة")
             players = _decode(row["players"])
             ids = [int(p["id"]) for p in players]
-            if uid not in ids:
-                raise ValueError("أنت لست لاعبًا في هذه الغرفة")
+            if uid not in ids and action != "state":
+                raise ValueError("هذا الإجراء متاح للاعبين فقط")
             state = _decode(row["game_state"])
             if row["status"] == "playing" and row["deadline"] and row["deadline"] <= datetime.now(timezone.utc):
                 scores = state.get("scores", [0] * len(players))
@@ -132,9 +132,13 @@ async def carrom_online_api(user_id: int, action: str, raw_game_id: str, payload
                     x, y = float(item.get("x", 400)), float(item.get("y", 400))
                     if not math.isfinite(x) or not math.isfinite(y) or not (35 <= x <= 765 and 35 <= y <= 765):
                         raise ValueError("موضع القرص خارج اللوحة")
-                    clean.append({"x": x, "y": y, "color": str(item.get("color", "")),
-                                  "type": str(item.get("type", "coin")),
-                                  "pocketed": bool(item.get("pocketed", False))})
+                    original = state["discs"][len(clean)]
+                    color = str(item.get("color", ""))
+                    disc_type = str(item.get("type", "coin"))
+                    if color != original["color"] or disc_type != original["type"]:
+                        raise ValueError("تعريف القرص غير صالح")
+                    clean.append({"x": x, "y": y, "color": color,
+                                  "type": disc_type, "pocketed": bool(item.get("pocketed", False))})
                 striker = payload.get("striker") or {}
                 sx, sy = float(striker.get("x", 400)), float(striker.get("y", 620))
                 if not math.isfinite(sx) or not math.isfinite(sy) or not (35 <= sx <= 765 and 35 <= sy <= 765):
