@@ -84,13 +84,25 @@ async def create_game(conn, lobby, game_id):
 
 
 async def carrom_online_api(user_id: int, action: str, raw_game_id: str, payload=None):
+    uid = int(user_id)
+    payload = payload or {}
+    pool = get_pool()
+    if action == "active":
+        async with pool.acquire() as conn:
+            active = await conn.fetchrow(
+                """SELECT id FROM carrom_online_games
+                   WHERE status='playing' AND players @> $1::jsonb
+                   ORDER BY updated_at DESC LIMIT 1""",
+                json.dumps([{"id": uid}]),
+            )
+        if not active:
+            return None
+        raw_game_id = active["id"].hex
+        action = "state"
     try:
         game_id = uuid.UUID(hex=str(raw_game_id).replace("-", ""))
     except Exception:
         raise ValueError("رابط لعبة الكيرم غير صالح")
-    uid = int(user_id)
-    payload = payload or {}
-    pool = get_pool()
     async with pool.acquire() as conn:
         async with conn.transaction():
             row = await conn.fetchrow("SELECT * FROM carrom_online_games WHERE id=$1 FOR UPDATE", game_id)
