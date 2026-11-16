@@ -426,7 +426,10 @@ async def online_lobby_callback(update: Update, context: ContextTypes.DEFAULT_TY
                     lobby_id,
                 )
                 game_id = uuid.uuid4()
-                if game_type == "connect":
+                if game_type == "bowling":
+                    from games.bowling_online import create_game
+                    await create_game(conn, lobby, game_id)
+                elif game_type == "connect":
                     from games.connect4 import ROWS, COLS
                     board = [[0 for _ in range(COLS)] for _ in range(ROWS)]
                     await conn.execute(
