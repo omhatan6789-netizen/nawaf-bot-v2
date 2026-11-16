@@ -559,8 +559,8 @@ async def online_lobby_api(user_id: int, action: str, raw_lobby_id: str, setting
                         raise ValueError("الكيرم تدعم لاعبين أو أربعة لاعبين")
                     if mode not in ("individual", "teams") or (count != 4 and mode != "individual"):
                         raise ValueError("اختر نظام اللعب المناسب")
-                    if duration not in (180, 300, 600, 900):
-                        raise ValueError("اختر مدة 3 أو 5 أو 10 أو 15 دقيقة")
+                    if duration not in (20, 30, 40):
+                        raise ValueError("اختر وقت الدور 20 أو 30 أو 40 ثانية")
                 else:
                     if count != 2 or mode != "individual":
                         raise ValueError("هذه اللعبة تدعم لاعبين فقط")
