@@ -253,7 +253,7 @@ const c4StartParam=tg?.initDataUnsafe?.start_param||'';
 const onlineConnectId=c4StartParam.startsWith('online_c4_')?c4StartParam.slice(10):'';
 const onlineMiniGameId=c4StartParam.startsWith('online_mg_')?c4StartParam.slice(10):'';
 const onlineCarromId=c4StartParam.startsWith('online_carrom_')?c4StartParam.slice(14):'';
-const onlineBowlingId=c4StartParam.startsWith('online_bowling_')?c4StartParam.slice(16):'';
+const onlineBowlingId=c4StartParam.startsWith('online_bowling_')?c4StartParam.slice(15):'';
 const carromResumeDismissed=(()=>{try{return sessionStorage.getItem('carrom_return_to_menu')==='1';}catch(e){return false;}})();
 function clearCarromReturnDismissal(){try{sessionStorage.removeItem('carrom_return_to_menu');}catch(e){}}
 const onlineLobbyId=c4StartParam.startsWith('online_lobby_')?c4StartParam.slice(13):'';
