@@ -315,6 +315,7 @@ async function onlineLobbyRequest(action,settings={}){
 }
 function renderOnlineLobby(state){
  onlineLobbyState=state;
+ if(state.status==='playing'&&state.game_type==='carrom'&&state.game_id){if(onlineLobbyPoll){clearInterval(onlineLobbyPoll);onlineLobbyPoll=null;}location.replace('/carrom?online=1&game_id='+encodeURIComponent(state.game_id));return;}
  const shell=c4Shell(),names={connect:'Connect Four 🔴',dots:'Dots and Boxes 🟦',memory:'Memory Match 🧠',carrom:'الكيرم 🎯'};
  const isCreator=state.is_creator,joined=state.players||[];
  const avatar=p=>p?'<span class="online-lobby-avatar"><img src="/number-sort/avatar/'+Number(p.id||0)+'" onerror="this.remove();this.parentElement.textContent=\'👤\'" alt=""></span>':'<span class="online-lobby-avatar">👤</span>';
