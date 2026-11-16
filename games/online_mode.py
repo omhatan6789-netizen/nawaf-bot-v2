@@ -233,8 +233,8 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
             lobby_id = uuid.uuid4()
             await pool.execute(
                 """INSERT INTO online_game_lobbies
-                   (id,game_type,creator_id,creator_name)
-                   VALUES($1,$2,$3,$4)""",
+                   (id,game_type,creator_id,creator_name,duration_seconds)
+                   VALUES($1,$2,$3,$4,CASE WHEN $2='carrom' THEN 20 ELSE 300 END)""",
                 lobby_id, game_type, inline.from_user.id,
                 inline.from_user.full_name or inline.from_user.first_name or "مستخدم",
             )
