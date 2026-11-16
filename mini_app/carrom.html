@@ -20,14 +20,14 @@ h1{font-size:26px;margin:4px 0 5px;text-align:center} .sub{text-align:center;col
 .scorebar{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;margin-bottom:10px}
 .player{border:1px solid #ffffff28;background:#110709a8;border-radius:14px;padding:9px 10px;min-width:0}.player.active{border-color:#ffbd78;box-shadow:0 0 0 2px #ffbd7825}.player strong{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}.player span{font-size:11px;color:#ffffff9a}
 .vs{font-size:11px;color:#ffffff70;font-weight:900}
-.board-wrap{position:relative;width:min(100%,430px);margin:0 auto;filter:drop-shadow(0 13px 18px #0009);touch-action:none;overscroll-behavior:contain;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.board-wrap{position:relative;width:min(100%,470px);margin:0 auto;filter:drop-shadow(0 13px 18px #0009);touch-action:none;overscroll-behavior:contain;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 #board{display:block;width:100%;height:auto;aspect-ratio:1/1;touch-action:none;border-radius:18px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 .position-control{width:min(100%,430px);margin:12px auto 4px;padding:12px 14px;border:1px solid #ffffff2b;border-radius:15px;background:#ffffff0d;touch-action:pan-x;user-select:none}.position-control label{display:flex;justify-content:space-between;gap:8px;font-size:13px;font-weight:850;color:#ffe0ad;margin-bottom:8px}.position-control input{display:block;width:100%;height:28px;margin:0;accent-color:#e8b66d;touch-action:pan-x}.position-control small{display:block;text-align:center;color:#ffffff80;font-size:11px;margin-top:5px}.hint{text-align:center;color:#ffffff9b;font-size:12px;min-height:22px;margin:9px 0 0}
 .controls{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px}
 .controls button{border:1px solid #ffffff30;background:#ffffff12;color:#fff;border-radius:12px;min-height:43px;font-weight:800}
 #setup,#game{display:none}#setup.show,#game.show{display:block}
 .toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 15px);transform:translateX(-50%);background:#16090c;border:1px solid #ffffff40;border-radius:14px;padding:12px 17px;z-index:9;box-shadow:0 8px 30px #0009;max-width:90%;text-align:center}
-@media(min-height:850px){.board-wrap{width:min(100%,470px)}}
+@media(min-height:850px){.board-wrap{width:min(100%,490px)}}
 </style></head>
 <body><main class="app">
 <header class="top"><button class="pill" id="back">رجوع</button><div class="brand">كيرم <small>NAWAF GAME</small></div><button class="pill" id="reset">إعادة</button></header>
@@ -79,8 +79,7 @@ function placeStriker(){
 }
 function renderScores(){const el=$('scorebar');el.innerHTML='';if(players.length===4&&fourMode==='teams'){[0,1].forEach(team=>{const members=players.filter(p=>p.team===team),score=members.reduce((n,p)=>n+p.score,0),active=players[turn]?.team===team;const d=document.createElement('div');d.className='player'+(active?' active':'');d.innerHTML='<strong>'+(team===0?'الفريق الأول':'الفريق الثاني')+'</strong><span>'+score+' نقطة · '+members.map(p=>p.name.split(' · ').pop()).join(' و ')+'</span>';el.appendChild(d);});const vs=document.createElement('div');vs.className='vs';vs.textContent='VS';el.appendChild(vs);return;}players.forEach((p,i)=>{const d=document.createElement('div');d.className='player'+(i===turn?' active':'');d.innerHTML='<strong>'+p.name+'</strong><span>'+p.score+' نقطة</span>';el.appendChild(d);if(i===0&&players.length===2){const vs=document.createElement('div');vs.className='vs';vs.textContent='VS';el.appendChild(vs);}});if(players.length===4){const vs=document.createElement('div');vs.className='vs';vs.textContent='الدور '+(turn+1);el.appendChild(vs);}}
 function drawBoard(){
- // KOXTONS-style layout: dark frame, clean double playing boundary,
- // eight red baseline markers, diagonal corner guides and a central compass.
+ // Reproduction of the selected KOXTONS board markings.
  const frame=ctx.createLinearGradient(0,0,800,800);
  frame.addColorStop(0,'#161719');frame.addColorStop(.45,'#08090a');frame.addColorStop(1,'#242528');
  roundRect(ctx,8,8,784,784,30,frame,'#55575b',5);
@@ -91,69 +90,81 @@ function drawBoard(){
  wood.addColorStop(0,'#f3e4bd');wood.addColorStop(.5,'#ead6a8');wood.addColorStop(1,'#d9c18f');
  roundRect(ctx,48,48,704,704,9,wood,'#171719',3);
 
- // Four actual corner pockets with red lips.
+ // Red corner pocket rims.
  [[77,77],[723,77],[77,723],[723,723]].forEach(([x,y])=>{
   ctx.beginPath();ctx.arc(x,y,31,0,Math.PI*2);ctx.fillStyle='#090909';ctx.fill();
   ctx.lineWidth=8;ctx.strokeStyle='#c9152b';ctx.stroke();
   ctx.beginPath();ctx.arc(x,y,21,0,Math.PI*2);ctx.strokeStyle='#4c4c4c';ctx.lineWidth=2;ctx.stroke();
  });
 
- // Double square playing boundary. No extra decorative rectangles.
+ // Slightly larger playing field: double parallel boundary lines closer to the corners.
  ctx.save();ctx.strokeStyle='#171717';ctx.lineWidth=3;
- ctx.strokeRect(164,164,472,472);ctx.lineWidth=1.5;ctx.strokeRect(176,176,448,448);
+ ctx.strokeRect(145,145,510,510);
+ ctx.lineWidth=1.7;ctx.strokeRect(157,157,486,486);
  ctx.restore();
 
- // Base lines and red placement circles, exactly two at each side.
+ // Four baseline segments and their eight red base circles.
+ const lines=[
+  [[205,180],[595,180]],[[205,620],[595,620]],
+  [[180,205],[180,595]],[[620,205],[620,595]]
+ ];
+ ctx.save();ctx.strokeStyle='#171717';ctx.lineWidth=2.5;
+ lines.forEach(([a,b])=>{ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();});
  const markers=[[205,180],[595,180],[205,620],[595,620],[180,205],[180,595],[620,205],[620,595]];
- ctx.save();ctx.strokeStyle='#171717';ctx.lineWidth=2.5;ctx.beginPath();
- ctx.moveTo(205,180);ctx.lineTo(595,180);
- ctx.moveTo(205,620);ctx.lineTo(595,620);
- ctx.moveTo(180,205);ctx.lineTo(180,595);
- ctx.moveTo(620,205);ctx.lineTo(620,595);ctx.stroke();
  markers.forEach(([x,y])=>{
-  ctx.beginPath();ctx.arc(x,y,15,0,Math.PI*2);ctx.fillStyle='#c9152b';ctx.fill();
+  ctx.beginPath();ctx.arc(x,y,16,0,Math.PI*2);ctx.fillStyle='#c9152b';ctx.fill();
   ctx.lineWidth=2.5;ctx.strokeStyle='#171717';ctx.stroke();
   ctx.beginPath();ctx.arc(x,y,9,0,Math.PI*2);ctx.strokeStyle='#f3d9bd';ctx.lineWidth=1.5;ctx.stroke();
  });
  ctx.restore();
 
- // Corner direction guides and curved arrows, mirrored in all four quadrants.
- function arrowLine(x1,y1,x2,y2){
-  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
-  const a=Math.atan2(y2-y1,x2-x1),n=11;
-  ctx.beginPath();ctx.moveTo(x2,y2);
-  ctx.lineTo(x2-n*Math.cos(a-.48),y2-n*Math.sin(a-.48));
-  ctx.moveTo(x2,y2);ctx.lineTo(x2-n*Math.cos(a+.48),y2-n*Math.sin(a+.48));ctx.stroke();
- }
- const corners=[
-  {sx:215,sy:215,ex:305,ey:305,arc:[300,255,34,Math.PI*.08,Math.PI*.92]},
-  {sx:585,sy:215,ex:495,ey:305,arc:[500,255,34,Math.PI*.08,Math.PI*.92]},
-  {sx:215,sy:585,ex:305,ey:495,arc:[300,545,34,-Math.PI*.92,-Math.PI*.08]},
-  {sx:585,sy:585,ex:495,ey:495,arc:[500,545,34,-Math.PI*.92,-Math.PI*.08]}
+ // Four diagonal arrows with the curved directional sweep shown on the reference board.
+ const guides=[
+  {x:205,y:205,dx:-1,dy:-1},
+  {x:595,y:205,dx:1,dy:-1},
+  {x:205,y:595,dx:-1,dy:1},
+  {x:595,y:595,dx:1,dy:1}
  ];
- ctx.save();ctx.strokeStyle='#25201a';ctx.lineWidth=2;
- corners.forEach(c=>{
-  arrowLine(c.sx,c.sy,c.ex,c.ey);
-  ctx.beginPath();ctx.arc(c.arc[0],c.arc[1],c.arc[2],c.arc[3],c.arc[4]);ctx.stroke();
-  const end=c.arc[4],ex=c.arc[0]+Math.cos(end)*c.arc[2],ey=c.arc[1]+Math.sin(end)*c.arc[2];
-  const tangent=end+Math.PI/2;
-  ctx.beginPath();ctx.moveTo(ex,ey);ctx.lineTo(ex-10*Math.cos(tangent-.5),ey-10*Math.sin(tangent-.5));ctx.moveTo(ex,ey);ctx.lineTo(ex-10*Math.cos(tangent+.5),ey-10*Math.sin(tangent+.5));ctx.stroke();
+ ctx.save();ctx.strokeStyle='#25201a';ctx.lineWidth=2.2;ctx.lineCap='round';
+ guides.forEach(g=>{
+  const sx=g.x+g.dx*5,sy=g.y+g.dy*5,ex=g.x+g.dx*105,ey=g.y+g.dy*105;
+  ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(ex,ey);ctx.stroke();
+  const a=Math.atan2(ey-sy,ex-sx),n=11;
+  ctx.beginPath();ctx.moveTo(ex,ey);
+  ctx.lineTo(ex-n*Math.cos(a-.55),ey-n*Math.sin(a-.55));
+  ctx.moveTo(ex,ey);ctx.lineTo(ex-n*Math.cos(a+.55),ey-n*Math.sin(a+.55));ctx.stroke();
+
+  // Curved arrow sits inside each corner quadrant, mirrored by rotation.
+  const mx=g.x+g.dx*72,my=g.y+g.dy*38;
+  const startA=g.dx===g.dy?Math.PI*.08:Math.PI*.92;
+  ctx.beginPath();
+  ctx.arc(mx,my,31,startA,startA+Math.PI*1.28,g.dx!==g.dy);
+  ctx.stroke();
+  const endA=startA+Math.PI*1.28*(g.dx!==g.dy?-1:1);
+  const ax=mx+Math.cos(endA)*31,ay=my+Math.sin(endA)*31;
+  const tangent=endA+(g.dx!==g.dy?-Math.PI/2:Math.PI/2);
+  ctx.beginPath();ctx.moveTo(ax,ay);
+  ctx.lineTo(ax-9*Math.cos(tangent-.5),ay-9*Math.sin(tangent-.5));
+  ctx.moveTo(ax,ay);ctx.lineTo(ax-9*Math.cos(tangent+.5),ay-9*Math.sin(tangent+.5));ctx.stroke();
  });
  ctx.restore();
 
- // Central compass rose, not the old pair of plain circles.
+ // Larger eight-point compass: four bold red diagonal rays and four slim black cardinal rays.
  ctx.save();ctx.translate(cx,cy);
- ctx.beginPath();ctx.arc(0,0,82,0,Math.PI*2);ctx.strokeStyle='#171717';ctx.lineWidth=2.5;ctx.stroke();
- ctx.beginPath();ctx.arc(0,0,61,0,Math.PI*2);ctx.strokeStyle='#171717';ctx.lineWidth=1.5;ctx.stroke();
+ ctx.beginPath();ctx.arc(0,0,91,0,Math.PI*2);ctx.strokeStyle='#171717';ctx.lineWidth=2.7;ctx.stroke();
+ ctx.beginPath();ctx.arc(0,0,70,0,Math.PI*2);ctx.strokeStyle='#171717';ctx.lineWidth=1.8;ctx.stroke();
  for(let i=0;i<8;i++){
-  const a=-Math.PI/2+i*Math.PI/4,outer=58,inner=15,side=9;
-  ctx.beginPath();ctx.moveTo(Math.cos(a)*outer,Math.sin(a)*outer);
-  ctx.lineTo(Math.cos(a+Math.PI/2)*side,Math.sin(a+Math.PI/2)*side);
+  const a=-Math.PI/2+i*Math.PI/4;
+  const red=i%2===1,outer=red?69:61,inner=13,half=red?11:8;
+  ctx.beginPath();
+  ctx.moveTo(Math.cos(a)*outer,Math.sin(a)*outer);
+  ctx.lineTo(Math.cos(a+Math.PI/2)*half,Math.sin(a+Math.PI/2)*half);
   ctx.lineTo(Math.cos(a)*inner,Math.sin(a)*inner);
-  ctx.lineTo(Math.cos(a-Math.PI/2)*side,Math.sin(a-Math.PI/2)*side);
-  ctx.closePath();ctx.fillStyle=i%2===0?'#c9152b':'#171717';ctx.fill();ctx.strokeStyle='#171717';ctx.lineWidth=1;ctx.stroke();
+  ctx.lineTo(Math.cos(a-Math.PI/2)*half,Math.sin(a-Math.PI/2)*half);
+  ctx.closePath();ctx.fillStyle=red?'#c9152b':'#171717';ctx.fill();
+  ctx.strokeStyle='#171717';ctx.lineWidth=1.4;ctx.stroke();
  }
- ctx.beginPath();ctx.arc(0,0,12,0,Math.PI*2);ctx.fillStyle='#c9152b';ctx.fill();ctx.strokeStyle='#171717';ctx.lineWidth=2;ctx.stroke();
+ ctx.beginPath();ctx.arc(0,0,14,0,Math.PI*2);ctx.fillStyle='#c9152b';ctx.fill();ctx.strokeStyle='#171717';ctx.lineWidth=2;ctx.stroke();
  ctx.restore();
 }
 function roundRect(c,x,y,w,h,r,fill,stroke,lw){c.beginPath();c.roundRect(x,y,w,h,r);c.fillStyle=fill;c.fill();if(stroke){c.lineWidth=lw;c.strokeStyle=stroke;c.stroke();}}
