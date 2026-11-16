@@ -10,7 +10,7 @@ body{background:radial-gradient(ellipse at 50% 40%,#123b69 0,#07182d 48%,#020711
 header{height:58px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 header button,.action{border:1px solid #398ad9;background:#0b2543;color:#eaf6ff;border-radius:13px;padding:9px 13px;font-weight:800}
 h1{font-size:21px;margin:0;color:#d9f1ff;text-shadow:0 0 18px #168fff}
-#score{display:flex;gap:7px;justify-content:center;flex-shrink:0;margin:4px 0 10px}
+#score{display:flex;gap:7px;justify-content:center;flex-shrink:0;margin:4px 0 7px}.players{display:flex;gap:7px;overflow-x:auto;flex-shrink:0;padding:0 1px 7px;scrollbar-width:none}.player-chip{display:flex;align-items:center;gap:6px;min-width:0;flex:1;background:#0a1e35;border:1px solid #1d5b91;border-radius:12px;padding:5px 7px}.player-chip.active{border-color:#67d1ff;box-shadow:0 0 12px #16aaff55}.player-chip img{width:27px;height:27px;border-radius:50%;object-fit:cover;background:#163b5e}.player-chip span{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.player-chip b{display:block;font-size:12px;color:#dff4ff}
 .scorebox{background:#0a1e35;border:1px solid #1d5b91;border-radius:12px;padding:7px 12px;text-align:center;min-width:70px}
 .scorebox small{display:block;color:#8fc8f6;font-size:11px}.scorebox b{font-size:18px}
 #lane-wrap{position:relative;flex:1;min-height:0;border:1px solid #2678b9;border-radius:24px;overflow:hidden;box-shadow:0 0 35px #087bdf44,inset 0 0 40px #0b5ba733;background:#061a31}
@@ -46,7 +46,21 @@ function pinShape(p){ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.a);ctx.globa
 function ballShape(){if(!ball)return;ctx.save();ctx.shadowColor='#26baff';ctx.shadowBlur=24;let g=ctx.createRadialGradient(ball.x-ball.r*.35,ball.y-ball.r*.4,2,ball.x,ball.y,ball.r);g.addColorStop(0,'#f0fbff');g.addColorStop(.22,'#46c8ff');g.addColorStop(.65,'#0872d1');g.addColorStop(1,'#032b66');ctx.fillStyle=g;ctx.beginPath();ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;ctx.fillStyle='#dff7ff';for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(ball.x+Math.cos(i*2.1)*ball.r*.3,ball.y+Math.sin(i*2.1)*ball.r*.3,ball.r*.09,0,Math.PI*2);ctx.fill()}ctx.restore()}
 function setupPins(){pins=[];const cx=W/2,top=H*.19,step=Math.min(W*.075,H*.045);for(let row=0;row<4;row++)for(let col=0;col<=row;col++){let x=cx+(col-row/2)*step*1.65,y=top+row*step*1.25;pins.push({x,y,vx:0,vy:0,a:0,av:0,s:Math.max(13,step*.75),fallen:false,alpha:1})}ball={x:W/2,y:H*.83,vx:0,vy:0,r:Math.max(17,Math.min(W,H)*.035)}}
 function resetShot(){setupPins();drag=null;locked=false;settle=0;standing=10;frameRolls=[];$('hint').textContent='اسحب من الكرة للأعلى، وحرّك إصبعك يمينًا أو يسارًا لتحديد الاتجاه';update()}
-function update(){ $('frame').textContent=frame+' / 10';$('fallen').textContent=(10-standing)+' / 10';$('points').textContent=score;if(onlineState){const p=onlineState.players?.[onlineState.turn_index];$('current-player').textContent=p?.name||'—';}}
+function update(){
+ $('frame').textContent=frame+' / 10';$('fallen').textContent=(10-standing)+' / 10';$('points').textContent=score;
+ const bar=$('players');
+ if(onlineState){
+  bar.hidden=false;bar.replaceChildren();
+  onlineState.players.forEach((p,i)=>{
+   const chip=document.createElement('div');chip.className='player-chip'+(i===onlineState.turn_index?' active':'');
+   const avatar=document.createElement('img');avatar.src='/number-sort/avatar/'+Number(p.id||0);avatar.alt='';avatar.onerror=()=>{avatar.remove()};
+   const info=document.createElement('span'),name=document.createElement('b'),points=document.createElement('span');
+   name.textContent=p.name||'لاعب';points.textContent=(onlineState.scores?.[i]||0)+' نقطة';
+   info.append(name,points);chip.append(avatar,info);bar.append(chip);
+  });
+  const p=onlineState.players?.[onlineState.turn_index];$('current-player').textContent=p?.name||'—';
+ }else bar.hidden=true;
+}
 function scoringTotal(){let i=0,sum=0;for(let f=0;f<10;f++){if(i>=rolls.length)break;let a=rolls[i];if(a===10){sum+=10+(rolls[i+1]??0)+(rolls[i+2]??0);i++;}else if(i+1<rolls.length&&a+rolls[i+1]===10){sum+=10+(rolls[i+2]??0);i+=2;}else{sum+=a+(rolls[i+1]??0);i+=2;}}return sum}
 function resetBall(){ball={x:W/2,y:H*.83,vx:0,vy:0,r:Math.max(17,Math.min(W,H)*.035)}}
 function freshRack(){setupPins();standing=10}
