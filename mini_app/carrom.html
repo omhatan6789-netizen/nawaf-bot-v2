@@ -76,7 +76,7 @@ function applyOnlineState(result){
  queenPendingCover=!!result.state.queen_pending_cover;queenPocketed=false;strikerPocketed=false;queenCoverShot=false;turnPocketed=0;shotMoving=false;gameOver=result.status==='finished';
  renderScores();draw();
  const hint=$('hint');
- if(gameOver){const winner=players.find(p=>p.id===result.winner_id);const isDraw=!result.winner_id;showCarromEndOverlay(winner?.name||'',isDraw,isDraw?'انتهت المباراة بالتعادل.':('الفائز: '+(winner?.name||'')+' — '+Math.max(...players.map(p=>p.score))+' نقطة'));hint.textContent='انتهت المباراة';}
+ if(gameOver){const teamGame=players.length===4&&fourMode==='teams';const teamIndex=teamGame?(result.winner_id===players[0].id?0:result.winner_id===players[1].id?1:-1):-1;const winner=teamGame?null:players.find(p=>p.id===result.winner_id);const isDraw=!result.winner_id;const winnerName=teamGame&&teamIndex>=0?('الفريق '+(teamIndex===0?'الأول':'الثاني')+' ('+players[teamIndex].name+' و '+players[teamIndex+2].name+')'):(winner?.name||'');const high=teamGame?(teamIndex===0?players[0].score+players[2].score:players[1].score+players[3].score):Math.max(...players.map(p=>p.score));showCarromEndOverlay(winnerName,isDraw,isDraw?'انتهت المباراة بالتعادل.':('الفائز: '+winnerName+' — '+high+' نقطة'));hint.textContent='انتهت المباراة';}
  else if(result.remaining!==null&&result.remaining!==undefined)hint.textContent='الوقت المتبقي: '+Math.floor(result.remaining/60)+':'+String(result.remaining%60).padStart(2,'0')+' · '+(result.your_turn?'دورك':'دور '+players[turn].name);
  else hint.textContent=result.your_turn?'دورك — اسحب القرص للخلف ثم اتركه':'انتظر دور '+players[turn].name;
  $('striker-position').disabled=!result.your_turn||gameOver;$('change').hidden=true;$('new').hidden=true;
