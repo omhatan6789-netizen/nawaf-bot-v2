@@ -439,6 +439,7 @@ def handle_connect4_post(handler):
         "/api/minigames/solo/bot-move",
         "/api/online/restart", "/api/online/spectate", "/api/online/lobby", "/api/online/withdraw",
         "/api/extra-games", "/api/casual-games", "/api/number-sort", "/api/quick-games",
+        "/api/carrom-online",
     ):
         return False
     try:
