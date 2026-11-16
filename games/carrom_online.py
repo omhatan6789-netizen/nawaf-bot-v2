@@ -229,12 +229,14 @@ async def carrom_online_api(user_id: int, action: str, raw_game_id: str, payload
                     event = "striker_foul"
                 has_pot = bool(newly_normal)
                 keep_turn = (has_pot or pending) and not striker_foul
-                if striker_foul or not keep_turn:
-                    next_index = (turn_index + 1) % len(players)
-                elif keep_turn:
+                forfeited = {int(x) for x in state.get("forfeited", [])}
+                if keep_turn and ids[turn_index] not in forfeited:
                     next_index = turn_index
                 else:
-                    next_index = (turn_index + 1) % len(players)
+                    active_indices = [i for i, pid in enumerate(ids) if pid not in forfeited]
+                    next_index = next((i for offset in range(1, len(players) + 1)
+                                       for i in [(turn_index + offset) % len(players)]
+                                       if i in active_indices), turn_index)
                 state = {"discs": clean, "striker": _striker_baseline(next_index, len(players)),
                           "scores": scores, "queen_pending_cover": pending,
                           "last_event": event, "event_move_no": int(row["move_no"]) + 1}
