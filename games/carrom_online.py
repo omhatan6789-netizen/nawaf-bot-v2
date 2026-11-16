@@ -29,6 +29,17 @@ def _initial_state():
     }
 
 
+def _striker_baseline(index, count):
+    if count == 2:
+        return {"x": 400.0, "y": 620.0 if index % 2 == 0 else 180.0}
+    return [
+        {"x": 400.0, "y": 620.0},
+        {"x": 180.0, "y": 400.0},
+        {"x": 400.0, "y": 180.0},
+        {"x": 620.0, "y": 400.0},
+    ][index % 4]
+
+
 def _public(row, uid):
     players = _decode(row["players"])
     state = _decode(row["game_state"])
@@ -91,9 +102,14 @@ async def carrom_online_api(user_id: int, action: str, raw_game_id: str, payload
             state = _decode(row["game_state"])
             if row["status"] == "playing" and row["deadline"] and row["deadline"] <= datetime.now(timezone.utc):
                 scores = state.get("scores", [0] * len(players))
-                high = max(scores) if scores else 0
-                winners = [i for i, score in enumerate(scores) if score == high]
-                winner_id = ids[winners[0]] if len(winners) == 1 else None
+                settings = _decode(row["settings"])
+                if len(players) == 4 and settings.get("team_mode") == "teams":
+                    team_scores = [scores[0] + scores[2], scores[1] + scores[3]]
+                    winner_id = ids[0] if team_scores[0] > team_scores[1] else ids[1] if team_scores[1] > team_scores[0] else None
+                else:
+                    high = max(scores) if scores else 0
+                    winners = [i for i, score in enumerate(scores) if score == high]
+                    winner_id = ids[winners[0]] if len(winners) == 1 else None
                 row = await conn.fetchrow(
                     "UPDATE carrom_online_games SET status='finished',winner_id=$2,updated_at=NOW() WHERE id=$1 RETURNING *",
                     game_id, winner_id,
@@ -146,16 +162,14 @@ async def carrom_online_api(user_id: int, action: str, raw_game_id: str, payload
                 if striker_foul:
                     scores[turn_index] = max(0, scores[turn_index] - 5)
                 has_pot = bool(newly_normal)
-                keep_turn = (has_pot or (queen_new and not pending is False)) and not striker_foul
-                if pending:
-                    keep_turn = True
-                if striker_foul or (not has_pot and not pending):
+                keep_turn = (has_pot or pending) and not striker_foul
+                if striker_foul or not keep_turn:
                     next_index = (turn_index + 1) % len(players)
                 elif keep_turn:
                     next_index = turn_index
                 else:
                     next_index = (turn_index + 1) % len(players)
-                state = {"discs": clean, "striker": {"x": sx, "y": sy},
+                state = {"discs": clean, "striker": _striker_baseline(next_index, len(players)),
                           "scores": scores, "queen_pending_cover": pending}
                 all_regular_pocketed = all(d["pocketed"] for d in clean if d["type"] != "queen")
                 queen_done = clean[queen_index]["pocketed"] and not pending
