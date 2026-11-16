@@ -75,6 +75,7 @@ async def create_game(conn, lobby, game_id):
     }
     state = _initial_state()
     state["scores"] = [0 for _ in players]
+    state["collected"] = [0 for _ in players]
     deadline_seconds = settings["duration_seconds"]
     await conn.execute(
         """INSERT INTO carrom_online_games
@@ -246,17 +247,20 @@ async def carrom_online_api(user_id: int, action: str, raw_game_id: str, payload
                 striker_foul = bool(payload.get("striker_pocketed"))
                 scores = list(state.get("scores", [0] * len(players)))
                 scores += [0] * (len(players) - len(scores))
+                collected = list(state.get("collected", [0] * len(players)))
+                collected += [0] * (len(players) - len(collected))
                 pending = bool(state.get("queen_pending_cover"))
                 queen_new = queen_index in newly_pocketed
                 event = None
                 regular_before = [i for i, d in enumerate(old_discs) if d["type"] != "queen" and not d.get("pocketed")]
-                if len(regular_before) == 1 and newly_normal and not queen_new and not pending:
+                if len(regular_before) == 1 and newly_normal and not queen_new and not pending and not clean[queen_index].get("pocketed", False):
                     last_idx = newly_normal[0]
                     clean[last_idx].update({"x": 400.0, "y": 455.0, "pocketed": False})
                     newly_normal = [i for i in newly_normal if i != last_idx]
                     event = "last_coin_returned"
                 for i in newly_normal:
                     scores[turn_index] += 5 if clean[i]["color"] == "#080808" else 10
+                    collected[turn_index] += 1
                 if pending:
                     if newly_normal and not striker_foul:
                         scores[turn_index] += 50
@@ -271,6 +275,15 @@ async def carrom_online_api(user_id: int, action: str, raw_game_id: str, payload
                     event = "queen_pocketed"
                 if striker_foul:
                     scores[turn_index] = max(0, scores[turn_index] - 5)
+                    if collected[turn_index] > 0:
+                        return_index = next((i for i in newly_normal if clean[i].get("pocketed")), None)
+                        if return_index is None:
+                            return_index = next((i for i, disc in enumerate(clean)
+                                                 if disc["type"] != "queen" and disc.get("pocketed")), None)
+                        if return_index is not None:
+                            clean[return_index].update({"x": 400.0, "y": 455.0, "color": "#080808",
+                                                        "type": "coin", "pocketed": False})
+                            collected[turn_index] -= 1
                     event = "striker_foul"
                 has_pot = bool(newly_normal)
                 keep_turn = (has_pot or pending) and not striker_foul
@@ -283,7 +296,7 @@ async def carrom_online_api(user_id: int, action: str, raw_game_id: str, payload
                                        for i in [(turn_index + offset) % len(players)]
                                        if i in active_indices), turn_index)
                 state = {"discs": clean, "striker": _striker_baseline(next_index, len(players)),
-                          "scores": scores, "queen_pending_cover": pending,
+                          "scores": scores, "collected": collected, "queen_pending_cover": pending,
                           "last_event": event, "event_move_no": int(row["move_no"]) + 1}
                 all_regular_pocketed = all(d["pocketed"] for d in clean if d["type"] != "queen")
                 queen_done = clean[queen_index]["pocketed"] and not pending
