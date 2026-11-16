@@ -221,7 +221,7 @@ function showGames(){
    const placeholder=document.createElement('div');placeholder.className='game-cover-placeholder';placeholder.textContent=emoji;card.appendChild(placeholder);
   }
   const label=document.createElement('span');label.className='label';label.textContent=name;card.appendChild(label);
-  card.onclick=()=>{if(type==='carrom'){location.href='/carrom';return;}if(type==='timer'){startQuickGameSetup(type);return;}if(type==='sort'){startNumberSortSetup();return;}if(type==='connect'){showConnect4Setup();return;}if(type==='word'){showWordSetup();return;}if(type==='match'||type==='number'){startCasualSetup(type);return;}showMiniGameInstructions(type);};
+  card.onclick=()=>{if(type==='carrom'){clearCarromReturnDismissal();location.href='/carrom';return;}if(type==='timer'){startQuickGameSetup(type);return;}if(type==='sort'){startNumberSortSetup();return;}if(type==='connect'){showConnect4Setup();return;}if(type==='word'){showWordSetup();return;}if(type==='match'||type==='number'){startCasualSetup(type);return;}showMiniGameInstructions(type);};
   pageContent.appendChild(card);
  });
 }
@@ -252,6 +252,8 @@ const c4StartParam=tg?.initDataUnsafe?.start_param||'';
 const onlineConnectId=c4StartParam.startsWith('online_c4_')?c4StartParam.slice(10):'';
 const onlineMiniGameId=c4StartParam.startsWith('online_mg_')?c4StartParam.slice(10):'';
 const onlineCarromId=c4StartParam.startsWith('online_carrom_')?c4StartParam.slice(14):'';
+const carromResumeDismissed=(()=>{try{return sessionStorage.getItem('carrom_return_to_menu')==='1';}catch(e){return false;}})();
+function clearCarromReturnDismissal(){try{sessionStorage.removeItem('carrom_return_to_menu');}catch(e){}}
 const onlineLobbyId=c4StartParam.startsWith('online_lobby_')?c4StartParam.slice(13):'';
 const onlineMode=!!(onlineConnectId||onlineMiniGameId);
 let c4GameIdFromUrl=onlineConnectId||new URLSearchParams(window.location.search).get('game_id');
@@ -1109,12 +1111,12 @@ document.getElementById('back-home').onclick=showHome;
     home.hidden=true;page.hidden=false;pageTitle.textContent='خمن الكلمة';
     extraGame=await extraGameRequest('join','word');if(extraGame.status==='waiting')renderWordLobby();else renderWordGame();
   }
-  else if(onlineCarromId){location.replace('/carrom?online=1&game_id='+encodeURIComponent(onlineCarromId));}
-  else if(onlineLobbyId){startOnlineLobby();}
+  else if(onlineCarromId&&!carromResumeDismissed){clearCarromReturnDismissal();location.replace('/carrom?online=1&game_id='+encodeURIComponent(onlineCarromId));}
+  else if(onlineLobbyId){clearCarromReturnDismissal();startOnlineLobby();}
   else if(miniGameChallengeIdFromStart){home.hidden=true;page.hidden=false;pageTitle.textContent='الألعاب';startMiniGameChallenge();}
   else if(c4ChallengeIdFromStart){home.hidden=true;page.hidden=false;pageTitle.textContent='كونكت 4';startConnect4Challenge();}
   else if(c4GameIdFromUrl){home.hidden=true;page.hidden=false;pageTitle.textContent='كونكت 4';startConnect4();}
-  else if(!casualStartParam&&!extraGameType&&!onlineLobbyId&&!miniGameChallengeIdFromStart&&!c4ChallengeIdFromStart){
+  else if(!carromResumeDismissed&&!casualStartParam&&!extraGameType&&!onlineLobbyId&&!miniGameChallengeIdFromStart&&!c4ChallengeIdFromStart){
    try{const initData=tg?.initData||'';if(initData){const response=await fetch('/api/carrom-online',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData,action:'active'})});const data=await response.json().catch(()=>({}));const active=data?.ok?data.result:null;if(active?.id){location.replace('/carrom?online=1&game_id='+encodeURIComponent(active.id));return;}}}catch(e){console.warn('Could not check active Carrom game',e);}
   }
  }catch(e){console.error('Mini App extensions load failed:',e);const box=document.createElement('div');box.className='empty';box.textContent='تعذر تحميل الإضافات: '+(e?.message||'خطأ غير معروف');document.getElementById('custom').replaceChildren(box);}
