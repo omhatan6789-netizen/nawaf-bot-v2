@@ -4,6 +4,7 @@ from database.pool import get_pool
 
 CARD_COUNTS = (12, 16, 20, 24, 30)
 LEVELS = ("سهل", "متوسط", "صعب", "مستحيل")
+FIND_ITEMS = ["🍎","🍋","🍇","🍉","🍒","🥝","🍓","🍍","🥥","🥑","🍑","🍊","🫐","🥕","🌽","🍪","🍩","🍔","🍕","🍟","🌮","🍦","🎈","⚽","🏀","🎲","🎧","⌚","🚗","🚀","🐱","🐶","🦊","🐼","🦁","🐸","🌵","🌻","⭐","🌙","💎","🎁"]
 
 def _obj(value):
     return json.loads(value) if isinstance(value, str) else (value or {})
@@ -14,7 +15,33 @@ def _deck(count):
     random.shuffle(pairs)
     return [{"value": v, "matched": False, "matched_by": None} for v in pairs]
 
+def _find_board():
+    shared = random.choice(FIND_ITEMS)
+    others = random.sample([x for x in FIND_ITEMS if x != shared], 16)
+    left = [shared, *others[:8]]
+    right = [shared, *others[8:]]
+    random.shuffle(left)
+    random.shuffle(right)
+    return left, right, shared
+
+
+def _find_reset_round(state, settings, players, mode):
+    left, right, target = _find_board()
+    state.update({"left_items": left, "right_items": right, "target": target,
+                  "round": int(state.get("round", 0)) + 1, "round_winner_id": None})
+    if mode == "bot":
+        delays = {"سهل": (3.2, 4.8), "متوسط": (1.9, 3.0),
+                  "صعب": (1.0, 1.7), "مستحيل": (0.45, 0.85)}
+        low, high = delays.get(settings.get("difficulty", "متوسط"), (1.9, 3.0))
+        state["bot_due_at"] = time.time() + random.uniform(low, high)
+
+
 def _initial(game_type, settings, players, mode):
+    if game_type == "find":
+        state = {"scores": [0] * len(players), "round": 0, "winner_id": None,
+                 "round_winner_id": None, "target_score": 10}
+        _find_reset_round(state, settings, players, mode)
+        return state
     if game_type == "match":
         return {"cards": _deck(int(settings.get("card_count", 16))), "scores": [0]*len(players),
                 "turn_index": 0, "first": None, "second": None, "matched": 0,
@@ -38,6 +65,8 @@ def _next_number_player(players, state, settings, after_index):
 
 
 def _expired(players, state, settings, game_type):
+    if game_type == "find":
+        return False
     if not state.get("turn_deadline") or int(time.time()) < int(state["turn_deadline"]):
         return False
     current_index = int(state.get("turn_index", 0)) % len(players)
@@ -73,7 +102,7 @@ async def _record_finished(conn, row):
     players, state = _obj(row["players"]), _obj(row["state"])
     humans = [p for p in players if not p.get("bot") and int(p.get("id", 0)) > 0]
     winners, losers = [], []
-    if row["game_type"] == "number":
+    if row["game_type"] in ("number", "find"):
         winner_id = state.get("winner_id")
         if winner_id is not None:
             winners = [p for p in humans if int(p["id"]) == int(winner_id)]
@@ -106,7 +135,16 @@ def _public(row, uid):
               "status": row["status"], "owner_id": int(row["owner_id"]),
               "is_owner": int(row["owner_id"]) == int(uid), "players": players,
               "settings": settings, "turn_deadline": state.get("turn_deadline"), "turn_seconds": int(settings.get("turn_seconds",20)), "end_reason": state.get("end_reason")}
-    if row["game_type"] == "match":
+    if row["game_type"] == "find":
+        result.update({"left_items": state.get("left_items", []),
+                       "right_items": state.get("right_items", []),
+                       "round": int(state.get("round", 1)),
+                       "round_winner_id": state.get("round_winner_id"),
+                       "winner_id": state.get("winner_id"),
+                       "scores": state.get("scores", []),
+                       "target_score": int(state.get("target_score", 10)),
+                       "difficulty": settings.get("difficulty", "متوسط")})
+    elif row["game_type"] == "match":
         result.update({"cards": [{"value": c["value"] if c["matched"] or i in (state.get("first"), state.get("second")) or i in state.get("bot_reveal", []) else None,
                                    "matched": bool(c["matched"]), "matched_by": c.get("matched_by"), "index": i}
                                   for i,c in enumerate(state.get("cards", []))],
@@ -128,10 +166,14 @@ def _public(row, uid):
     return result
 
 async def create_game(user_id, name, game_type, mode="bot", settings=None, bot_name="البوت"):
-    if game_type not in ("match","number"): raise ValueError("اللعبة غير معروفة")
+    if game_type not in ("match","number","find"): raise ValueError("اللعبة غير معروفة")
     if mode not in ("bot","online"): raise ValueError("طور اللعب غير صالح")
     settings = dict(settings or {})
-    if game_type == "match":
+    if game_type == "find":
+        difficulty = settings.get("difficulty", "متوسط")
+        if difficulty not in LEVELS: difficulty = "متوسط"
+        settings = {"difficulty": difficulty, "turn_seconds": 20}
+    elif game_type == "match":
         count = int(settings.get("card_count",16))
         if count not in CARD_COUNTS: raise ValueError("اختر عدد البطاقات من 12 أو 16 أو 20 أو 24 أو 30")
         settings = {"card_count":count, "difficulty":settings.get("difficulty","متوسط"), "turn_seconds":int(settings.get("turn_seconds",20))}
@@ -186,7 +228,32 @@ async def game_action(user_id, raw_id, action):
             row=await c.fetchrow("UPDATE casual_game_rooms SET status=$2,state=$3::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,status,json.dumps(state,ensure_ascii=False))
             await _record_finished(c, row)
             return _public(row,uid)
-        if row["game_type"]=="match":
+        if row["game_type"] == "find":
+            if state.get("winner_id") is not None:
+                raise ValueError("انتهت اللعبة")
+            if state.get("round_winner_id") is not None:
+                raise ValueError("الجولة انتهت، انتظر الجولة التالية")
+            value = str(action.get("value", ""))
+            if value != str(state.get("target", "")):
+                state["wrong_by"] = uid
+                row = await c.fetchrow(
+                    "UPDATE casual_game_rooms SET state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",
+                    gid, json.dumps(state, ensure_ascii=False))
+                return _public(row, uid)
+            state["scores"][player_index] = int(state["scores"][player_index]) + 1
+            state["round_winner_id"] = uid
+            if state["scores"][player_index] >= int(state.get("target_score", 10)):
+                state["winner_id"] = uid
+                row = await c.fetchrow(
+                    "UPDATE casual_game_rooms SET status='finished',state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",
+                    gid, json.dumps(state, ensure_ascii=False))
+                await _record_finished(c, row)
+            else:
+                _find_reset_round(state, settings, players, row["mode"])
+                row = await c.fetchrow(
+                    "UPDATE casual_game_rooms SET state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",
+                    gid, json.dumps(state, ensure_ascii=False))
+        elif row["game_type"]=="match":
             if action.get("action") == "continue":
                 if state.get("bot_reveal"):
                     state["bot_reveal"] = []
@@ -259,6 +326,22 @@ async def bot_turn(user_id, raw_id):
         if not row or row["status"]!="playing": raise ValueError("اللعبة غير متاحة")
         if int(row["owner_id"])!=uid or row["mode"]!="bot": raise ValueError("حركة البوت غير متاحة لهذه اللعبة")
         state=_obj(row["state"]); players=_obj(row["players"])
+        if row["game_type"] == "find":
+            if row["mode"] != "bot" or int(row["owner_id"]) != uid:
+                raise ValueError("حركة البوت غير متاحة لهذه اللعبة")
+            if state.get("winner_id") is None and state.get("round_winner_id") is None and time.time() >= float(state.get("bot_due_at", 0)):
+                bot_index = next((i for i, p in enumerate(_obj(row["players"])) if p.get("bot")), None)
+                if bot_index is not None:
+                    state["scores"][bot_index] = int(state["scores"][bot_index]) + 1
+                    state["round_winner_id"] = int(_obj(row["players"])[bot_index]["id"])
+                    if state["scores"][bot_index] >= int(state.get("target_score", 10)):
+                        state["winner_id"] = int(_obj(row["players"])[bot_index]["id"])
+                        row = await c.fetchrow("UPDATE casual_game_rooms SET status='finished',state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *", gid, json.dumps(state, ensure_ascii=False))
+                        await _record_finished(c, row)
+                    else:
+                        _find_reset_round(state, _obj(row["settings"]), _obj(row["players"]), "bot")
+                        row = await c.fetchrow("UPDATE casual_game_rooms SET state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *", gid, json.dumps(state, ensure_ascii=False))
+            return _public(row, uid)
         if row["game_type"]!="match" or not state.get("bot_pending"): return _public(row,uid)
         cards=state["cards"]; known=state.setdefault("bot_memory",{})
         available=[i for i,x in enumerate(cards) if not x["matched"]]
@@ -372,7 +455,11 @@ async def configure_game(user_id, raw_id, settings):
         if not row or int(row["owner_id"])!=uid: raise ValueError("الإعدادات لصاحب الغرفة فقط")
         if row["status"]!="waiting": raise ValueError("لا يمكن تعديل الإعدادات بعد بدء اللعبة")
         current=_obj(row["settings"])
-        if row["game_type"]=="match":
+        if row["game_type"] == "find":
+            difficulty = settings.get("difficulty", current.get("difficulty", "متوسط"))
+            if difficulty not in LEVELS: raise ValueError("مستوى اللعبة غير صالح")
+            current["difficulty"] = difficulty
+        elif row["game_type"]=="match":
             count=int(settings.get("card_count",current.get("card_count",16)))
             if count not in CARD_COUNTS: raise ValueError("اختر 12 أو 16 أو 20 أو 24 أو 30 بطاقة")
             current["card_count"]=count
