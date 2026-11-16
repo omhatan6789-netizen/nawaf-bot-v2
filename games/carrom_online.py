@@ -43,10 +43,12 @@ def _striker_baseline(index, count):
 def _public(row, uid):
     players = _decode(row["players"])
     state = _decode(row["game_state"])
-    deadline = row["deadline"]
+    deadline = row["turn_deadline"]
     remaining = None
     if deadline:
         remaining = max(0, int((deadline - datetime.now(timezone.utc)).total_seconds()))
+    forfeited = {int(x) for x in state.get("forfeited", [])}
+    players = [{**p, "forfeited": int(p["id"]) in forfeited} for p in players]
     return {
         "id": row["id"].hex, "status": row["status"],
         "players": players, "settings": _decode(row["settings"]),
@@ -55,7 +57,7 @@ def _public(row, uid):
         "remaining": remaining, "winner_id": int(row["winner_id"]) if row["winner_id"] else None,
         "is_player": any(int(p["id"]) == int(uid) for p in players),
         "you_player_index": next((i for i, p in enumerate(players) if int(p["id"]) == int(uid)), 0),
-        "your_turn": row["status"] == "playing" and int(players[int(row["turn_index"])]["id"]) == int(uid),
+        "your_turn": row["status"] == "playing" and int(players[int(row["turn_index"])]["id"]) == int(uid) and int(uid) not in forfeited,
         "scores": state.get("scores", [0] * len(players)),
     }
 
@@ -76,10 +78,56 @@ async def create_game(conn, lobby, game_id):
     deadline_seconds = settings["duration_seconds"]
     await conn.execute(
         """INSERT INTO carrom_online_games
-           (id,lobby_id,players,settings,game_state,turn_index,move_no,deadline)
-           VALUES($1,$2,$3::jsonb,$4::jsonb,$5::jsonb,0,0,NOW()+($6 * INTERVAL '1 second'))""",
+           (id,lobby_id,players,settings,game_state,turn_index,move_no,deadline,turn_deadline)
+           VALUES($1,$2,$3::jsonb,$4::jsonb,$5::jsonb,0,0,NULL,NOW()+INTERVAL '20 seconds')""",
         game_id, lobby["id"], json.dumps(players, ensure_ascii=False),
-        json.dumps(settings), json.dumps(state), deadline_seconds,
+        json.dumps(settings), json.dumps(state),
+    )
+
+
+async def _forfeit_player(conn, row, players, state, uid, reset_timer=False):
+    ids = [int(p["id"]) for p in players]
+    forfeited = {int(x) for x in state.get("forfeited", [])}
+    if uid not in ids or uid in forfeited or row["status"] != "playing":
+        return row
+    current = int(row["turn_index"])
+    was_current = ids[current] == int(uid)
+    forfeited.add(int(uid))
+    state["forfeited"] = sorted(forfeited)
+    state["last_event"] = "turn_timeout" if reset_timer else "player_withdrew"
+    active = [i for i, pid in enumerate(ids) if pid not in forfeited]
+    settings = _decode(row["settings"])
+    winner_id = None
+    finished = False
+    if len(players) == 4 and settings.get("team_mode") == "teams":
+        active_teams = {i % 2 for i in active}
+        if len(active_teams) <= 1:
+            finished = True
+            if active:
+                team = next(iter(active_teams))
+                winner_id = ids[next(i for i in active if i % 2 == team)]
+    elif len(active) <= 1:
+        finished = True
+        if active:
+            winner_id = ids[active[0]]
+    if finished:
+        return await conn.fetchrow(
+            """UPDATE carrom_online_games SET status='finished',winner_id=$2,
+               game_state=$3::jsonb,move_no=move_no+1,turn_deadline=NULL,updated_at=NOW()
+               WHERE id=$1 RETURNING *""",
+            row["id"], winner_id, json.dumps(state),
+        )
+    if was_current:
+        next_index = next((i for offset in range(1, len(ids) + 1)
+                           for i in [(current + offset) % len(ids)] if i in active), active[0])
+    else:
+        next_index = current
+    return await conn.fetchrow(
+        """UPDATE carrom_online_games SET game_state=$2::jsonb,turn_index=$3,
+           move_no=move_no+1,
+           turn_deadline=CASE WHEN $4 THEN NOW()+INTERVAL '20 seconds' ELSE turn_deadline END,
+           updated_at=NOW() WHERE id=$1 RETURNING *""",
+        row["id"], json.dumps(state), next_index, bool(was_current or reset_timer),
     )
 
 
@@ -113,20 +161,10 @@ async def carrom_online_api(user_id: int, action: str, raw_game_id: str, payload
             if uid not in ids and action != "state":
                 raise ValueError("هذا الإجراء متاح للاعبين فقط")
             state = _decode(row["game_state"])
-            if row["status"] == "playing" and row["deadline"] and row["deadline"] <= datetime.now(timezone.utc):
-                scores = state.get("scores", [0] * len(players))
-                settings = _decode(row["settings"])
-                if len(players) == 4 and settings.get("team_mode") == "teams":
-                    team_scores = [scores[0] + scores[2], scores[1] + scores[3]]
-                    winner_id = ids[0] if team_scores[0] > team_scores[1] else ids[1] if team_scores[1] > team_scores[0] else None
-                else:
-                    high = max(scores) if scores else 0
-                    winners = [i for i, score in enumerate(scores) if score == high]
-                    winner_id = ids[winners[0]] if len(winners) == 1 else None
-                row = await conn.fetchrow(
-                    "UPDATE carrom_online_games SET status='finished',winner_id=$2,updated_at=NOW() WHERE id=$1 RETURNING *",
-                    game_id, winner_id,
-                )
+            if (row["status"] == "playing" and row["turn_deadline"]
+                    and row["turn_deadline"] <= datetime.now(timezone.utc)):
+                current_uid = ids[int(row["turn_index"])]
+                row = await _forfeit_player(conn, row, players, state, current_uid, reset_timer=True)
             elif action == "shot":
                 if row["status"] != "playing":
                     raise ValueError("انتهت المباراة")
@@ -216,16 +254,13 @@ async def carrom_online_api(user_id: int, action: str, raw_game_id: str, payload
                             winner_id = ids[winners[0]]
                 row = await conn.fetchrow(
                     """UPDATE carrom_online_games SET game_state=$2::jsonb,turn_index=$3,
-                       move_no=move_no+1,status=$4,winner_id=$5,updated_at=NOW()
-                       WHERE id=$1 RETURNING *""",
+                       move_no=move_no+1,status=$4,winner_id=$5,
+                       turn_deadline=CASE WHEN $4='playing' THEN NOW()+INTERVAL '20 seconds' ELSE NULL END,
+                       updated_at=NOW() WHERE id=$1 RETURNING *""",
                     game_id, json.dumps(state), next_index, status, winner_id,
                 )
             elif action not in ("state", "leave"):
                 raise ValueError("طلب غير معروف")
             elif action == "leave" and row["status"] == "playing":
-                winner_id = next((pid for pid in ids if pid != uid), None)
-                row = await conn.fetchrow(
-                    "UPDATE carrom_online_games SET status='finished',winner_id=$2,updated_at=NOW() WHERE id=$1 RETURNING *",
-                    game_id, winner_id,
-                )
+                row = await _forfeit_player(conn, row, players, state, uid, reset_timer=False)
     return _public(row, uid)
