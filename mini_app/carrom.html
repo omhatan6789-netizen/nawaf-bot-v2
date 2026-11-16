@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#35090d"><title>كيرم | بوت نواف</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/matter-js@0.20.0/build/matter.min.js"></script>
+<style>
+:root{color-scheme:dark;--red:#b81728;--gold:#e5bb76}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#17090b;color:#fff;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+body{min-height:100dvh;background:radial-gradient(ellipse at 50% 0,#78121b,#24090d 58%,#100709);padding:env(safe-area-inset-top) 12px env(safe-area-inset-bottom);touch-action:pan-y}
+.app{width:min(100%,560px);margin:auto;padding:10px 0 18px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:4px 0 12px}
+.brand{font-weight:950;font-size:21px;letter-spacing:.2px}.brand small{display:block;color:#ffffff80;font-size:10px;font-weight:650;letter-spacing:1.8px}
+.pill{border:1px solid #ffffff30;background:#ffffff12;color:#fff;border-radius:30px;padding:8px 12px;font-weight:800}
+.panel{border:1px solid #ffffff22;background:linear-gradient(145deg,#ffffff13,#09040670);border-radius:20px;padding:15px;box-shadow:0 12px 30px #0005}
+h1{font-size:26px;margin:4px 0 5px;text-align:center} .sub{text-align:center;color:#ffffff9a;font-size:13px;margin:0 0 16px}
+.choices{display:grid;grid-template-columns:1fr 1fr;gap:10px}.choice{border:1px solid #ffffff35;border-radius:15px;background:#17090c;color:#fff;padding:14px 8px;min-height:65px;font-weight:850;font-size:15px}.choice.active{border-color:#ff9ba3;background:linear-gradient(135deg,#a81321,#4d0a11);box-shadow:0 0 0 2px #ff5b672b}
+.primary,.secondary{width:100%;border:0;border-radius:14px;min-height:52px;margin-top:12px;font-size:16px;font-weight:900}.primary{background:linear-gradient(135deg,#ef4858,#9e0d1c);color:#fff;box-shadow:0 4px 0 #560811}.secondary{background:#ffffff13;color:#fff;border:1px solid #ffffff30}
+.scorebar{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;margin-bottom:10px}
+.player{border:1px solid #ffffff28;background:#110709a8;border-radius:14px;padding:9px 10px;min-width:0}.player.active{border-color:#ffbd78;box-shadow:0 0 0 2px #ffbd7825}.player strong{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}.player span{font-size:11px;color:#ffffff9a}
+.vs{font-size:11px;color:#ffffff70;font-weight:900}
+.board-wrap{position:relative;width:min(100%,430px);margin:0 auto;filter:drop-shadow(0 13px 18px #0009)}
+#board{display:block;width:100%;height:auto;aspect-ratio:1/1;touch-action:none;border-radius:18px}
+.hint{text-align:center;color:#ffffff9b;font-size:12px;min-height:22px;margin:9px 0 0}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px}
+.controls button{border:1px solid #ffffff30;background:#ffffff12;color:#fff;border-radius:12px;min-height:43px;font-weight:800}
+#setup,#game{display:none}#setup.show,#game.show{display:block}
+.toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 15px);transform:translateX(-50%);background:#16090c;border:1px solid #ffffff40;border-radius:14px;padding:12px 17px;z-index:9;box-shadow:0 8px 30px #0009;max-width:90%;text-align:center}
+@media(min-height:850px){.board-wrap{width:min(100%,470px)}}
+</style></head>
+<body><main class="app">
+<header class="top"><button class="pill" id="back">رجوع</button><div class="brand">كيرم <small>NAWAF GAME</small></div><button class="pill" id="reset">إعادة</button></header>
+<section id="setup" class="panel show"><h1>كيرم 🎯</h1><p class="sub">اختر طريقة اللعب وعدد اللاعبين</p>
+<div class="sub">طريقة اللعب</div><div class="choices" id="modes">
+<button class="choice active" data-mode="bot">🤖 ضد الكمبيوتر</button><button class="choice" data-mode="local">👥 لاعبين على نفس الجهاز</button>
+</div>
+<div class="sub" style="margin-top:16px">عدد اللاعبين</div><div class="choices" id="counts">
+<button class="choice active" data-count="2">لاعبان</button><button class="choice" data-count="4">أربعة لاعبين</button>
+</div>
+<div id="fourModeWrap" style="display:none"><div class="sub" style="margin-top:16px">نظام الأربعة لاعبين</div><div class="choices" id="fourModes">
+<button class="choice active" data-four-mode="teams">🤝 فريقان (2 ضد 2)</button><button class="choice" data-four-mode="solo">🏆 كل لاعب لحاله</button>
+</div></div>
+<button class="primary" id="start">ابدأ اللعب</button>
+<p class="sub" style="margin:12px 0 0">اللعب أونلاين بالغرف قيد بناء نظام المزامنة الخاص به.</p></section>
+<section id="game"><div class="scorebar" id="scorebar"></div><div class="board-wrap"><canvas id="board" width="800" height="800"></canvas></div><div class="hint" id="hint">اسحب من القرص الضارب للخلف ثم اتركه للتسديد</div><div class="controls"><button id="change">تبديل اللاعب</button><button id="new">مباراة جديدة</button></div></section>
+</main>
+<script>
+const {Engine,World,Bodies,Body,Events}=Matter;
+const $=id=>document.getElementById(id),canvas=$('board'),ctx=canvas.getContext('2d');
+const W=800,H=800,engine=Engine.create({enableSleeping:true}),world=engine.world;
+engine.gravity.x=0;engine.gravity.y=0;engine.positionIterations=8;engine.velocityIterations=8;engine.constraintIterations=4;
+let mode='bot',count=2,fourMode='teams',players=[],turn=0,coins=[],striker=null,aim=null,dragging=false,shotMoving=false,turnPocketed=0,queenPocketed=false,gameOver=false,lastT=0,raf=0;
+const cx=400,cy=400,inner={l:62,r:738,t:62,b:738},pocketR=43;
+function choose(group,attr,val){document.querySelectorAll('#'+group+' .choice').forEach(b=>b.classList.toggle('active',b.dataset[attr]===val));}
+$('modes').onclick=e=>{const b=e.target.closest('[data-mode]');if(!b)return;mode=b.dataset.mode;choose('modes','mode',mode)};
+$('counts').onclick=e=>{const b=e.target.closest('[data-count]');if(!b)return;count=Number(b.dataset.count);choose('counts','count',String(count));$('fourModeWrap').style.display=count===4?'block':'none';};
+$('fourModes').onclick=e=>{const b=e.target.closest('[data-four-mode]');if(!b)return;fourMode=b.dataset.fourMode;choose('fourModes','fourMode',fourMode)};
+function startGame(){ $('setup').classList.remove('show');$('game').classList.add('show');players=count===2?[{name:'أنت',color:'#242326',score:0},{name:mode==='bot'?'الكمبيوتر':'اللاعب الثاني',color:'#eee4d0',score:0}]:fourMode==='teams'?[{name:'الفريق الأول · أنت',color:'#242326',score:0,team:0},{name:'الفريق الثاني · اللاعب 2',color:'#eee4d0',score:0,team:1},{name:'الفريق الأول · اللاعب 3',color:'#242326',score:0,team:0},{name:'الفريق الثاني · اللاعب 4',color:'#eee4d0',score:0,team:1}]:[{name:'اللاعب 1',color:'#242326',score:0},{name:'اللاعب 2',color:'#eee4d0',score:0},{name:'اللاعب 3',color:'#242326',score:0},{name:'اللاعب 4',color:'#eee4d0',score:0}];turn=0;gameOver=false;resetBoard();renderScores();$('hint').textContent='اسحب القرص الضارب للخلف ثم اتركه للتسديد';loop();}
+function clearWorld(){World.clear(world,false);coins=[];striker=null;}
+function addWalls(){const t=25,L=inner.l,R=inner.r,T=inner.t,B=inner.b,gap=100;
+ const rect=(x,y,w,h)=>World.add(world,Bodies.rectangle(x,y,w,h,{isStatic:true,restitution:.78,friction:.08}));
+ rect((L+R)/2,T,R-L-2*gap,t);rect((L+R)/2,B,R-L-2*gap,t);
+ rect(L,(T+B)/2,t,B-T-2*gap);rect(R,(T+B)/2,t,B-T-2*gap);
+ rect(L+gap/2,T+gap/2,gap,t);rect(R-gap/2,T+gap/2,gap,t);
+}
+function addCoin(x,y,color,type='coin'){const b=Bodies.circle(x,y,type==='queen'?16:15,{label:type,restitution:.88,friction:.035,frictionStatic:.12,frictionAir:.018,density:.0012,sleepThreshold:70});b.gameColor=color;b.gameType=type;b.pocketed=false;World.add(world,b);coins.push(b);return b;}
+function resetBoard(){clearWorld();addWalls();const colors=['#080808','#f7f7f7'];addCoin(cx,cy,'#ed172b','queen');
+ const rings=[{r:34,n:6,start:-Math.PI/2},{r:68,n:12,start:-Math.PI/2}];rings.forEach((ring,ri)=>{for(let i=0;i<ring.n;i++){const a=ring.start+i*Math.PI*2/ring.n+(ri?Math.PI/12:0);addCoin(cx+Math.cos(a)*ring.r,cy+Math.sin(a)*ring.r,colors[(i+ri)%2]);}});
+ placeStriker();turnPocketed=0;queenPocketed=false;shotMoving=false;aim=null;draw();}
+function baselinePosition(){
+ if(count===2)return {x:cx,y:turn%2===0?680:120};
+ return [{x:cx,y:680},{x:120,y:cy},{x:cx,y:120},{x:680,y:cy}][turn%4];
+}
+function placeStriker(){
+ if(striker)World.remove(world,striker);
+ const p=baselinePosition();
+ striker=Bodies.circle(p.x,p.y,23,{label:'striker',restitution:.82,friction:.035,frictionAir:.016,density:.002});
+ striker.gameColor='#d8a64f';striker.isStriker=true;World.add(world,striker);
+}
+function renderScores(){const el=$('scorebar');el.innerHTML='';if(players.length===4&&fourMode==='teams'){[0,1].forEach(team=>{const members=players.filter(p=>p.team===team),score=members.reduce((n,p)=>n+p.score,0),active=players[turn]?.team===team;const d=document.createElement('div');d.className='player'+(active?' active':'');d.innerHTML='<strong>'+(team===0?'الفريق الأول':'الفريق الثاني')+'</strong><span>'+score+' نقطة · '+members.map(p=>p.name.split(' · ').pop()).join(' و ')+'</span>';el.appendChild(d);});const vs=document.createElement('div');vs.className='vs';vs.textContent='VS';el.appendChild(vs);return;}players.forEach((p,i)=>{const d=document.createElement('div');d.className='player'+(i===turn?' active':'');d.innerHTML='<strong>'+p.name+'</strong><span>'+p.score+' نقطة</span>';el.appendChild(d);if(i===0&&players.length===2){const vs=document.createElement('div');vs.className='vs';vs.textContent='VS';el.appendChild(vs);}});if(players.length===4){const vs=document.createElement('div');vs.className='vs';vs.textContent='الدور '+(turn+1);el.appendChild(vs);}}
+function drawBoard(){
+ const frame=ctx.createLinearGradient(0,0,800,800);frame.addColorStop(0,'#35170f');frame.addColorStop(.28,'#8a4a2a');frame.addColorStop(.55,'#32140d');frame.addColorStop(1,'#170906');roundRect(ctx,8,8,784,784,34,frame,'#c78c55',9);
+ const rail=ctx.createLinearGradient(0,12,0,788);rail.addColorStop(0,'#e3a16c');rail.addColorStop(.18,'#6c321d');rail.addColorStop(.5,'#3b1a11');rail.addColorStop(.82,'#8d4a29');rail.addColorStop(1,'#d99a66');roundRect(ctx,22,22,756,756,30,rail,'#2a100a',5);
+ const wood=ctx.createLinearGradient(65,45,735,755);wood.addColorStop(0,'#f0c995');wood.addColorStop(.42,'#dcb17e');wood.addColorStop(1,'#c99461');roundRect(ctx,43,43,714,714,22,wood,'#6c351e',8);
+ ctx.save();ctx.globalAlpha=.12;for(let i=0;i<17;i++){const y=75+i*39;ctx.beginPath();ctx.moveTo(60,y);ctx.bezierCurveTo(230,y-10+(i%3)*8,520,y+12-(i%4)*6,740,y-4);ctx.strokeStyle=i%2?'#8c552e':'#fff0d0';ctx.lineWidth=1.4;ctx.stroke();}ctx.restore();
+ ctx.save();ctx.strokeStyle='#805033';ctx.lineWidth=5;ctx.strokeRect(116,116,568,568);ctx.strokeStyle='#a16c45';ctx.lineWidth=2;ctx.strokeRect(132,132,536,536);
+ ctx.beginPath();ctx.arc(cx,cy,104,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.arc(cx,cy,78,0,Math.PI*2);ctx.stroke();
+ const marks=[[145,145,1,1],[655,145,-1,1],[145,655,1,-1],[655,655,-1,-1]];
+ marks.forEach(([x,y,sx,sy])=>{ctx.beginPath();ctx.arc(x,y,31,0,Math.PI*2);ctx.fillStyle='#d98d78';ctx.fill();ctx.strokeStyle='#805039';ctx.lineWidth=5;ctx.stroke();ctx.beginPath();ctx.arc(x,y,38,0,Math.PI*2);ctx.strokeStyle='#9a6846';ctx.lineWidth=2;ctx.stroke();ctx.beginPath();ctx.moveTo(x+sx*36,y+sy*36);ctx.lineTo(x+sx*178,y+sy*178);ctx.strokeStyle='#795036';ctx.lineWidth=2.5;ctx.stroke();ctx.beginPath();ctx.arc(x+sx*178,y+sy*178,34,0,Math.PI*2);ctx.stroke();});
+ [[77,77],[723,77],[77,723],[723,723]].forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,43,0,Math.PI*2);ctx.fillStyle='#160b08';ctx.fill();ctx.strokeStyle='#d59a66';ctx.lineWidth=9;ctx.stroke();ctx.save();ctx.beginPath();ctx.arc(x,y,36,0,Math.PI*2);ctx.clip();ctx.strokeStyle='#60402e';ctx.lineWidth=2;for(let k=-55;k<55;k+=13){ctx.beginPath();ctx.moveTo(x-40,y+k);ctx.lineTo(x+40,y+k+80);ctx.moveTo(x-40,y+k+80);ctx.lineTo(x+40,y+k);ctx.stroke();}ctx.restore();});
+ ctx.strokeStyle='#805033';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(205,120);ctx.lineTo(595,120);ctx.moveTo(205,680);ctx.lineTo(595,680);ctx.moveTo(120,205);ctx.lineTo(120,595);ctx.moveTo(680,205);ctx.lineTo(680,595);ctx.stroke();ctx.beginPath();[[205,120],[595,120],[205,680],[595,680],[120,205],[120,595],[680,205],[680,595]].forEach(([x,y])=>ctx.arc(x,y,25,0,Math.PI*2));ctx.stroke();ctx.restore();
+}
+function roundRect(c,x,y,w,h,r,fill,stroke,lw){c.beginPath();c.roundRect(x,y,w,h,r);c.fillStyle=fill;c.fill();if(stroke){c.lineWidth=lw;c.strokeStyle=stroke;c.stroke();}}
+function drawPiece(b){const {x,y}=b.position,r=b.circleRadius||15;ctx.save();ctx.translate(x,y);ctx.rotate(b.angle||0);ctx.shadowColor='#0008';ctx.shadowBlur=8;ctx.shadowOffsetY=4;const grad=ctx.createRadialGradient(-r*.35,-r*.42,r*.1,0,0,r*1.2);if(b.gameType==='queen'){grad.addColorStop(0,'#ff626d');grad.addColorStop(.25,'#f51d32');grad.addColorStop(.7,'#d90020');grad.addColorStop(1,'#8f0014');}else if(b.isStriker){grad.addColorStop(0,'#ffe6a6');grad.addColorStop(.4,'#d9a64e');grad.addColorStop(1,'#80501c');}else if(b.gameColor==='#080808'||b.gameColor==='#242326'){grad.addColorStop(0,'#444');grad.addColorStop(.22,'#171717');grad.addColorStop(.62,'#050505');grad.addColorStop(1,'#000');}else{grad.addColorStop(0,'#fff');grad.addColorStop(.28,'#f7f7f7');grad.addColorStop(.72,'#e4e4e4');grad.addColorStop(1,'#bdbdbd');}ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.fillStyle=grad;ctx.fill();ctx.shadowColor='transparent';ctx.strokeStyle=b.isStriker?'#fff0c0':'#fff8';ctx.lineWidth=2;ctx.stroke();ctx.beginPath();ctx.arc(0,0,r*.56,0,Math.PI*2);ctx.strokeStyle=b.isStriker?'#885d25':'#8c7257';ctx.lineWidth=1;ctx.stroke();if(b.gameType==='queen'){ctx.fillStyle='#fff';ctx.font='bold 16px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('♛',0,1);}ctx.restore();}
+function draw(){drawBoard();coins.filter(b=>!b.pocketed).forEach(drawPiece);if(striker&&!striker.pocketed)drawPiece(striker);if(aim&&striker){ctx.save();ctx.strokeStyle='#fff4d0';ctx.lineWidth=4;ctx.setLineDash([9,8]);ctx.beginPath();ctx.moveTo(striker.position.x,striker.position.y);ctx.lineTo(aim.x,aim.y);ctx.stroke();ctx.setLineDash([]);const dx=striker.position.x-aim.x,dy=striker.position.y-aim.y,len=Math.hypot(dx,dy)||1;ctx.strokeStyle='#ffd27a';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(striker.position.x,striker.position.y);ctx.lineTo(striker.position.x+dx/len*100,striker.position.y+dy/len*100);ctx.stroke();ctx.restore();}}
+function loop(t){if(!document.getElementById('game').classList.contains('show'))return;const dt=Math.min(33,t-(lastT||t));lastT=t;Engine.update(engine,dt||16.67);detectPockets();draw();if(!shotMoving&&striker&&striker.speed>.2)shotMoving=true;if(shotMoving&&allStopped()){shotMoving=false;finishTurn();}raf=requestAnimationFrame(loop);}
+function allStopped(){return [striker,...coins].filter(b=>b&&!b.pocketed).every(b=>Math.abs(b.velocity.x)<.13&&Math.abs(b.velocity.y)<.13&&Math.abs(b.angularVelocity)<.02);}
+function detectPockets(){const ps=[[77,77],[723,77],[77,723],[723,723]];[striker,...coins].filter(Boolean).forEach(b=>{if(b.pocketed)return;for(const [x,y] of ps){if(Math.hypot(b.position.x-x,b.position.y-y)<pocketR){b.pocketed=true;World.remove(world,b);if(b===striker){setTimeout(()=>{placeStriker();draw();},180);}else{turnPocketed++;if(b.gameType==='queen')queenPocketed=true;else players[turn].score+=b.gameColor==='#272629'?1:1;toast(b.gameType==='queen'?'دخلت الملكة!':'قرص في الجيب +1');}break;}}});}
+function finishTurn(){if(queenPocketed){players[turn].score+=3;queenPocketed=false;}renderScores();if(coins.every(c=>c.pocketed)){if(players.length===4&&fourMode==='teams'){const a=players.filter(p=>p.team===0).reduce((n,p)=>n+p.score,0),b=players.filter(p=>p.team===1).reduce((n,p)=>n+p.score,0);gameOver=true;$('hint').textContent=a===b?'انتهت المباراة — تعادل الفريقين 🤝':'انتهت المباراة — الفائز: '+(a>b?'الفريق الأول':'الفريق الثاني')+' 🏆';}else{const winner=players.reduce((a,b)=>a.score>=b.score?a:b);gameOver=true;$('hint').textContent='انتهت المباراة — الفائز: '+winner.name+' 🏆';}return;}if(turnPocketed===0)turn=(turn+1)%players.length;turnPocketed=0;placeStriker();renderScores();$('hint').textContent='دور '+players[turn].name+' — اسحب القرص للخلف ثم اتركه';if(mode==='bot'&&turn===1&&!gameOver)setTimeout(botShot,700);}
+function pointerPos(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height};}
+canvas.addEventListener('pointerdown',e=>{if(!striker||shotMoving||gameOver||(mode==='bot'&&turn===1))return;const p=pointerPos(e);if(Math.hypot(p.x-striker.position.x,p.y-striker.position.y)<58){dragging=true;aim=p;canvas.setPointerCapture(e.pointerId);draw();}});
+canvas.addEventListener('pointermove',e=>{if(!dragging)return;aim=pointerPos(e);draw();});
+canvas.addEventListener('pointerup',e=>{if(!dragging)return;dragging=false;const p=pointerPos(e),dx=striker.position.x-p.x,dy=striker.position.y-p.y,len=Math.hypot(dx,dy);aim=null;if(len<8){draw();return;}const power=Math.min(0.22,len*.0027);Body.setVelocity(striker,{x:dx/len*power*60,y:dy/len*power*60});shotMoving=true;$('hint').textContent='القرص يتحرك...';});
+function botShot(){if(gameOver||turn!==1||mode!=='bot')return;const target=coins.find(c=>!c.pocketed&&c.gameType!=='queen')||coins.find(c=>!c.pocketed);if(!target)return;const dx=target.position.x-striker.position.x,dy=target.position.y-striker.position.y,len=Math.hypot(dx,dy)||1;Body.setVelocity(striker,{x:dx/len*7,y:dy/len*7});shotMoving=true;$('hint').textContent='الكمبيوتر يسدد...';}
+function toast(s){const d=document.createElement('div');d.className='toast';d.textContent=s;document.body.appendChild(d);setTimeout(()=>d.remove(),1300);}
+function back(){cancelAnimationFrame(raf);$('game').classList.remove('show');$('setup').classList.add('show');}
+$('start').onclick=startGame;$('back').onclick=()=>{if($('game').classList.contains('show'))back();else location.href='/mini-app';};$('reset').onclick=()=>{if(players.length){players.forEach(p=>p.score=0);turn=0;gameOver=false;resetBoard();renderScores();$('hint').textContent='مباراة جديدة — دور '+players[0].name;}};$('new').onclick=()=>{players.forEach(p=>p.score=0);turn=0;gameOver=false;resetBoard();renderScores();$('hint').textContent='بدأت مباراة جديدة';};$('change').onclick=()=>{if(shotMoving)return;turn=(turn+1)%players.length;placeStriker();renderScores();draw();};
+if(window.Telegram?.WebApp){Telegram.WebApp.ready();Telegram.WebApp.expand();}
+</script></body></html>
