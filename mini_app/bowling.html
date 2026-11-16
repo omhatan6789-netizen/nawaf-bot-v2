@@ -48,7 +48,7 @@ function draw(){if(!W||!H)return;ctx.clearRect(0,0,W,H);lane();pins.forEach(pinS
 function launch(){if(locked||!drag)return;let dx=drag.x-ball.x,dy=ball.y-drag.y;let power=clamp(Math.hypot(dx,dy),12,Math.min(H*.42,180));let angle=clamp(dx/Math.max(55,power),-.48,.48);let speed=7+power*.075;ball.vx=Math.sin(angle)*speed;ball.vy=-Math.cos(angle)*speed;locked=true;drag=null;$('hint').textContent='الكرة في طريقها إلى القوارير...';animate()}
 function animate(){cancelAnimationFrame(anim);let active=true;function step(){let moving=false;ball.x+=ball.vx;ball.y+=ball.vy;ball.vx*=.992;ball.vy*=.992;
 pins.forEach(p=>{if(p.fallen){p.x+=p.vx;p.y+=p.vy;p.vx*=.985;p.vy*=.985;p.a+=p.av;p.av*=.98;if(p.y>H*.96||p.x<-30||p.x>W+30)p.alpha=Math.max(0,p.alpha-.04);if(Math.hypot(p.vx,p.vy)>.15)moving=true;return}
-let d=Math.hypot(ball.x-p.x,ball.y-p.y),hit=ball.r+p.s*.34;if(d<hit&&ball.y<p.y+ball.s){let nx=(p.x-ball.x)/(d||1),ny=(p.y-ball.y)/(d||1),imp=Math.max(3,Math.abs(ball.vy)*.8);p.fallen=true;p.vx=nx*imp+ball.vx*.35;p.vy=ny*imp+Math.abs(ball.vy)*.65;p.av=(Math.random()-.5)*.28;ball.vx+=nx*1.1;ball.vy*=.84;}}
+let d=Math.hypot(ball.x-p.x,ball.y-p.y),hit=ball.r+p.s*.34;if(d<hit&&ball.y<p.y+ball.r){let nx=(p.x-ball.x)/(d||1),ny=(p.y-ball.y)/(d||1),imp=Math.max(3,Math.abs(ball.vy)*.8);p.fallen=true;p.vx=nx*imp+ball.vx*.35;p.vy=ny*imp+Math.abs(ball.vy)*.65;p.av=(Math.random()-.5)*.28;ball.vx+=nx*1.1;ball.vy*=.84;}}
 );
 if(ball.y<H*.16){ball.vy=Math.max(ball.vy,1);ball.vx*=.98}
 if(ball.y>H*.89||ball.x<W*.1||ball.x>W*.9){ball.vx*=.92;ball.vy*=.9}
