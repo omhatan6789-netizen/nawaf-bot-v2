@@ -46,7 +46,7 @@ h1{font-size:26px;margin:4px 0 5px;text-align:center} .sub{text-align:center;col
 <section id="game"><div class="scorebar" id="scorebar"></div><div class="board-wrap"><canvas id="board" width="800" height="800"></canvas></div><div class="position-control"><label for="striker-position"><span>مكان قرص التسديد</span><span>↔</span></label><input id="striker-position" type="range" dir="rtl" min="0" max="100" value="50" step="1"><small>حرّك المؤشر لتحديد مكان القرص على خطك فقط</small></div><div class="hint" id="hint">اسحب من القرص الضارب للخلف ثم اتركه للتسديد</div><div class="controls"><button id="change">تبديل اللاعب</button><button id="new">مباراة جديدة</button></div></section>
 </main>
 <script>
-const {Engine,World,Bodies,Body,Sleeping,Events}=Matter;
+const {Engine,World,Bodies,Body,Sleeping}=Matter;
 const $=id=>document.getElementById(id),canvas=$('board'),ctx=canvas.getContext('2d');
 const W=800,H=800,engine=Engine.create({enableSleeping:true}),world=engine.world;
 engine.gravity.x=0;engine.gravity.y=0;engine.positionIterations=8;engine.velocityIterations=8;engine.constraintIterations=4;
@@ -168,7 +168,7 @@ function enforceBoardBounds(){
   if(x<minX){x=minX;hitX=true;}else if(x>maxX){x=maxX;hitX=true;}
   if(y<minY){y=minY;hitY=true;}else if(y>maxY){y=maxY;hitY=true;}
   if(hitX||hitY){
-   const speed=Math.hypot(vx,vy),bounce=.48+Math.min(.38,speed*.025);if(speed>1.4)playImpactSound(speed);
+   const speed=Math.hypot(vx,vy),bounce=.48+Math.min(.38,speed*.025);
    if(hitX){vx=-vx*bounce;vy*=.985;}
    if(hitY){vy=-vy*bounce;vx*=.985;}
    Body.setPosition(b,{x,y});Body.setVelocity(b,{x:vx,y:vy});Sleeping.set(b,false);
@@ -180,28 +180,6 @@ function allStopped(){return [striker,...coins].filter(b=>b&&!b.pocketed).every(
 function detectPockets(){const ps=[[77,77],[723,77],[77,723],[723,723]];[striker,...coins].filter(Boolean).forEach(b=>{if(b.pocketed)return;for(const [x,y] of ps){if(Math.hypot(b.position.x-x,b.position.y-y)<pocketR){b.pocketed=true;World.remove(world,b);playPocketSound();if(b===striker){setTimeout(()=>{placeStriker();draw();},180);}else if(b.gameType==='queen'){queenPocketed=true;toast('دخلت الملكة! لازم تدخل قرص أبيض أو أسود في الضربة القادمة');}else{turnPocketed++;const points=b.gameColor==='#080808'?5:10;players[turn].score+=points;toast((points===5?'الأسود':'الأبيض')+' +'+points+' نقاط');}break;}}});}
 function finishTurn(){if(queenCoverShot){if(turnPocketed>0){players[turn].score+=50;toast('تم تثبيت الملكة! +50 نقطة');queenPendingCover=false;}else{addCoin(cx,cy,'#ed172b','queen');queenPendingCover=false;toast('الملكة رجعت بالنص ماجبت شي بعدها');}queenCoverShot=false;}if(queenPocketed){queenPendingCover=true;queenPocketed=false;}renderScores();if(coins.every(c=>c.pocketed)&&!queenPendingCover){if(players.length===4&&fourMode==='teams'){const a=players.filter(p=>p.team===0).reduce((n,p)=>n+p.score,0),b=players.filter(p=>p.team===1).reduce((n,p)=>n+p.score,0);gameOver=true;$('hint').textContent=a===b?'انتهت المباراة — تعادل الفريقين 🤝':'انتهت المباراة — الفائز: '+(a>b?'الفريق الأول':'الفريق الثاني')+' 🏆';}else{const winner=players.reduce((a,b)=>a.score>=b.score?a:b);gameOver=true;$('hint').textContent='انتهت المباراة — الفائز: '+winner.name+' 🏆';}return;}if(turnPocketed===0&&!queenPendingCover)turn=(turn+1)%players.length;turnPocketed=0;placeStriker();renderScores();$('hint').textContent='دور '+players[turn].name+' — اسحب القرص للخلف ثم اتركه';if(mode==='bot'&&turn===1&&!gameOver)setTimeout(botShot,700);}
 let pocketAudio=null;function unlockPocketAudio(){try{const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;if(!pocketAudio)pocketAudio=new AC();if(pocketAudio.state==='suspended')pocketAudio.resume();}catch(_){}}function playPocketSound(){try{unlockPocketAudio();if(!pocketAudio)return;const t=pocketAudio.currentTime,master=pocketAudio.createGain();master.gain.setValueAtTime(.0001,t);master.gain.exponentialRampToValueAtTime(.42,t+.008);master.gain.exponentialRampToValueAtTime(.0001,t+.24);master.connect(pocketAudio.destination);const osc=pocketAudio.createOscillator(),g=pocketAudio.createGain();osc.type='triangle';osc.frequency.setValueAtTime(185,t);osc.frequency.exponentialRampToValueAtTime(72,t+.12);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.65,t+.006);g.gain.exponentialRampToValueAtTime(.0001,t+.16);osc.connect(g);g.connect(master);osc.start(t);osc.stop(t+.17);const n=Math.floor(pocketAudio.sampleRate*.055),buf=pocketAudio.createBuffer(1,n,pocketAudio.sampleRate),data=buf.getChannelData(0);for(let i=0;i<n;i++)data[i]=(Math.random()*2-1)*(1-i/n);const noise=pocketAudio.createBufferSource(),ng=pocketAudio.createGain();ng.gain.setValueAtTime(.0001,t);ng.gain.exponentialRampToValueAtTime(.18,t+.003);ng.gain.exponentialRampToValueAtTime(.0001,t+.055);noise.buffer=buf;noise.connect(ng);ng.connect(master);noise.start(t);noise.stop(t+.06);}catch(_){}}
-let lastImpactAudioAt=0;
-function playImpactSound(speed=3){
- try{
-  unlockPocketAudio();if(!pocketAudio||pocketAudio.state!=='running')return;
-  const now=pocketAudio.currentTime;if(now-lastImpactAudioAt<.045)return;lastImpactAudioAt=now;
-  const strength=Math.max(.08,Math.min(.3,speed*.035)),osc=pocketAudio.createOscillator(),og=pocketAudio.createGain();
-  osc.type='triangle';osc.frequency.setValueAtTime(620,now);osc.frequency.exponentialRampToValueAtTime(230,now+.055);
-  og.gain.setValueAtTime(.0001,now);og.gain.exponentialRampToValueAtTime(strength,now+.003);og.gain.exponentialRampToValueAtTime(.0001,now+.075);
-  osc.connect(og);og.connect(pocketAudio.destination);osc.start(now);osc.stop(now+.08);
-  const n=Math.floor(pocketAudio.sampleRate*.028),buf=pocketAudio.createBuffer(1,n,pocketAudio.sampleRate),data=buf.getChannelData(0);
-  for(let i=0;i<n;i++)data[i]=(Math.random()*2-1)*(1-i/n);
-  const noise=pocketAudio.createBufferSource(),ng=pocketAudio.createGain();ng.gain.setValueAtTime(.0001,now);ng.gain.exponentialRampToValueAtTime(strength*.42,now+.002);ng.gain.exponentialRampToValueAtTime(.0001,now+.03);noise.buffer=buf;noise.connect(ng);ng.connect(pocketAudio.destination);noise.start(now);noise.stop(now+.032);
- }catch(_){}
-}
-Events.on(engine,'collisionStart',event=>{
- for(const pair of event.pairs){
-  const a=pair.bodyA,b=pair.bodyB;
-  if(a.isStatic&&b.isStatic)continue;
-  const speed=Math.hypot((a.velocity?.x||0)-(b.velocity?.x||0),(a.velocity?.y||0)-(b.velocity?.y||0));
-  if(speed>1.25)playImpactSound(speed);
- }
-});
 function pointerPos(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height};}
 canvas.addEventListener('pointerdown',e=>{if(!striker||shotMoving||gameOver||(mode==='bot'&&turn===1))return;unlockPocketAudio();const p=pointerPos(e);if(Math.hypot(p.x-striker.position.x,p.y-striker.position.y)<82){e.preventDefault();dragging=true;activePointerId=e.pointerId;aim=p;try{canvas.setPointerCapture(e.pointerId);}catch(_){}draw();}}, {passive:false});
 canvas.addEventListener('pointermove',e=>{if(!dragging||e.pointerId!==activePointerId)return;e.preventDefault();aim=pointerPos(e);draw();}, {passive:false});
