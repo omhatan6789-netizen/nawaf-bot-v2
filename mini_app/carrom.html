@@ -69,12 +69,14 @@ function showCarromEndOverlay(winnerName,isDraw,subtitle){
  audioReady.then(audio=>{if(audio){audio.preload='auto';audio.play().catch(()=>{});}});tick();
 }
 function applyOnlineState(result){
+ const previousMove=onlineState?.move_no;
  onlineState=result;count=result.players.length;fourMode=result.settings.team_mode||'individual';turn=result.turn_index;const seat=Math.max(0,Math.min(count-1,Number(result.you_player_index)||0));viewRotation=count===2?(seat===0?0:Math.PI):([-0,-Math.PI/2,Math.PI,Math.PI/2][seat]??0);
  players=result.players.map((p,i)=>({id:Number(p.id),name:p.name,color:i%2?'#eee4d0':'#242326',score:Number(result.scores?.[i]||0),team:fourMode==='teams'?i%2:undefined}));
  clearWorld();addWalls();
  (result.state.discs||[]).forEach(d=>{const coin=addCoin(Number(d.x),Number(d.y),d.color,d.type);if(d.pocketed){coin.pocketed=true;World.remove(world,coin);}});
  const sp=result.state.striker||baselinePosition(50);striker=Bodies.circle(Number(sp.x),Number(sp.y),30,{label:'striker',restitution:.82,friction:.035,frictionAir:.016,density:.002});striker.gameColor='#d8a64f';striker.isStriker=true;World.add(world,striker);
  queenPendingCover=!!result.state.queen_pending_cover;queenPocketed=false;strikerPocketed=false;queenCoverShot=false;turnPocketed=0;shotMoving=false;gameOver=result.status==='finished';
+ if(previousMove!==undefined&&result.move_no!==previousMove){const messages={queen_pocketed:'دخلت الملكة الحمراء! لازم تدخل قرص ثاني في الضربة القادمة لتثبيتها',queen_covered:'تم تثبيت الملكة الحمراء بنجاح! +50 نقطة',queen_returned:'ما دخلت قرص لتثبيت الملكة؛ رجعت الملكة للنص',last_coin_returned:'رجعنا آخر قرص للنص؛ لازم تدخل الملكة الحمراء ثم تغطيها بقرص آخر',striker_foul:'دخل المضرب! تم خصم 5 نقاط'};const event=result.state.last_event;if(messages[event])toast(messages[event]);}
  renderScores();draw();
  const hint=$('hint');
  if(gameOver){const teamGame=players.length===4&&fourMode==='teams';const teamIndex=teamGame?(result.winner_id===players[0].id?0:result.winner_id===players[1].id?1:-1):-1;const winner=teamGame?null:players.find(p=>p.id===result.winner_id);const isDraw=!result.winner_id;const winnerName=teamGame&&teamIndex>=0?('الفريق '+(teamIndex===0?'الأول':'الثاني')+' ('+players[teamIndex].name+' و '+players[teamIndex+2].name+')'):(winner?.name||'');const high=teamGame?(teamIndex===0?players[0].score+players[2].score:players[1].score+players[3].score):Math.max(...players.map(p=>p.score));showCarromEndOverlay(winnerName,isDraw,isDraw?'انتهت المباراة بالتعادل.':('الفائز: '+winnerName+' — '+high+' نقطة'));hint.textContent='انتهت المباراة';}
@@ -228,7 +230,7 @@ function toast(s){const d=document.createElement('div');d.className='toast';d.te
 function back(){cancelAnimationFrame(raf);dragging=false;aim=null;setGameSwipeLock(false);$('game').classList.remove('show');$('setup').classList.add('show');}
 $('striker-position').addEventListener('input',e=>{
  if(!striker||shotMoving||dragging||gameOver||(mode==='online'&&!onlineState?.your_turn))return;
- const requested=Math.max(0,Math.min(100,Number(e.target.value)));
+ const rawRequested=Math.max(0,Math.min(100,Number(e.target.value)));const reverseSlider=Math.abs(viewRotation)>Math.PI/2;const requested=reverseSlider?100-rawRequested:rawRequested;
  const horizontal=count===2||turn%2===0;
  const fixed=horizontal?(turn%2===0?620:180):(turn%4===1?180:620);
  const wanted=baselinePosition(requested);
@@ -252,7 +254,7 @@ $('striker-position').addEventListener('input',e=>{
  }
  if(!best)best=wanted;
  Body.setPosition(striker,best);Sleeping.set(striker,false);Body.setVelocity(striker,{x:0,y:0});
- e.target.value=String(bestValue);
+ e.target.value=String(reverseSlider?100-bestValue:bestValue);
  draw();
 });
 $('start').onclick=()=>{unlockPocketAudio();startGame();};$('back').onclick=()=>{if($('game').classList.contains('show'))back();else location.href='/mini-app';};$('reset').onclick=()=>{if(players.length){if(typeof window.clearOnlineEndOverlay==='function')window.clearOnlineEndOverlay();players.forEach(p=>p.score=0);turn=0;gameOver=false;resetBoard();renderScores();$('hint').textContent='مباراة جديدة — دور '+players[0].name;}};$('new').onclick=()=>{if(typeof window.clearOnlineEndOverlay==='function')window.clearOnlineEndOverlay();players.forEach(p=>p.score=0);turn=0;gameOver=false;resetBoard();renderScores();$('hint').textContent='بدأت مباراة جديدة';};$('change').onclick=()=>{if(shotMoving)return;turn=(turn+1)%players.length;placeStriker();renderScores();draw();};
