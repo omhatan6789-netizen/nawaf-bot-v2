@@ -205,6 +205,7 @@ function showGames(){
   ['🧠','اختبر ذاكرتك','احفظ التسلسل وتحدَّ لاعبًا آخر','memory'],
   ['🔤','خمن الكلمة','تحدَّ حتى 10 لاعبين أو تدرب لحالك','word'],
   ['🃏','تطابق البطاقات','طابق الأزواج ضد البوت أو أصدقائك','match'],
+  ['🔎','Find Match','اعثر على الغرض المشترك قبل خصمك','find'],
   ['🔢','ترتيب الأرقام','رتّب اللوحة قبل انتهاء الوقت','sort'],
   ['🎯','خمن الرقم','اكتشف الرقم مع تلميحات أعلى أو أقل','number'],
   ['⏱️','المؤقت','أوقف الوقت عند الهدف دون رؤية العداد','timer'],
@@ -221,7 +222,7 @@ function showGames(){
    const placeholder=document.createElement('div');placeholder.className='game-cover-placeholder';placeholder.textContent=emoji;card.appendChild(placeholder);
   }
   const label=document.createElement('span');label.className='label';label.textContent=name;card.appendChild(label);
-  card.onclick=()=>{if(type==='carrom'){clearCarromReturnDismissal();location.href='/carrom';return;}if(type==='timer'){startQuickGameSetup(type);return;}if(type==='sort'){startNumberSortSetup();return;}if(type==='connect'){showConnect4Setup();return;}if(type==='word'){showWordSetup();return;}if(type==='match'||type==='number'){startCasualSetup(type);return;}showMiniGameInstructions(type);};
+  card.onclick=()=>{if(type==='carrom'){clearCarromReturnDismissal();location.href='/carrom';return;}if(type==='timer'){startQuickGameSetup(type);return;}if(type==='sort'){startNumberSortSetup();return;}if(type==='connect'){showConnect4Setup();return;}if(type==='word'){showWordSetup();return;}if(type==='match'||type==='number'||type==='find'){startCasualSetup(type);return;}showMiniGameInstructions(type);};
   pageContent.appendChild(card);
  });
 }
@@ -1105,7 +1106,7 @@ document.getElementById('back-home').onclick=showHome;
     startNumberSortGame(casualStartParam);
   }
   else if(casualStartParam.startsWith('quick_timer_')){startQuickGame(casualStartParam);}
-  else if(casualStartParam.startsWith('casual_match_')||casualStartParam.startsWith('casual_number_')){
+  else if(casualStartParam.startsWith('casual_match_')||casualStartParam.startsWith('casual_number_')||casualStartParam.startsWith('casual_find_')){
     startCasualGame(casualStartParam);
   }
   else if(extraGameType&&extraGameId){
