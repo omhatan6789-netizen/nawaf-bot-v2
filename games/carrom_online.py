@@ -249,7 +249,7 @@ async def carrom_online_api(user_id: int, action: str, raw_game_id: str, payload
                 striker_foul = bool(payload.get("striker_pocketed"))
                 scores = list(state.get("scores", [0] * len(players)))
                 scores += [0] * (len(players) - len(scores))
-                collected = list(state.get("collected", [0] * len(players)))
+                collected = list(state.get("collected", [1 if score > 0 else 0 for score in scores]))
                 collected += [0] * (len(players) - len(collected))
                 pending = bool(state.get("queen_pending_cover"))
                 queen_new = queen_index in newly_pocketed
