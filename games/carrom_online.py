@@ -185,7 +185,10 @@ async def carrom_online_api(user_id: int, action: str, raw_game_id: str, payload
                     disc_type = str(item.get("type", "coin"))
                     if color != original["color"] or disc_type != original["type"]:
                         raise ValueError("تعريف قرص الحركة غير صالح")
-                    clean_motion.append({"x": x, "y": y, "color": color, "type": disc_type,
+                    angle = float(item.get("angle", 0))
+                    if not math.isfinite(angle):
+                        raise ValueError("زاوية قرص الحركة غير صالحة")
+                    clean_motion.append({"x": x, "y": y, "angle": angle, "color": color, "type": disc_type,
                                          "pocketed": bool(item.get("pocketed", False))})
                 striker_in = incoming.get("striker") or {}
                 sx, sy = float(striker_in.get("x", 400)), float(striker_in.get("y", 620))
