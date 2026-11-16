@@ -21,7 +21,8 @@ GAME_INFO = {
     "match": ("تطابق البطاقات 🃏", "طابق أكبر عدد من أزواج البطاقات ضد لاعب أو البوت"),
     "number": ("خمن الرقم 🔢", "اخمن الرقم الصحيح مع تلميحات أعلى أو أقل"),
     "sort": ("ترتيب الأرقام 🔢", "رتّب الأرقام قبل انتهاء الوقت وتنافس مع 5 لاعبين"),
-    "carrom": ("الكيرم 🎯", "لعبة الكيرم"),\n    "bowling": ("بولينق 🎳", "أسقط القوارير واجمع أعلى نتيجة"),
+    "carrom": ("الكيرم 🎯", "لعبة الكيرم"),
+    "bowling": ("بولينق 🎳", "أسقط القوارير واجمع أعلى نتيجة"),
 }
 
 def _safe_player_name(value, fallback: str) -> str:
@@ -121,6 +122,8 @@ def _select_games(query: str):
     supported_inline = ["connect", "dots", "memory", "word", "match", "number", "sort", "carrom", "bowling"]
     if not value:
         return supported_inline
+    if any(word in value for word in ("بولينق", "بولينج", "bowling")):
+        return ["bowling"]
     if any(word in value for word in ("كيرم", "carrom", "carom")):
         return ["carrom"]
     if any(word in value for word in ("كونكت", "connect", "4")):
@@ -493,6 +496,7 @@ async def online_lobby_callback(update: Update, context: ContextTypes.DEFAULT_TY
     me = await context.bot.get_me()
     start_param = (
         f"online_c4_{game_id.hex}" if game_type == "connect"
+        else f"online_bowling_{game_id.hex}" if game_type == "bowling"
         else f"online_mg_{game_id.hex}"
     )
     launch_url = f"https://t.me/{me.username}?startapp={start_param}"
