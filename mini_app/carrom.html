@@ -61,7 +61,7 @@ function startGame(){ $('setup').classList.remove('show');$('game').classList.ad
 function clearWorld(){World.clear(world,false);coins=[];striker=null;}
 function addWalls(){const t=25,L=inner.l,R=inner.r,T=inner.t,B=inner.b,gap=100;
  const rect=(x,y,w,h)=>World.add(world,Bodies.rectangle(x,y,w,h,{isStatic:true,restitution:.78,friction:.08}));
- const opening=145;
+ const opening=100;
  rect((L+R)/2,T,R-L-2*opening,t);rect((L+R)/2,B,R-L-2*opening,t);
  rect(L,(T+B)/2,t,B-T-2*opening);rect(R,(T+B)/2,t,B-T-2*opening);
 
@@ -114,7 +114,7 @@ function back(){cancelAnimationFrame(raf);dragging=false;aim=null;setGameSwipeLo
 $('striker-position').addEventListener('input',e=>{
  if(!striker||shotMoving||dragging||gameOver)return;
  const wanted=baselinePosition(e.target.value),current=striker.position;
- const horizontal=count===2||turn%2===0||turn%2===2;
+ const horizontal=count===2||turn%2===0;
  const axis=horizontal?'x':'y',fixed=horizontal?wanted.y:wanted.x;
  let target=horizontal?wanted.x:wanted.y;
  const here=horizontal?current.x:current.y,dir=Math.sign(target-here);
