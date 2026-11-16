@@ -69,7 +69,7 @@ function showCarromEndOverlay(winnerName,isDraw,subtitle){
  audioReady.then(audio=>{if(audio){audio.preload='auto';audio.play().catch(()=>{});}});tick();
 }
 function applyOnlineState(result){
- onlineState=result;count=result.players.length;fourMode=result.settings.team_mode||'individual';turn=result.turn_index;const seat=Math.max(0,Math.min(count-1,Number(result.you_player_index)||0));viewRotation=([-0,-Math.PI/2,Math.PI,Math.PI/2][seat]||0);
+ onlineState=result;count=result.players.length;fourMode=result.settings.team_mode||'individual';turn=result.turn_index;const seat=Math.max(0,Math.min(count-1,Number(result.you_player_index)||0));viewRotation=count===2?(seat===0?0:Math.PI):([-0,-Math.PI/2,Math.PI,Math.PI/2][seat]??0);
  players=result.players.map((p,i)=>({id:Number(p.id),name:p.name,color:i%2?'#eee4d0':'#242326',score:Number(result.scores?.[i]||0),team:fourMode==='teams'?i%2:undefined}));
  clearWorld();addWalls();
  (result.state.discs||[]).forEach(d=>{const coin=addCoin(Number(d.x),Number(d.y),d.color,d.type);if(d.pocketed){coin.pocketed=true;World.remove(world,coin);}});
