@@ -22,7 +22,6 @@ GAME_INFO = {
     "number": ("خمن الرقم 🔢", "اخمن الرقم الصحيح مع تلميحات أعلى أو أقل"),
     "sort": ("ترتيب الأرقام 🔢", "رتّب الأرقام قبل انتهاء الوقت وتنافس مع 5 لاعبين"),
     "carrom": ("الكيرم 🎯", "لعبة الكيرم"),
-    "bowling": ("بولينق 🎳", "أسقط القوارير واجمع أعلى نتيجة"),
 }
 
 def _safe_player_name(value, fallback: str) -> str:
@@ -119,11 +118,9 @@ async def online_image_receive(update: Update, context: ContextTypes.DEFAULT_TYP
 
 def _select_games(query: str):
     value = (query or "").strip().lower()
-    supported_inline = ["connect", "dots", "memory", "word", "match", "number", "sort", "carrom", "bowling"]
+    supported_inline = ["connect", "dots", "memory", "word", "match", "number", "sort", "carrom"]
     if not value:
         return supported_inline
-    if any(word in value for word in ("بولينق", "بولينج", "bowling")):
-        return ["bowling"]
     if any(word in value for word in ("كيرم", "carrom", "carom")):
         return ["carrom"]
     if any(word in value for word in ("كونكت", "connect", "4")):
@@ -426,10 +423,7 @@ async def online_lobby_callback(update: Update, context: ContextTypes.DEFAULT_TY
                     lobby_id,
                 )
                 game_id = uuid.uuid4()
-                if game_type == "bowling":
-                    from games.bowling_online import create_game
-                    await create_game(conn, lobby, game_id)
-                elif game_type == "connect":
+                if game_type == "connect":
                     from games.connect4 import ROWS, COLS
                     board = [[0 for _ in range(COLS)] for _ in range(ROWS)]
                     await conn.execute(
@@ -499,7 +493,6 @@ async def online_lobby_callback(update: Update, context: ContextTypes.DEFAULT_TY
     me = await context.bot.get_me()
     start_param = (
         f"online_c4_{game_id.hex}" if game_type == "connect"
-        else f"online_bowling_{game_id.hex}" if game_type == "bowling"
         else f"online_mg_{game_id.hex}"
     )
     launch_url = f"https://t.me/{me.username}?startapp={start_param}"
@@ -561,10 +554,6 @@ async def online_lobby_api(user_id: int, action: str, raw_lobby_id: str, setting
                         raise ValueError("اختر لاعبين أو ثلاثة أو أربعة")
                     if mode not in ("individual", "teams") or (count != 4 and mode != "individual"):
                         raise ValueError("نظام الفرق متاح لأربعة لاعبين فقط")
-                elif lobby["game_type"] == "bowling":
-                    if count not in (2, 3, 4) or mode != "individual":
-                        raise ValueError("البولينق تدعم من لاعبين إلى أربعة، وكل لاعب يلعب لحاله")
-                    duration = 300
                 elif lobby["game_type"] == "carrom":
                     if count not in (2, 4):
                         raise ValueError("الكيرم تدعم لاعبين أو أربعة لاعبين")
@@ -612,9 +601,6 @@ async def online_lobby_api(user_id: int, action: str, raw_lobby_id: str, setting
                 game_id = uuid.uuid4()
                 if lobby["game_type"] == "carrom":
                     from games.carrom_online import create_game
-                    await create_game(conn, lobby, game_id)
-                elif lobby["game_type"] == "bowling":
-                    from games.bowling_online import create_game
                     await create_game(conn, lobby, game_id)
                 elif lobby["game_type"] == "connect":
                     from games.connect4 import ROWS, COLS
