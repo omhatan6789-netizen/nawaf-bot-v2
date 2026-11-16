@@ -31,7 +31,7 @@ h1{font-size:26px;margin:4px 0 5px;text-align:center} .sub{text-align:center;col
 </style></head>
 <body><main class="app">
 <header class="top"><button class="pill" id="back">رجوع</button><div class="brand">كيرم <small>NAWAF GAME</small></div><button class="pill" id="reset">إعادة</button></header>
-<section id="setup" class="panel show"><h1>كيرم 🎯</h1><p class="sub">اختر طريقة اللعب</p><div class="sub">طريقة اللعب</div><div class="choices" id="modes"><button class="choice active" data-mode="bot">🤖 ضد البوت</button><button class="choice" data-mode="local">👥 لاعبين على نفس الجهاز</button></div><button class="primary" id="start">ابدأ اللعب</button></section>
+<section id="setup" class="panel show"><h1>كيرم 🎯</h1><p class="sub">اختر طريقة اللعب</p><div class="sub">طريقة اللعب</div><div class="choices" id="modes"><button class="choice active" data-mode="bot">🤖 ضد البوت</button><button class="choice" data-mode="local">👥 لاعبين على نفس الجهاز</button></div><div id="bot-difficulty-wrap" style="margin-top:16px"><div class="sub" style="margin-bottom:9px">مستوى البوت</div><div class="choices" id="bot-difficulty"><button class="choice" data-difficulty="easy">سهل</button><button class="choice active" data-difficulty="medium">متوسط</button><button class="choice" data-difficulty="hard">صعب</button></div></div><button class="primary" id="start">ابدأ اللعب</button></section>
 <section id="game"><div class="game-topbar"><div class="hint" id="hint">اسحب من القرص الضارب للخلف ثم اتركه للتسديد</div><div class="controls"><button id="change">تبديل اللاعب</button><button id="new">مباراة جديدة</button><button id="withdraw">انسحاب</button></div></div><div class="scorebar" id="scorebar"></div><div class="board-wrap"><canvas id="board" width="800" height="800"></canvas></div><div class="coin-legend"><div class="legend-item"><span class="legend-disc black"></span><span>الأسود</span><b>خمس نقاط</b></div><div class="legend-item"><span class="legend-disc white"></span><span>الأبيض</span><b>عشر نقاط</b></div><div class="legend-item"><span class="legend-disc red"></span><span>الأحمر</span><b>خمسون نقطة</b></div></div><div class="position-control"><label for="striker-position"><span>مكان قرص التسديد</span><span>↔</span></label><input id="striker-position" type="range" dir="rtl" min="0" max="100" value="50" step="1"><small>حرّك المؤشر لتحديد مكان القرص على خطك فقط</small></div></section>
 </main>
 <script>
@@ -39,11 +39,11 @@ const {Engine,World,Bodies,Body,Sleeping}=Matter;
 const $=id=>document.getElementById(id),canvas=$('board'),ctx=canvas.getContext('2d');
 const W=800,H=800,engine=Engine.create({enableSleeping:true}),world=engine.world;
 engine.gravity.x=0;engine.gravity.y=0;engine.positionIterations=8;engine.velocityIterations=8;engine.constraintIterations=4;
-let mode='bot',count=2,fourMode='teams',players=[],turn=0,coins=[],striker=null,aim=null,dragging=false,activePointerId=null,shotMoving=false,turnPocketed=0,strikerPocketed=false,queenPocketed=false,queenPendingCover=false,queenCoverShot=false,gameOver=false,lastT=0,raf=0,lastImpactAt=0,localTurnTimer=null,localTurnDeadline=0,collectedCoins=[],pocketAnimations=[];
+let mode='bot',botDifficulty='medium',count=2,fourMode='teams',players=[],turn=0,coins=[],striker=null,aim=null,dragging=false,activePointerId=null,shotMoving=false,turnPocketed=0,strikerPocketed=false,queenPocketed=false,queenPendingCover=false,queenCoverShot=false,gameOver=false,lastT=0,raf=0,lastImpactAt=0,localTurnTimer=null,localTurnDeadline=0,collectedCoins=[],pocketAnimations=[];
 const onlineGameId=new URLSearchParams(location.search).get('game_id')||'';let onlineState=null,onlinePollTimer=null,onlineSubmitting=false,onlineEndShown=false,gameEndCountdownTimer=null,viewRotation=0,onlineMotionTimer=null,onlineMotionInFlight=false,onlinePositionDirty=false,remoteMotionActive=false,remoteAim=null,remoteMotionSeq=0,remoteMotionTargets=null,remoteStrikerTarget=null;
 const cx=400,cy=400,inner={l:62,r:738,t:62,b:738},pocketR=51;
 function choose(group,attr,val){document.querySelectorAll('#'+group+' .choice').forEach(b=>b.classList.toggle('active',b.dataset[attr]===val));}
-$('modes').onclick=e=>{const b=e.target.closest('[data-mode]');if(!b)return;mode=b.dataset.mode;choose('modes','mode',mode)};
+$('modes').onclick=e=>{const b=e.target.closest('[data-mode]');if(!b)return;mode=b.dataset.mode;choose('modes','mode',mode);$('bot-difficulty-wrap').style.display=mode==='bot'?'block':'none';};$('bot-difficulty').onclick=e=>{const b=e.target.closest('[data-difficulty]');if(!b)return;botDifficulty=b.dataset.difficulty;choose('bot-difficulty','difficulty',botDifficulty);};
 function setGameSwipeLock(locked){document.body.classList.toggle('playing',locked);const tg=window.Telegram?.WebApp;if(!tg)return;if(locked&&typeof tg.disableVerticalSwipes==='function')tg.disableVerticalSwipes();if(!locked&&typeof tg.enableVerticalSwipes==='function')tg.enableVerticalSwipes();}
 const onlineApi=async(action,extra={})=>{const initData=window.Telegram?.WebApp?.initData||'';if(!initData)throw new Error('افتح اللعبة من تيليجرام');const r=await fetch('/api/carrom-online',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData,action,game_id:onlineGameId,...extra})});const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok)throw new Error(d.error||'تعذر الاتصال بالغرفة');return d.result;};
 let returningToMiniMenu=false;
@@ -247,7 +247,44 @@ canvas.addEventListener('pointermove',e=>{if(!dragging||e.pointerId!==activePoin
 function releaseShot(e){if(!dragging||e.pointerId!==activePointerId)return;if(e.cancelable)e.preventDefault();const p=pointerPos(e);dragging=false;activePointerId=null;aim=null;const dx=striker.position.x-p.x,dy=striker.position.y-p.y,len=Math.hypot(dx,dy);if(len<24){$('hint').textContent='ما ثبتّ التصويب — تقدر تسحب مرة ثانية وتعدّل اتجاهك';draw();return;}const pull=Math.min(1,len/240),speed=2.2+18.5*Math.pow(pull,1.5)+3*Math.pow(pull,6);Sleeping.set(striker,false);Body.setVelocity(striker,{x:dx/len*speed,y:dy/len*speed});queenCoverShot=queenPendingCover;shotMoving=true;$('hint').textContent='القرص يتحرك...';if(mode==='online')sendOnlineMotion();}
 canvas.addEventListener('pointerup',releaseShot,{passive:false});
 canvas.addEventListener('pointercancel',e=>{if(e.pointerId!==activePointerId)return;dragging=false;activePointerId=null;aim=null;draw();},{passive:false});
-function botShot(){if(gameOver||turn!==1||mode!=='bot')return;const target=coins.find(c=>!c.pocketed&&c.gameType!=='queen')||coins.find(c=>!c.pocketed);if(!target)return;const dx=target.position.x-striker.position.x,dy=target.position.y-striker.position.y,len=Math.hypot(dx,dy)||1;Sleeping.set(striker,false);Body.setVelocity(striker,{x:dx/len*11,y:dy/len*11});queenCoverShot=queenPendingCover;shotMoving=true;$('hint').textContent='البوت يسدد...';}
+function botShot(){
+ if(gameOver||turn!==1||mode!=='bot')return;
+ const targets=coins.filter(c=>!c.pocketed&&c.gameType!=='queen');
+ const pool=targets.length?targets:coins.filter(c=>!c.pocketed);
+ if(!pool.length)return;
+ let dx=0,dy=0,speed=8.5;
+ if(botDifficulty==='easy'){
+  const target=pool[Math.floor(Math.random()*pool.length)];
+  const base=Math.atan2(target.position.y-striker.position.y,target.position.x-striker.position.x);
+  const angle=base+(Math.random()-.5)*.72;
+  dx=Math.cos(angle);dy=Math.sin(angle);speed=6.4+Math.random()*1.5;
+ }else if(botDifficulty==='hard'){
+  let best=null,bestScore=-Infinity;
+  const pockets=[[77,77],[723,77],[77,723],[723,723]];
+  for(const target of pool){
+   for(const pocket of pockets){
+    const tx=target.position.x,ty=target.position.y;
+    const px=pocket[0]-tx,py=pocket[1]-ty,plen=Math.hypot(px,py)||1;
+    const ux=px/plen,uy=py/plen;
+    const gx=tx-ux*49,gy=ty-uy*49;
+    const sx=gx-striker.position.x,sy=gy-striker.position.y,slen=Math.hypot(sx,sy)||1;
+    const aimX=sx/slen,aimY=sy/slen;
+    const align=aimX*ux+aimY*uy;
+    const distance=Math.hypot(sx,sy);
+    const score=align*2.2-distance/900-plen/1800;
+    if(!best||score>bestScore){best={x:aimX,y:aimY};bestScore=score;}
+   }
+  }
+  const angle=Math.atan2(best.y,best.x)+(Math.random()-.5)*.055;
+  dx=Math.cos(angle);dy=Math.sin(angle);speed=12.2;
+ }else{
+  const target=pool.reduce((a,b)=>Math.hypot(a.position.x-striker.position.x,a.position.y-striker.position.y)<Math.hypot(b.position.x-striker.position.x,b.position.y-striker.position.y)?a:b);
+  const angle=Math.atan2(target.position.y-striker.position.y,target.position.x-striker.position.x)+(Math.random()-.5)*.2;
+  dx=Math.cos(angle);dy=Math.sin(angle);speed=9.2;
+ }
+ Sleeping.set(striker,false);Body.setVelocity(striker,{x:dx*speed,y:dy*speed});queenCoverShot=queenPendingCover;shotMoving=true;
+ $('hint').textContent='البوت يسدد ('+(botDifficulty==='easy'?'سهل':botDifficulty==='hard'?'صعب':'متوسط')+')...';
+}
 function clearLocalTurnTimer(){if(localTurnTimer){clearInterval(localTurnTimer);localTurnTimer=null;}localTurnDeadline=0;}
 function startLocalTurnTimer(){clearLocalTurnTimer();if(mode==='online'||gameOver||(mode==='bot'&&turn===1))return;localTurnDeadline=Date.now()+20000;const tick=()=>{const left=Math.max(0,Math.ceil((localTurnDeadline-Date.now())/1000));$('hint').textContent='دور '+players[turn].name+' · باقي '+left+' ثانية';if(left<=0){clearLocalTurnTimer();forfeitLocalTurn(true);}};tick();localTurnTimer=setInterval(tick,250);}
 function forfeitLocalTurn(timedOut=false){if(gameOver)return;clearLocalTurnTimer();gameOver=true;const winner=mode==='bot'?players[1]:players[(turn+1)%players.length];const message=timedOut?'انتهى وقت اللاعب ولم يلعب خلال 20 ثانية.':'انسحب اللاعب من المباراة.';$('hint').textContent=message+' الفائز: '+winner.name;showCarromEndOverlay(winner.name,false,message);}
