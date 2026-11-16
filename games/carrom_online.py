@@ -245,13 +245,19 @@ async def carrom_online_api(user_id: int, action: str, raw_game_id: str, payload
                 status = "finished" if all_regular_pocketed and queen_done else "playing"
                 winner_id = None
                 if status == "finished":
+                    forfeited = {int(x) for x in state.get("forfeited", [])}
+                    active = [i for i, pid in enumerate(ids) if pid not in forfeited]
                     if len(players) == 4 and _decode(row["settings"]).get("team_mode") == "teams":
-                        team_scores = [scores[0] + scores[2], scores[1] + scores[3]]
+                        team_scores = [
+                            sum(scores[i] for i in range(len(players)) if i % 2 == team and i in active)
+                            for team in (0, 1)
+                        ]
                         if team_scores[0] != team_scores[1]:
-                            winner_id = ids[0] if team_scores[0] > team_scores[1] else ids[1]
+                            winner_team = 0 if team_scores[0] > team_scores[1] else 1
+                            winner_id = ids[next(i for i in active if i % 2 == winner_team)]
                     else:
-                        high = max(scores)
-                        winners = [i for i, score in enumerate(scores) if score == high]
+                        high = max((scores[i] for i in active), default=0)
+                        winners = [i for i in active if scores[i] == high]
                         if len(winners) == 1:
                             winner_id = ids[winners[0]]
                 row = await conn.fetchrow(
