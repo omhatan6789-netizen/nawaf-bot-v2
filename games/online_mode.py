@@ -21,7 +21,7 @@ GAME_INFO = {
     "match": ("تطابق البطاقات 🃏", "طابق أكبر عدد من أزواج البطاقات ضد لاعب أو البوت"),
     "number": ("خمن الرقم 🔢", "اخمن الرقم الصحيح مع تلميحات أعلى أو أقل"),
     "sort": ("ترتيب الأرقام 🔢", "رتّب الأرقام قبل انتهاء الوقت وتنافس مع 5 لاعبين"),
-    "carrom": ("الكيرم 🎯", "لعبة الكيرم"),
+    "carrom": ("الكيرم 🎯", "لعبة الكيرم"),\n    "bowling": ("بولينق 🎳", "أسقط القوارير واجمع أعلى نتيجة"),
 }
 
 def _safe_player_name(value, fallback: str) -> str:
@@ -118,7 +118,7 @@ async def online_image_receive(update: Update, context: ContextTypes.DEFAULT_TYP
 
 def _select_games(query: str):
     value = (query or "").strip().lower()
-    supported_inline = ["connect", "dots", "memory", "word", "match", "number", "sort", "carrom"]
+    supported_inline = ["connect", "dots", "memory", "word", "match", "number", "sort", "carrom", "bowling"]
     if not value:
         return supported_inline
     if any(word in value for word in ("كيرم", "carrom", "carom")):
@@ -554,6 +554,10 @@ async def online_lobby_api(user_id: int, action: str, raw_lobby_id: str, setting
                         raise ValueError("اختر لاعبين أو ثلاثة أو أربعة")
                     if mode not in ("individual", "teams") or (count != 4 and mode != "individual"):
                         raise ValueError("نظام الفرق متاح لأربعة لاعبين فقط")
+                elif lobby["game_type"] == "bowling":
+                    if count not in (2, 3, 4) or mode != "individual":
+                        raise ValueError("البولينق تدعم من لاعبين إلى أربعة، وكل لاعب يلعب لحاله")
+                    duration = 300
                 elif lobby["game_type"] == "carrom":
                     if count not in (2, 4):
                         raise ValueError("الكيرم تدعم لاعبين أو أربعة لاعبين")
@@ -601,6 +605,9 @@ async def online_lobby_api(user_id: int, action: str, raw_lobby_id: str, setting
                 game_id = uuid.uuid4()
                 if lobby["game_type"] == "carrom":
                     from games.carrom_online import create_game
+                    await create_game(conn, lobby, game_id)
+                elif lobby["game_type"] == "bowling":
+                    from games.bowling_online import create_game
                     await create_game(conn, lobby, game_id)
                 elif lobby["game_type"] == "connect":
                     from games.connect4 import ROWS, COLS
