@@ -333,8 +333,9 @@ function renderOnlineLobby(state){
   [['individual','كل لاعب لحاله'],['teams','فريقين 2 ضد 2']].forEach(([v,t])=>{const b=document.createElement('button');b.className='c4-level'+(state.team_mode===v?' active':'');b.textContent=t;b.disabled=!canConfigure;b.onclick=()=>onlineLobbyRequest('configure',{player_count:4,team_mode:v,duration_seconds:state.duration_seconds}).then(loadOnlineLobby).catch(showOnlineLobbyError);modes.appendChild(b);});
  }else{modes.remove();}
  if(state.game_type==='carrom'){
-  const turnTime=document.createElement('div');turnTime.className='c4-label';turnTime.textContent='وقت كل دور: 20 ثانية — إذا انتهى الوقت يُستبعد اللاعب';durations.appendChild(turnTime);
- }else{durations.remove();}
+   const turnLabel=document.createElement('div');turnLabel.className='c4-label';turnLabel.textContent='وقت كل دور';durations.appendChild(turnLabel);
+   [[20,'20 ثانية'],[30,'30 ثانية'],[40,'40 ثانية']].forEach(([seconds,label])=>{const b=document.createElement('button');b.className='c4-level'+(Number(state.duration_seconds)===seconds?' active':'');b.textContent=label;b.disabled=!canConfigure;b.onclick=()=>onlineLobbyRequest('configure',{player_count:state.player_count,team_mode:state.team_mode,duration_seconds:seconds}).then(loadOnlineLobby).catch(showOnlineLobbyError);durations.appendChild(b);});
+  }else{durations.remove();}
  const join=shell.querySelector('#online-join'),start=shell.querySelector('#online-start'),leave=shell.querySelector('#online-leave');
  join.disabled=state.status!=='pending'||state.is_joined||joined.length>=state.player_count;
  join.textContent=state.is_joined?'أنت منضم بالفعل ✓':'انضمام إلى الغرفة 👥';
