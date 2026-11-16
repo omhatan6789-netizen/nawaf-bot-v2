@@ -260,6 +260,7 @@ $('striker-position').addEventListener('input',e=>{
  if(!best)best=wanted;
  Body.setPosition(striker,best);Sleeping.set(striker,false);Body.setVelocity(striker,{x:0,y:0});
  e.target.value=String(reverseSlider?100-bestValue:bestValue);
+ if(mode==='online'){onlinePositionDirty=true;sendOnlineMotion();}
  draw();
 });
 $('start').onclick=()=>{unlockPocketAudio();startGame();};$('back').onclick=()=>{if($('game').classList.contains('show'))back();else location.href='/mini-app';};$('reset').onclick=()=>{if(players.length){clearLocalTurnTimer();if(typeof window.clearOnlineEndOverlay==='function')window.clearOnlineEndOverlay();players.forEach(p=>p.score=0);turn=0;gameOver=false;resetBoard();renderScores();$('hint').textContent='مباراة جديدة — دور '+players[0].name;startLocalTurnTimer();}};$('new').onclick=()=>{clearLocalTurnTimer();if(typeof window.clearOnlineEndOverlay==='function')window.clearOnlineEndOverlay();players.forEach(p=>p.score=0);turn=0;gameOver=false;resetBoard();renderScores();$('hint').textContent='بدأت مباراة جديدة';startLocalTurnTimer();};$('withdraw').onclick=withdrawFromCarrom;$('change').onclick=()=>{if(shotMoving)return;turn=(turn+1)%players.length;placeStriker();renderScores();draw();};
