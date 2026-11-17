@@ -82,12 +82,12 @@ function applyRemoteMotion(m){
  if(!m||Number(m.player_id)===Number(players[onlineState?.you_player_index||0]?.id))return;
  const stamp=Number(m.sent_at||0);if(stamp&&stamp<=remoteMotionSeq)return;remoteMotionSeq=stamp||remoteMotionSeq+1;
  const snapshot={at:performance.now(),discs:(m.discs||[]).map(d=>({x:+d.x,y:+d.y,angle:+d.angle||0,vx:+d.vx||0,vy:+d.vy||0,av:+d.av||0,pocketed:!!d.pocketed})),striker:m.striker?{x:+m.striker.x,y:+m.striker.y,vx:+m.striker.vx||0,vy:+m.striker.vy||0}:null,aim:m.aim?{x:+m.aim.x,y:+m.aim.y}:null,moving:!!m.moving};
- remoteMotionBuffer.push(snapshot);if(remoteMotionBuffer.length>12)remoteMotionBuffer.shift();
+ remoteMotionBuffer.push(snapshot);if(remoteMotionBuffer.length>20)remoteMotionBuffer.shift();
  remoteMotionTargets=snapshot.discs;remoteStrikerTarget=snapshot.striker;remoteAim=snapshot.aim;remoteMotionActive=snapshot.moving||!!snapshot.aim;remoteMotionReceivedAt=snapshot.at;
 }
 function applyRemoteMotionFrame(){
  if(!remoteMotionBuffer.length)return;
- const renderAt=performance.now()-90;let a=remoteMotionBuffer[0],b=remoteMotionBuffer[remoteMotionBuffer.length-1];
+ const renderAt=performance.now()-55;let a=remoteMotionBuffer[0],b=remoteMotionBuffer[remoteMotionBuffer.length-1];
  for(let i=1;i<remoteMotionBuffer.length;i++){if(remoteMotionBuffer[i].at>=renderAt){a=remoteMotionBuffer[i-1];b=remoteMotionBuffer[i];break;}}
  const span=Math.max(1,b.at-a.at),t=Math.max(0,Math.min(1,(renderAt-a.at)/span));
  const lerp=(x,y)=>x+(y-x)*t;
@@ -104,7 +104,7 @@ function applyRemoteMotionFrame(){
  remoteMotionActive=b.moving||!!b.aim;
  while(remoteMotionBuffer.length>2&&remoteMotionBuffer[1].at<renderAt)remoteMotionBuffer.shift();
 }
-function startOnlineMotionSync(){if(onlineMotionTimer)clearInterval(onlineMotionTimer);onlineMotionTimer=setInterval(sendOnlineMotion,33);}
+function startOnlineMotionSync(){if(onlineMotionTimer)clearInterval(onlineMotionTimer);onlineMotionTimer=setInterval(sendOnlineMotion,16);}
 async function sendOnlineMotion(){if(mode!=='online'||!onlineState?.your_turn||gameOver||onlineMotionInFlight||(!dragging&&!shotMoving&&!onlinePositionDirty))return;onlineMotionInFlight=true;onlinePositionDirty=false;const motion={discs:coins.map(b=>({x:b.position.x,y:b.position.y,angle:b.angle,vx:b.velocity.x,vy:b.velocity.y,av:b.angularVelocity,color:b.gameColor,type:b.gameType,pocketed:!!b.pocketed})),striker:{x:striker?.position.x||400,y:striker?.position.y||620,vx:striker?.velocity.x||0,vy:striker?.velocity.y||0},aim:dragging&&aim?aim:null,moving:!!shotMoving};try{if(carromSocket&&carromSocket.readyState===WebSocket.OPEN){if(carromSocket.bufferedAmount<65536)carromSocket.send(JSON.stringify({type:'motion',motion}));}else{await onlineApi('motion',{motion});}}catch(_){}finally{onlineMotionInFlight=false;}}
 function scheduleOnlinePoll(){if(onlinePollTimer)clearTimeout(onlinePollTimer);onlinePollTimer=setTimeout(async()=>{try{if(!onlineSubmitting&&(!onlineState?.your_turn||!shotMoving)){const result=await onlineApi('state');if(!onlineState||result.move_no!==onlineState.move_no||result.status!==onlineState.status)applyOnlineState(result);else{applyRemoteMotion(result.motion);if(result.remaining!==null&&result.remaining!==undefined)$('hint').textContent='باقي '+result.remaining+' ثانية · '+(result.your_turn?'دورك':'دور '+players[turn].name);}}}catch(_){}if(!gameOver)scheduleOnlinePoll();},carromSocket&&carromSocket.readyState===WebSocket.OPEN?1000:100);}
 async function submitOnlineShot(){
