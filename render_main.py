@@ -162,6 +162,7 @@ def handle_carrom_websocket(handler):
             if now - last_motion_at < 0.018:
                 continue
             last_motion_at = now
+            motion["type"] = "motion"
             motion["player_id"] = uid
             motion["sent_at"] = time.time()
             outgoing = json.dumps(motion, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
