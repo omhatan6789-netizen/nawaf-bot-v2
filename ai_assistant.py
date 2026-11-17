@@ -856,11 +856,13 @@ async def _jikan_image_candidates(query: str):
                     images = item.get("images") or {}
                     webp = images.get("webp") or {}
                     jpg = images.get("jpg") or {}
+                    # Telegram InlineQueryResultPhoto only accepts JPEG.
+                    # Prefer Jikan's JPEG variant instead of WEBP.
                     image_url = (
-                        webp.get("large_image_url")
-                        or webp.get("image_url")
-                        or jpg.get("large_image_url")
+                        jpg.get("large_image_url")
                         or jpg.get("image_url")
+                        or webp.get("large_image_url")
+                        or webp.get("image_url")
                     )
                     if image_url and image_url.startswith(("https://", "http://")):
                         if image_url not in candidates:
