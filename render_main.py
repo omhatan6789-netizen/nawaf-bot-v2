@@ -86,6 +86,7 @@ def handle_carrom_websocket(handler):
     if parsed.path != "/ws/carrom":
         return False
     client = None
+    upgraded = False
     try:
         query = parse_qs(parsed.query)
         game_id = (query.get("game_id") or [""])[0]
@@ -114,12 +115,14 @@ def handle_carrom_websocket(handler):
         accept = base64.b64encode(
             hashlib.sha1((key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").encode()).digest()
         ).decode()
+        handler.protocol_version = "HTTP/1.1"
         handler.send_response(101, "Switching Protocols")
         handler.send_header("Upgrade", "websocket")
         handler.send_header("Connection", "Upgrade")
         handler.send_header("Sec-WebSocket-Accept", accept)
         handler.end_headers()
         handler.wfile.flush()
+        upgraded = True
         handler.connection.settimeout(25)
         client = {"handler": handler, "uid": uid, "game_id": game_id, "send_lock": threading.Lock()}
         with _carrom_ws_lock:
@@ -174,7 +177,7 @@ def handle_carrom_websocket(handler):
                     pass
     except Exception as exc:
         logging.getLogger("nawaf-webhook").debug("Carrom WebSocket closed: %s", exc)
-        if not handler.wfile.closed:
+        if not upgraded:
             try:
                 handler.send_error(400, "Carrom real-time connection failed")
             except Exception:
