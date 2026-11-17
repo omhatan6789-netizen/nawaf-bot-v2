@@ -183,7 +183,7 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
                     "title": "دعوة لاعب — خمن الكلمة 🔤",
                     "description": f"دعوة من {inviter_name} للانضمام إلى غرفة قائمة",
                     "input_message_content": InputTextMessageContent(
-                        f"🔤 دعوة للانضمام إلى غرفة خمن الكلمة\\n\\n"
+                        f"🔤 دعوة للانضمام إلى غرفة خمن الكلمة\n\n"
                         f"دعاك {inviter_name} للانضمام إلى اللعبة."
                     ),
                     "reply_markup": InlineKeyboardMarkup([[
@@ -334,7 +334,7 @@ async def online_game_chosen_inline_result(update: Update, context: ContextTypes
     creator_name = creator.full_name or creator.first_name or "لاعب"
     if game_type == "wordinvite":
         caption = (
-            "🔤 دعوة للانضمام إلى غرفة خمن الكلمة\\n\\n"
+            "🔤 دعوة للانضمام إلى غرفة خمن الكلمة\n\n"
             f"دعاك {creator_name} للانضمام إلى اللعبة."
         )
         room_url = f"https://t.me/{(await context.bot.get_me()).username}?startapp=word_{room_id}"
