@@ -159,7 +159,7 @@ def handle_carrom_websocket(handler):
             if not isinstance(motion, dict) or not isinstance(motion.get("discs"), list):
                 continue
             now = time.monotonic()
-            if now - last_motion_at < 0.018:
+            if now - last_motion_at < 0.010:
                 continue
             last_motion_at = now
             motion["type"] = "motion"
