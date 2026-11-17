@@ -288,47 +288,82 @@ canvas.addEventListener('pointermove',e=>{if(!dragging||e.pointerId!==activePoin
 function releaseShot(e){if(!dragging||e.pointerId!==activePointerId)return;if(strikerPlacementInvalid){dragging=false;activePointerId=null;aim=null;draw();return;}if(e.cancelable)e.preventDefault();const p=pointerPos(e);dragging=false;activePointerId=null;aim=null;const dx=striker.position.x-p.x,dy=striker.position.y-p.y,len=Math.hypot(dx,dy);if(len<24){$('hint').textContent='ما ثبتّ التصويب — تقدر تسحب مرة ثانية وتعدّل اتجاهك';draw();return;}const pull=Math.min(1,len/240),speed=2.2+18.5*Math.pow(pull,1.5)+3*Math.pow(pull,6);Sleeping.set(striker,false);Body.setVelocity(striker,{x:dx/len*speed,y:dy/len*speed});queenCoverShot=queenPendingCover;shotMoving=true;$('hint').textContent='القرص يتحرك...';if(mode==='online')sendOnlineMotion();}
 canvas.addEventListener('pointerup',releaseShot,{passive:false});
 canvas.addEventListener('pointercancel',e=>{if(e.pointerId!==activePointerId)return;dragging=false;activePointerId=null;aim=null;draw();},{passive:false});
-function botShot(){
- if(gameOver||turn!==1||mode!=='bot')return;
- const targets=coins.filter(c=>!c.pocketed&&c.gameType!=='queen');
- const queenTarget=coins.find(c=>!c.pocketed&&c.gameType==='queen');
- // When only one regular coin remains, the bot must take the queen first.
- const pool=queenTarget&&!queenPendingCover&&targets.length===1
-  ?[queenTarget]
-  :(targets.length?targets:(queenTarget?[queenTarget]:[]));
- if(!pool.length)return;
- let dx=0,dy=0,speed=8.5;
- if(botDifficulty==='easy'){
-  const target=pool[Math.floor(Math.random()*pool.length)];
-  const base=Math.atan2(target.position.y-striker.position.y,target.position.x-striker.position.x);
-  const angle=base+(Math.random()-.5)*.72;
-  dx=Math.cos(angle);dy=Math.sin(angle);speed=6.4+Math.random()*1.5;
- }else if(botDifficulty==='hard'){
-  let best=null,bestScore=-Infinity;
-  const pockets=[[77,77],[723,77],[77,723],[723,723]];
-  for(const target of pool){
-   for(const pocket of pockets){
-    const tx=target.position.x,ty=target.position.y;
-    const px=pocket[0]-tx,py=pocket[1]-ty,plen=Math.hypot(px,py)||1;
-    const ux=px/plen,uy=py/plen;
-    const gx=tx-ux*49,gy=ty-uy*49;
-    const sx=gx-striker.position.x,sy=gy-striker.position.y,slen=Math.hypot(sx,sy)||1;
-    const aimX=sx/slen,aimY=sy/slen;
-    const align=aimX*ux+aimY*uy;
-    const distance=Math.hypot(sx,sy);
-    const score=align*2.2-distance/900-plen/1800;
-    if(!best||score>bestScore){best={x:aimX,y:aimY};bestScore=score;}
+function pointSegmentDistance(px,py,ax,ay,bx,by){
+ const dx=bx-ax,dy=by-ay,len2=dx*dx+dy*dy;
+ const t=len2?Math.max(0,Math.min(1,((px-ax)*dx+(py-ay)*dy)/len2)):0;
+ return Math.hypot(px-(ax+t*dx),py-(ay+t*dy));
+}
+function botLinePenalty(ax,ay,bx,by,excluded,extra=0){
+ let penalty=0;
+ for(const coin of coins){
+  if(coin.pocketed||coin===excluded)continue;
+  const clearance=pointSegmentDistance(coin.position.x,coin.position.y,ax,ay,bx,by);
+  const needed=(coin.circleRadius||20)+extra;
+  if(clearance<needed)penalty+=(needed-clearance)*1.8;
+ }
+ return penalty;
+}
+function findBotShot(){
+ const regular=coins.filter(c=>!c.pocketed&&c.gameType!=='queen');
+ const queen=coins.find(c=>!c.pocketed&&c.gameType==='queen');
+ // Queen first when only one regular coin remains; cover the queen with a regular coin afterward.
+ const pool=queen&&!queenPendingCover&&regular.length===1?[queen]:(regular.length?regular:(queen?[queen]:[]));
+ if(!pool.length)return null;
+ const pockets=[[77,77],[723,77],[77,723],[723,723]];
+ const step=botDifficulty==='hard'?3:botDifficulty==='medium'?5:10;
+ let best=null,bestScore=-Infinity;
+ for(const target of pool){
+  for(const pocket of pockets){
+   const tx=target.position.x,ty=target.position.y;
+   const px=pocket[0]-tx,py=pocket[1]-ty,pocketDistance=Math.hypot(px,py)||1;
+   const ux=px/pocketDistance,uy=py/pocketDistance;
+   const ghost={x:tx-ux*((target.circleRadius||20)+30+3),y:ty-uy*((target.circleRadius||20)+30+3)};
+   if(ghost.x<95||ghost.x>705||ghost.y<95||ghost.y>705)continue;
+   const potPenalty=botLinePenalty(tx,ty,pocket[0],pocket[1],target,5);
+   for(let value=0;value<=100;value+=step){
+    const position=baselinePosition(value);
+    if(coins.some(c=>!c.pocketed&&Math.hypot(position.x-c.position.x,position.y-c.position.y)<(c.circleRadius||20)+32))continue;
+    const approachDistance=Math.hypot(ghost.x-position.x,ghost.y-position.y);
+    const approachPenalty=botLinePenalty(position.x,position.y,ghost.x,ghost.y,target,7);
+    const score=-(approachDistance*.035)-(pocketDistance*.012)-(approachPenalty*2.8)-(potPenalty*3.2);
+    if(score>bestScore){bestScore=score;best={position,ghost,target,pocket,value,score};}
    }
   }
-  const angle=Math.atan2(best.y,best.x)+(Math.random()-.5)*.055;
-  dx=Math.cos(angle);dy=Math.sin(angle);speed=12.2;
- }else{
-  const target=pool.reduce((a,b)=>Math.hypot(a.position.x-striker.position.x,a.position.y-striker.position.y)<Math.hypot(b.position.x-striker.position.x,b.position.y-striker.position.y)?a:b);
-  const angle=Math.atan2(target.position.y-striker.position.y,target.position.x-striker.position.x)+(Math.random()-.5)*.2;
-  dx=Math.cos(angle);dy=Math.sin(angle);speed=9.2;
  }
- Sleeping.set(striker,false);Body.setVelocity(striker,{x:dx*speed,y:dy*speed});queenCoverShot=queenPendingCover;shotMoving=true;
- $('hint').textContent='البوت يسدد ('+(botDifficulty==='easy'?'سهل':botDifficulty==='hard'?'صعب':'متوسط')+')...';
+ return best;
+}
+function moveBotStriker(position){
+ return new Promise(resolve=>{
+  if(!striker){resolve();return;}
+  const start={x:striker.position.x,y:striker.position.y},began=performance.now();
+  const duration=botDifficulty==='easy'?260:botDifficulty==='hard'?520:400;
+  const animate=now=>{
+   if(gameOver||turn!==1||mode!=='bot'){resolve();return;}
+   const t=Math.min(1,(now-began)/duration),ease=t*t*(3-2*t);
+   Body.setPosition(striker,{x:start.x+(position.x-start.x)*ease,y:start.y+(position.y-start.y)*ease});
+   Body.setVelocity(striker,{x:0,y:0});Sleeping.set(striker,false);updateStrikerPlacementState();draw();
+   if(t<1)requestAnimationFrame(animate);else resolve();
+  };
+  requestAnimationFrame(animate);
+ });
+}
+async function botShot(){
+ if(gameOver||turn!==1||mode!=='bot'||shotMoving||!striker)return;
+ const plan=findBotShot();
+ if(!plan)return;
+ // The bot visibly moves its striker to a legal point before taking the shot.
+ await moveBotStriker(plan.position);
+ if(gameOver||turn!==1||mode!=='bot'||!striker)return;
+ if(strikerPlacementInvalid){placeStriker();return;}
+ const sliderValue=Math.max(0,Math.min(100,Math.round((595-plan.position.x)/390*100)));
+ $('striker-position').value=sliderValue;
+ const dx=plan.ghost.x-striker.position.x,dy=plan.ghost.y-striker.position.y;
+ const error=botDifficulty==='easy'?.12:botDifficulty==='medium'?.045:.012;
+ const angle=Math.atan2(dy,dx)+(Math.random()-.5)*error;
+ const speed=botDifficulty==='easy'?7.1:botDifficulty==='hard'?12.2:9.5;
+ Sleeping.set(striker,false);Body.setVelocity(striker,{x:Math.cos(angle)*speed,y:Math.sin(angle)*speed});
+ queenCoverShot=queenPendingCover;shotMoving=true;
+ $('hint').textContent='البوت يحدد مكان التسديد ثم يصوّب...';
 }
 function clearLocalTurnTimer(){if(localTurnTimer){clearInterval(localTurnTimer);localTurnTimer=null;}localTurnDeadline=0;}
 function startLocalTurnTimer(){clearLocalTurnTimer();/* الوقت محدد للأونلاين فقط؛ اللعب ضد البوت أو على نفس الجهاز بدون مؤقت. */return;}
