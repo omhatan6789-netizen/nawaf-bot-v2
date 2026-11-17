@@ -4,7 +4,7 @@ from database.pool import get_pool
 
 CARD_COUNTS = (12, 16, 20, 24, 30)
 LEVELS = ("سهل", "متوسط", "صعب", "مستحيل")
-FIND_ITEMS = ["🍎","🍋","🍇","🍉","🍒","🥝","🍓","🍍","🥥","🥑","🍑","🍊","🫐","🥕","🌽","🍪","🍩","🍔","🍕","🍟","🌮","🍦","🎈","⚽","🏀","🎲","🎧","⌚","🚗","🚀","🐱","🐶","🦊","🐼","🦁","🐸","🌵","🌻","⭐","🌙","💎","🎁"]
+FIND_ITEMS = ["car","plane","kite","boat","bike","bus","train","truck","rocket","helicopter","balloon","umbrella","camera","clock","headphones","key","crown","gift","house","flower","tree","sun","moon","star","diamond","guitar","football","basketball","pizza","icecream","sailboat","scooter","ship","trophy","lamp","book","glasses","bell","anchor","pencil","watch","camera2"]
 
 def _obj(value):
     return json.loads(value) if isinstance(value, str) else (value or {})
@@ -28,18 +28,18 @@ def _find_board():
 def _find_reset_round(state, settings, players, mode):
     left, right, target = _find_board()
     state.update({"left_items": left, "right_items": right, "target": target,
-                  "round": int(state.get("round", 0)) + 1, "round_winner_id": None, "wrong_by": None})
+                  "round": int(state.get("round", 0)) + 1, "round_winner_id": None, "round_next_at": None, "wrong_by": None})
     if mode == "bot":
-        delays = {"سهل": (3.2, 4.8), "متوسط": (1.9, 3.0),
-                  "صعب": (1.0, 1.7), "مستحيل": (0.45, 0.85)}
-        low, high = delays.get(settings.get("difficulty", "متوسط"), (1.9, 3.0))
+        delays = {"سهل": (7.0, 9.0), "متوسط": (5.0, 6.8),
+                  "صعب": (3.5, 4.8), "مستحيل": (2.5, 3.4)}
+        low, high = delays.get(settings.get("difficulty", "متوسط"), (5.0, 6.8))
         state["bot_due_at"] = time.time() + random.uniform(low, high)
 
 
 def _initial(game_type, settings, players, mode):
     if game_type == "find":
         state = {"scores": [0] * len(players), "round": 0, "winner_id": None,
-                 "round_winner_id": None, "target_score": 10}
+                 "round_winner_id": None, "target_score": int(settings.get("target_score", 5))}
         _find_reset_round(state, settings, players, mode)
         return state
     if game_type == "match":
@@ -142,7 +142,8 @@ def _public(row, uid):
                        "round_winner_id": state.get("round_winner_id"),
                        "winner_id": state.get("winner_id"),
                        "scores": state.get("scores", []),
-                       "target_score": int(state.get("target_score", 10)),
+                       "target_score": int(state.get("target_score", 5)),
+                       "round_winner_name": next((p.get("name") for p in players if int(p["id"]) == int(state.get("round_winner_id") or 0)), None),
                        "difficulty": settings.get("difficulty", "متوسط"),
                        "wrong_by": state.get("wrong_by")})
     elif row["game_type"] == "match":
@@ -173,7 +174,8 @@ async def create_game(user_id, name, game_type, mode="bot", settings=None, bot_n
     if game_type == "find":
         difficulty = settings.get("difficulty", "متوسط")
         if difficulty not in LEVELS: difficulty = "متوسط"
-        settings = {"difficulty": difficulty, "turn_seconds": 20}
+        target_score = max(1, min(10, int(settings.get("target_score", 5))))
+        settings = {"difficulty": difficulty, "target_score": target_score, "turn_seconds": 20}
     elif game_type == "match":
         count = int(settings.get("card_count",16))
         if count not in CARD_COUNTS: raise ValueError("اختر عدد البطاقات من 12 أو 16 أو 20 أو 24 أو 30")
@@ -246,17 +248,14 @@ async def game_action(user_id, raw_id, action):
                 return _public(row, uid)
             state["scores"][player_index] = int(state["scores"][player_index]) + 1
             state["round_winner_id"] = uid
-            if state["scores"][player_index] >= int(state.get("target_score", 10)):
+            state["wrong_by"] = None
+            state["round_next_at"] = time.time() + 2.7
+            if state["scores"][player_index] >= int(state.get("target_score", 5)):
                 state["winner_id"] = uid
-                row = await c.fetchrow(
-                    "UPDATE casual_game_rooms SET status='finished',state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",
-                    gid, json.dumps(state, ensure_ascii=False))
-                await _record_finished(c, row)
-            else:
-                _find_reset_round(state, settings, players, row["mode"])
-                row = await c.fetchrow(
-                    "UPDATE casual_game_rooms SET state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",
-                    gid, json.dumps(state, ensure_ascii=False))
+                state["final_due_at"] = time.time() + 2.7
+            row = await c.fetchrow(
+                "UPDATE casual_game_rooms SET state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",
+                gid, json.dumps(state, ensure_ascii=False))
         elif row["game_type"]=="match":
             if action.get("action") == "continue":
                 if state.get("bot_reveal"):
@@ -333,18 +332,23 @@ async def bot_turn(user_id, raw_id):
         if row["game_type"] == "find":
             if row["mode"] != "bot" or int(row["owner_id"]) != uid:
                 raise ValueError("حركة البوت غير متاحة لهذه اللعبة")
-            if state.get("winner_id") is None and state.get("round_winner_id") is None and time.time() >= float(state.get("bot_due_at", 0)):
-                bot_index = next((i for i, p in enumerate(_obj(row["players"])) if p.get("bot")), None)
+            now = time.time()
+            if state.get("winner_id") is not None and now >= float(state.get("final_due_at", now + 999)):
+                row = await c.fetchrow("UPDATE casual_game_rooms SET status='finished',updated_at=NOW() WHERE id=$1 RETURNING *", gid)
+                await _record_finished(c, row)
+            elif state.get("round_winner_id") is not None and state.get("winner_id") is None and now >= float(state.get("round_next_at", now + 999)):
+                _find_reset_round(state, _obj(row["settings"]), players, "bot")
+                row = await c.fetchrow("UPDATE casual_game_rooms SET state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *", gid, json.dumps(state, ensure_ascii=False))
+            elif state.get("winner_id") is None and state.get("round_winner_id") is None and now >= float(state.get("bot_due_at", 0)):
+                bot_index = next((i for i, p in enumerate(players) if p.get("bot")), None)
                 if bot_index is not None:
                     state["scores"][bot_index] = int(state["scores"][bot_index]) + 1
-                    state["round_winner_id"] = int(_obj(row["players"])[bot_index]["id"])
-                    if state["scores"][bot_index] >= int(state.get("target_score", 10)):
-                        state["winner_id"] = int(_obj(row["players"])[bot_index]["id"])
-                        row = await c.fetchrow("UPDATE casual_game_rooms SET status='finished',state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *", gid, json.dumps(state, ensure_ascii=False))
-                        await _record_finished(c, row)
-                    else:
-                        _find_reset_round(state, _obj(row["settings"]), _obj(row["players"]), "bot")
-                        row = await c.fetchrow("UPDATE casual_game_rooms SET state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *", gid, json.dumps(state, ensure_ascii=False))
+                    state["round_winner_id"] = int(players[bot_index]["id"])
+                    state["round_next_at"] = now + 2.7
+                    if state["scores"][bot_index] >= int(state.get("target_score", 5)):
+                        state["winner_id"] = int(players[bot_index]["id"])
+                        state["final_due_at"] = now + 2.7
+                    row = await c.fetchrow("UPDATE casual_game_rooms SET state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *", gid, json.dumps(state, ensure_ascii=False))
             return _public(row, uid)
         if row["game_type"]!="match" or not state.get("bot_pending"): return _public(row,uid)
         cards=state["cards"]; known=state.setdefault("bot_memory",{})
@@ -397,6 +401,14 @@ async def get_state(user_id, raw_id):
         row=await c.fetchrow("SELECT * FROM casual_game_rooms WHERE id=$1 FOR UPDATE",gid)
         if not row: raise ValueError("اللعبة غير موجودة")
         players=_obj(row["players"]); state=_obj(row["state"])
+        if row["status"] == "playing" and row["game_type"] == "find":
+            now = time.time()
+            if state.get("winner_id") is not None and now >= float(state.get("final_due_at", now + 999)):
+                row = await c.fetchrow("UPDATE casual_game_rooms SET status='finished',updated_at=NOW() WHERE id=$1 RETURNING *", gid)
+                await _record_finished(c, row)
+            elif state.get("round_winner_id") is not None and state.get("winner_id") is None and now >= float(state.get("round_next_at", now + 999)):
+                _find_reset_round(state, _obj(row["settings"]), players, row["mode"])
+                row = await c.fetchrow("UPDATE casual_game_rooms SET state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *", gid, json.dumps(state, ensure_ascii=False))
         if row["status"]=="playing" and _expired(players, state, _obj(row["settings"]), row["game_type"]):
             status = "finished" if state.get("end_reason") else "playing"
             row=await c.fetchrow("UPDATE casual_game_rooms SET status=$2,state=$3::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",gid,status,json.dumps(state,ensure_ascii=False))
@@ -463,6 +475,7 @@ async def configure_game(user_id, raw_id, settings):
             difficulty = settings.get("difficulty", current.get("difficulty", "متوسط"))
             if difficulty not in LEVELS: raise ValueError("مستوى اللعبة غير صالح")
             current["difficulty"] = difficulty
+            current["target_score"] = max(1, min(10, int(settings.get("target_score", current.get("target_score", 5)))))
         elif row["game_type"]=="match":
             count=int(settings.get("card_count",current.get("card_count",16)))
             if count not in CARD_COUNTS: raise ValueError("اختر 12 أو 16 أو 20 أو 24 أو 30 بطاقة")
