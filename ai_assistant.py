@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 import re
@@ -10,7 +11,7 @@ from telegram.constants import ChatMemberStatus, ChatType
 from telegram.ext import ContextTypes, ApplicationHandlerStop
 
 from database.pool import get_pool
-from urllib.parse import urlencode, parse_qs, urlparse
+from urllib.parse import urlencode, parse_qs, urlparse, quote
 from html import unescape, escape as html_escape
 from html.parser import HTMLParser
 import httpx
@@ -626,7 +627,16 @@ async def ai_assistant_message(
         if len(image_prompt) > 1800:
             await message.reply_text("وصف الصورة طويل جدًا، اختصره شوي.")
         else:
-            await _send_internet_image(message, image_prompt)
+            # أرسل حالة البحث فورًا، ثم نفّذ جلب الصورة بالخلفية حتى لا
+            # يحتجز معالج الرسائل المتسلسل بقية رسائل القروب.
+            status_message = await message.reply_text(
+                "🔎 أدور لك على صورة حقيقية من الإنترنت..."
+            )
+            context.application.create_task(
+                _send_internet_image(message, image_prompt, status_message),
+                update=update,
+                name=f"ai-image-{chat.id}-{message.message_id}",
+            )
 
         raise ApplicationHandlerStop()
 
@@ -975,51 +985,161 @@ async def _image_url_candidates_from_duckduckgo(query: str):
     return [str(item.get("image") or "") for item in data.get("results", []) if str(item.get("image") or "").startswith(("https://", "http://"))][:20]
 
 
-async def _search_and_download_image(query: str):
-    seen_urls = set()
+async def _wikipedia_image_candidates(query: str):
+    """Free image lookup for real-world people and subjects via Wikipedia/Commons."""
+    aliases = {
+        "ميسي": "Lionel Messi",
+        "ليونيل ميسي": "Lionel Messi",
+        "mess": "Lionel Messi",
+        "ronaldo": "Cristiano Ronaldo",
+        "رونالدو": "Cristiano Ronaldo",
+        "كريستيانو": "Cristiano Ronaldo",
+    }
+    search_term = aliases.get(str(query or "").strip().lower(), str(query or "").strip())
+    headers = {"User-Agent": "NyoufTelegramBot/1.0 (free image lookup)"}
 
-    # Anime characters and titles: try free structured APIs first.
+    # First try the article's representative image (fast and usually reliable).
     try:
-        anime_urls = await _anime_image_url_candidates(query)
+        title = quote(search_term.replace(" ", "_"), safe="")
+        async with httpx.AsyncClient(timeout=5, follow_redirects=True, headers=headers) as client:
+            response = await client.get(
+                f"https://en.wikipedia.org/api/rest_v1/page/summary/{title}"
+            )
+            if response.status_code == 200:
+                data = response.json()
+                image = (data.get("originalimage") or {}).get("source") or (data.get("thumbnail") or {}).get("source")
+                if image and image.startswith("https://"):
+                    return [image]
     except Exception as exc:
-        print(f"[AI Images] Anime API lookup error: {exc}")
+        print(f"[AI Images] Wikipedia summary error: {type(exc).__name__}: {exc}")
+
+    # Then search Wikimedia Commons directly; no key or paid API required.
+    try:
+        async with httpx.AsyncClient(timeout=6, follow_redirects=True, headers=headers) as client:
+            response = await client.get(
+                "https://commons.wikimedia.org/w/api.php",
+                params={
+                    "action": "query",
+                    "generator": "search",
+                    "gsrsearch": f"{search_term} filetype:bitmap",
+                    "gsrnamespace": 6,
+                    "gsrlimit": 12,
+                    "prop": "imageinfo",
+                    "iiprop": "url",
+                    "iiurlwidth": 1200,
+                    "format": "json",
+                },
+            )
+            response.raise_for_status()
+            pages = (response.json().get("query") or {}).get("pages") or {}
+        urls = []
+        for item in pages.values():
+            info = (item.get("imageinfo") or [{}])[0]
+            image = info.get("thumburl") or info.get("url")
+            if image and image.startswith("https://") and image not in urls:
+                urls.append(image)
+        return urls[:8]
+    except Exception as exc:
+        print(f"[AI Images] Wikimedia Commons error: {type(exc).__name__}: {exc}")
+        return []
+
+
+async def _download_first_valid_image(urls):
+    unique = list(dict.fromkeys(
+        str(url).strip() for url in urls
+        if str(url).startswith(("https://", "http://"))
+    ))[:8]
+    if not unique:
+        return None
+    results = await asyncio.gather(
+        *(
+            asyncio.wait_for(_download_image_url(url), timeout=6)
+            for url in unique
+        ),
+        return_exceptions=True,
+    )
+    for result in results:
+        if isinstance(result, tuple) and result and result[0]:
+            return result
+    return None
+
+
+async def _search_and_download_image(query: str):
+    # Anime APIs are only used for recognized anime names.
+    try:
+        anime_urls = await asyncio.wait_for(
+            _anime_image_url_candidates(query), timeout=6
+        )
+    except Exception as exc:
+        print(f"[AI Images] Anime API lookup error: {type(exc).__name__}: {exc}")
         anime_urls = []
 
-    for image_url in anime_urls:
-        if image_url in seen_urls:
-            continue
-        seen_urls.add(image_url)
-        try:
-            result = await _download_image_url(image_url)
-            if result:
-                return result
-        except Exception as exc:
-            print(f"[AI Images] Anime image download failed: {exc}")
+    result = await _download_first_valid_image(anime_urls)
+    if result:
+        return result
 
-    # General images: free sources only; no Google HTML scraping or paid API.
+    # Real people and general subjects: Wikipedia/Commons are free and do not
+    # require API keys. This also handles Arabic names such as ميسي.
+    try:
+        general_urls = await _wikipedia_image_candidates(query)
+    except Exception as exc:
+        print(f"[AI Images] Wikimedia lookup error: {type(exc).__name__}: {exc}")
+        general_urls = []
+
+    result = await _download_first_valid_image(general_urls)
+    if result:
+        return result
+
+    # Last free fallbacks. Run both searches together and cap their time.
     searchers = (
         _image_url_candidates_from_duckduckgo,
         _image_url_candidates_from_bing,
-        _image_url_candidates_from_pinterest,
     )
-    for search_query in (query, f"{query} image"):
-        for searcher in searchers:
-            try:
-                urls = await searcher(search_query)
-            except Exception as exc:
-                print(f"[AI Images] {searcher.__name__}: {exc}")
-                continue
-            for image_url in urls:
-                if image_url in seen_urls:
-                    continue
-                seen_urls.add(image_url)
-                try:
-                    result = await _download_image_url(image_url)
-                    if result:
-                        return result
-                except Exception as exc:
-                    print(f"[AI Images] Download failed: {exc}")
+    batches = await asyncio.gather(
+        *(
+            asyncio.wait_for(searcher(query), timeout=6)
+            for searcher in searchers
+        ),
+        return_exceptions=True,
+    )
+    fallback_urls = []
+    for searcher, batch in zip(searchers, batches):
+        if isinstance(batch, Exception):
+            print(f"[AI Images] {searcher.__name__}: {type(batch).__name__}: {batch}")
+            continue
+        fallback_urls.extend(batch or [])
+
+    result = await _download_first_valid_image(fallback_urls)
+    if result:
+        return result
     raise RuntimeError("ما حصلت صورة قابلة للإرسال من نتائج البحث.")
+
+
+async def _send_internet_image(message, query: str, status_message=None) -> None:
+    try:
+        image_bytes, extension = await _search_and_download_image(query)
+        photo = BytesIO(image_bytes)
+        photo.name = f"internet_image.{extension}"
+        await message.reply_photo(photo=photo)
+        if status_message:
+            try:
+                await status_message.delete()
+            except Exception:
+                pass
+    except Exception as exc:
+        print(f"[AI Images] Image request failed for {query!r}: {type(exc).__name__}: {exc}")
+        if status_message:
+            try:
+                await status_message.edit_text(
+                    "ما حصلت صورة مناسبة أقدر أرسلها حاليًا. جرّب اسمًا أو وصفًا مختلفًا."
+                )
+                return
+            except Exception:
+                pass
+        await message.reply_text(
+            "ما حصلت صورة مناسبة أقدر أرسلها حاليًا. جرّب اسمًا أو وصفًا مختلفًا."
+        )
+
 
 async def _send_internet_image(message, query: str) -> None:
     try:
