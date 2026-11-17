@@ -7,7 +7,7 @@ import uuid
 
 from telegram import (
     InlineKeyboardButton, InlineKeyboardMarkup, InlineQueryResultArticle,
-    InputTextMessageContent, Update,
+    InputMediaPhoto, InputTextMessageContent, Update,
 )
 from telegram.ext import ContextTypes
 
@@ -267,6 +267,67 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
             result_kwargs["thumbnail_url"] = f"{base_url}/tg-file/{list_photo_file_id}"
         results.append(InlineQueryResultArticle(**result_kwargs))
     await inline.answer(results, cache_time=0, is_personal=True)
+
+
+async def online_game_chosen_inline_result(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chosen = update.chosen_inline_result
+    if not chosen or not chosen.inline_message_id:
+        return
+    try:
+        game_type, room_id = chosen.result_id.split(":", 1)
+        if game_type not in GAME_INFO:
+            return
+    except ValueError:
+        return
+
+    photo_file_id = await get_pool().fetchval(
+        "SELECT photo_file_id FROM online_game_images WHERE game_type=$1",
+        game_type,
+    )
+    if not photo_file_id:
+        return
+
+    title = GAME_INFO[game_type][0]
+    creator = chosen.from_user
+    creator_name = creator.full_name or creator.first_name or "لاعب"
+    if game_type == "sort":
+        caption = (
+            "🔢 غرفة ترتيب الأرقام\\n\\n"
+            f"أنشأ {creator_name} غرفة جديدة.\\n"
+            "افتحوا الغرفة من الزر بالأسفل للانضمام. الحد الأقصى 5 لاعبين."
+        )
+        room_url = f"https://t.me/{(await context.bot.get_me()).username}?startapp=sort_{room_id}"
+    elif game_type in ("match", "number", "find"):
+        caption = (
+            f"🎮 غرفة أونلاين — {title}\\n\\n"
+            f"أنشأ {creator_name} غرفة جديدة.\\n"
+            "افتحوا الغرفة من الزر بالأسفل للانضمام، ويمكن لصاحبها ضبط الإعدادات وبدء اللعب."
+        )
+        room_url = f"https://t.me/{(await context.bot.get_me()).username}?startapp=casual_{game_type}_{room_id}"
+    elif game_type == "word":
+        caption = (
+            f"🔤 غرفة أونلاين — {title}\\n\\n"
+            f"أنشأ {creator_name} غرفة خمن الكلمة.\\n"
+            "انضموا من الزر بالأسفل، ويمكن لصاحب الغرفة بدء اللعبة بعد انضمام اللاعبين."
+        )
+        room_url = f"https://t.me/{(await context.bot.get_me()).username}?startapp=word_{room_id}"
+    else:
+        caption = (
+            f"🎮 غرفة أونلاين — {title}\\n\\n"
+            "افتحوا الغرفة من الزر بالأسفل للانضمام وضبط الإعدادات وبدء اللعبة داخل الميني آب."
+        )
+        room_url = f"https://t.me/{(await context.bot.get_me()).username}?startapp=online_lobby_{room_id}"
+    keyboard = InlineKeyboardMarkup([[
+        InlineKeyboardButton("فتح غرفة اللعبة", url=room_url)
+    ]])
+    try:
+        await context.bot.edit_message_media(
+            inline_message_id=chosen.inline_message_id,
+            media=InputMediaPhoto(media=photo_file_id, caption=caption),
+            reply_markup=keyboard,
+        )
+    except Exception:
+        return
 
 
 async def _edit_lobby_message(query, context, text, keyboard):
