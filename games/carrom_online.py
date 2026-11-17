@@ -278,10 +278,12 @@ async def carrom_online_api(user_id: int, action: str, raw_game_id: str, payload
                 queen_new = queen_index in newly_pocketed
                 event = None
                 regular_before = [i for i, d in enumerate(old_discs) if d["type"] != "queen" and not d.get("pocketed")]
-                if len(regular_before) == 1 and newly_normal and not queen_new and not pending and not clean[queen_index].get("pocketed", False):
+                last_coin_returned = False
+                if len(regular_before) == 1 and newly_normal and not pending:
                     last_idx = newly_normal[0]
                     clean[last_idx].update({"x": 400.0, "y": 455.0, "pocketed": False})
                     newly_normal = [i for i in newly_normal if i != last_idx]
+                    last_coin_returned = True
                     event = "last_coin_returned"
                 for i in newly_normal:
                     scores[turn_index] += 5 if clean[i]["color"] == "#080808" else 10
@@ -297,7 +299,7 @@ async def carrom_online_api(user_id: int, action: str, raw_game_id: str, payload
                         event = "queen_returned"
                 elif queen_new:
                     pending = True
-                    event = "queen_pocketed"
+                    event = "queen_pocketed_last_coin_returned" if last_coin_returned else "queen_pocketed"
                 if striker_foul:
                     scores[turn_index] = max(0, scores[turn_index] - 5)
                     if collected[turn_index] > 0:
