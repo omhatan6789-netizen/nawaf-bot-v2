@@ -7,7 +7,7 @@ import uuid
 
 from telegram import (
     InlineKeyboardButton, InlineKeyboardMarkup, InlineQueryResultArticle,
-    InputMediaPhoto, InputTextMessageContent, Update,
+    InputTextMessageContent, Update,
 )
 from telegram.ext import ContextTypes
 
@@ -51,44 +51,6 @@ def _lobby_text(game_type: str, count: int, mode: str, joined_players=None) -> s
 
 
 OWNER_ID = 8453977662
-
-
-async def online_list_image_add_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    message = update.effective_message
-    if not user or not message:
-        return
-    if int(user.id) != OWNER_ID:
-        await message.reply_text("هذا الأمر للمالك فقط.")
-        return
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("كونكت 4 🔴", callback_data="online_list_image:connect")],
-        [InlineKeyboardButton("المربعات 🟦", callback_data="online_list_image:dots")],
-        [InlineKeyboardButton("اختبر ذاكرتك 🧠", callback_data="online_list_image:memory")],
-        [InlineKeyboardButton("خمن الكلمة 🔤", callback_data="online_list_image:word")],
-        [InlineKeyboardButton("تطابق البطاقات 🃏", callback_data="online_list_image:match")],
-        [InlineKeyboardButton("Find Match 🔎", callback_data="online_list_image:find")],
-        [InlineKeyboardButton("خمن الرقم 🔢", callback_data="online_list_image:number")],
-        [InlineKeyboardButton("ترتيب الأرقام 🔢", callback_data="online_list_image:sort")],
-        [InlineKeyboardButton("الكيرم 🎯", callback_data="online_list_image:carrom")],
-    ])
-    await message.reply_text("اختر اللعبة التي تريد إضافة صورتها في القائمة، وبعدها أرسل الصورة:", reply_markup=keyboard)
-
-
-async def online_list_image_select(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    if not query or not query.data:
-        return
-    if int(query.from_user.id) != OWNER_ID:
-        await query.answer("هذا الخيار للمالك فقط.", show_alert=True)
-        return
-    game_type = query.data.split(":", 1)[1]
-    if game_type not in GAME_INFO:
-        await query.answer("اللعبة غير معروفة.", show_alert=True)
-        return
-    context.user_data["online_list_image_pending_game"] = game_type
-    await query.answer()
-    await query.edit_message_text(f"أرسل الآن صورة القائمة للعبة {GAME_INFO[game_type][0]}.")
 
 
 async def online_image_add_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -135,10 +97,6 @@ async def online_image_receive(update: Update, context: ContextTypes.DEFAULT_TYP
     user = update.effective_user
     message = update.effective_message
     game_type = context.user_data.get("online_image_pending_game")
-    list_game_type = context.user_data.get("online_list_image_pending_game")
-    is_list_image = bool(list_game_type)
-    if is_list_image:
-        game_type = list_game_type
     if not user or not message or not game_type:
         return
     if int(user.id) != OWNER_ID:
@@ -147,30 +105,19 @@ async def online_image_receive(update: Update, context: ContextTypes.DEFAULT_TYP
         await message.reply_text("أرسل صورة عادية للعبة.")
         return
     file_id = message.photo[-1].file_id
-    if is_list_image:
-        await get_pool().execute(
-            """INSERT INTO online_game_list_images(game_type, photo_file_id, updated_by)
-               VALUES($1,$2,$3)
-               ON CONFLICT(game_type) DO UPDATE SET
-                 photo_file_id=EXCLUDED.photo_file_id,
-                 updated_by=EXCLUDED.updated_by,
-                 updated_at=NOW()""",
-            game_type, file_id, int(user.id),
-        )
-        context.user_data.pop("online_list_image_pending_game", None)
-        await message.reply_text(f"تم حفظ صورة قائمة {GAME_INFO[game_type][0]} ✅")
-    else:
-        await get_pool().execute(
-            """INSERT INTO online_game_images(game_type, photo_file_id, updated_by)
-               VALUES($1,$2,$3)
-               ON CONFLICT(game_type) DO UPDATE SET
-                 photo_file_id=EXCLUDED.photo_file_id,
-                 updated_by=EXCLUDED.updated_by,
-                 updated_at=NOW()""",
-            game_type, file_id, int(user.id),
-        )
-        context.user_data.pop("online_image_pending_game", None)
-        await message.reply_text(f"تم حفظ صورة اللعبة {GAME_INFO[game_type][0]} ✅")
+    await get_pool().execute(
+        """INSERT INTO online_game_images(game_type, photo_file_id, updated_by)
+           VALUES($1,$2,$3)
+           ON CONFLICT(game_type) DO UPDATE SET
+             photo_file_id=EXCLUDED.photo_file_id,
+             updated_by=EXCLUDED.updated_by,
+             updated_at=NOW()""",
+        game_type, file_id, int(user.id),
+    )
+    context.user_data.pop("online_image_pending_game", None)
+    await message.reply_text(
+        f"تم حفظ صورة {GAME_INFO[game_type][0]} في القائمة والميني آب وكل أماكن عرض اللعبة ✅"
+    )
 
 
 def _select_games(query: str):
@@ -248,7 +195,7 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
                 ]),
             }
             list_photo_file_id = await pool.fetchval(
-                "SELECT photo_file_id FROM online_game_list_images WHERE game_type=$1",
+                "SELECT photo_file_id FROM online_game_images WHERE game_type=$1",
                 game_type,
             )
             if list_photo_file_id:
@@ -320,51 +267,6 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
             result_kwargs["thumbnail_url"] = f"{base_url}/tg-file/{list_photo_file_id}"
         results.append(InlineQueryResultArticle(**result_kwargs))
     await inline.answer(results, cache_time=0, is_personal=True)
-
-
-async def online_game_chosen_inline_result(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chosen = update.chosen_inline_result
-    if not chosen or not chosen.inline_message_id:
-        return
-    try:
-        game_type, room_id = chosen.result_id.split(":", 1)
-        if game_type not in GAME_INFO:
-            return
-    except ValueError:
-        return
-
-    pool = get_pool()
-    photo_file_id = await pool.fetchval(
-        "SELECT photo_file_id FROM online_game_images WHERE game_type=$1",
-        game_type,
-    )
-    if not photo_file_id:
-        return
-
-    me = await context.bot.get_me()
-    if game_type == "sort":
-        startapp = f"sort_{room_id}"
-    elif game_type in ("match", "number", "find"):
-        startapp = f"casual_{game_type}_{room_id}"
-    elif game_type == "word":
-        startapp = f"word_{room_id}"
-    else:
-        startapp = f"online_lobby_{room_id}"
-    room_url = f"https://t.me/{me.username}?startapp={startapp}"
-    keyboard = InlineKeyboardMarkup([[
-        InlineKeyboardButton("فتح غرفة اللعبة", url=room_url)
-    ]])
-    try:
-        await context.bot.edit_message_media(
-            inline_message_id=chosen.inline_message_id,
-            media=InputMediaPhoto(
-                media=photo_file_id,
-                caption=f"🎮 {GAME_INFO[game_type][0]}\n\nافتحوا الغرفة من الزر بالأسفل للانضمام واللعب.",
-            ),
-            reply_markup=keyboard,
-        )
-    except Exception:
-        return
 
 
 async def _edit_lobby_message(query, context, text, keyboard):
