@@ -367,9 +367,10 @@ function startOnlineLobby(){
  onlineLobbyPoll=setInterval(()=>loadOnlineLobby().catch(()=>{}),2200);
 }
 
-let gameEndCountdownTimer=null;
+let gameEndCountdownTimer=null,gameEndCountdownAudio=null;
 function clearOnlineEndOverlay(){
  if(gameEndCountdownTimer){clearTimeout(gameEndCountdownTimer);gameEndCountdownTimer=null;}
+ if(gameEndCountdownAudio){try{gameEndCountdownAudio.pause();gameEndCountdownAudio.currentTime=0;}catch(e){}gameEndCountdownAudio=null;}
  try{if('speechSynthesis'in window)window.speechSynthesis.cancel();}catch(e){}
  document.querySelector('.online-end-countdown')?.remove();
  document.querySelector('.online-end-overlay')?.remove();
@@ -427,22 +428,22 @@ function startGameEndCountdown(key,soundReady){
  const number=document.createElement('div');number.style.cssText='color:#fff;font-size:clamp(88px,26vw,132px);font-weight:1000;line-height:1;font-variant-numeric:tabular-nums;text-shadow:0 0 24px #fff8';
  const home=document.createElement('button');home.type='button';home.textContent='الرجوع للقائمة الرئيسية';home.style.cssText='width:100%;min-height:54px;border:1px solid #ffffff70;border-radius:15px;background:linear-gradient(135deg,#ed4054,#94152a);color:#fff;font-size:16px;font-weight:900;cursor:pointer';home.onclick=()=>{clearOnlineEndOverlay();showHome();};
  card.append(label,number,home);layer.appendChild(card);document.body.appendChild(layer);
- let remaining=5, sound=null;
+ let remaining=5;
  const tick=()=>{
   if(!document.body.contains(layer))return;
   number.textContent=String(remaining);
   if(remaining===1){
-   gameEndCountdownTimer=setTimeout(()=>{gameEndCountdownTimer=null;try{if(sound)sound.pause();}catch(e){}layer.remove();if(tg&&typeof tg.close==='function')tg.close();else showHome();},1000);
+   gameEndCountdownTimer=setTimeout(()=>{gameEndCountdownTimer=null;if(gameEndCountdownAudio){try{gameEndCountdownAudio.pause();gameEndCountdownAudio.currentTime=0;}catch(e){}gameEndCountdownAudio=null;}layer.remove();if(tg&&typeof tg.close==='function')tg.close();else showHome();},1000);
   }else{remaining-=1;gameEndCountdownTimer=setTimeout(tick,1000);}
  };
  Promise.resolve(soundReady).then(audio=>{
-  sound=audio;
-  if(document.body.contains(layer)&&sound){
+  gameEndCountdownAudio=audio;
+  if(document.body.contains(layer)&&gameEndCountdownAudio){
    try{
-    sound.loop=false;
-    sound.currentTime=0;
-    sound.preload='auto';
-    const playback=sound.play();
+    gameEndCountdownAudio.loop=false;
+    gameEndCountdownAudio.currentTime=0;
+    gameEndCountdownAudio.preload='auto';
+    const playback=gameEndCountdownAudio.play();
     if(playback&&playback.catch)playback.catch(()=>{});
     // Play once from the beginning; short media ends naturally.
     // Long media is stopped at the end of the five-second countdown.
