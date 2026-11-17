@@ -17,9 +17,9 @@ def _deck(count):
 
 def _find_board():
     shared = random.choice(FIND_ITEMS)
-    others = random.sample([x for x in FIND_ITEMS if x != shared], 16)
-    left = [shared, *others[:8]]
-    right = [shared, *others[8:]]
+    others = random.sample([x for x in FIND_ITEMS if x != shared], 14)
+    left = [shared, *others[:7]]
+    right = [shared, *others[7:]]
     random.shuffle(left)
     random.shuffle(right)
     return left, right, shared
