@@ -142,7 +142,7 @@ def _select_games(query: str):
         return ["number"]
     if any(word in value for word in ("خمن", "كلمة", "word")):
         return ["word"]
-    return []
+    return supported_inline
 
 
 async def online_games_inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
