@@ -452,7 +452,8 @@ async def online_lobby_callback(update: Update, context: ContextTypes.DEFAULT_TY
                            VALUES($1,$2,$3,'متوسط',$4::jsonb,'human',$5,$6,$7,$2,0,TRUE)""",
                         game_id, int(lobby["creator_id"]), int(lobby["player2_id"]),
                         json.dumps(board), chat_id, player1_name, player2_name,
-                    )                else:
+                    )
+                else:
                     if game_type == "dots":
                         count = int(lobby["player_count"])
                         size = 4 if count == 2 else 6
