@@ -614,7 +614,7 @@ async def ai_assistant_message(
         raise ApplicationHandlerStop()
 
     image_match = re.match(
-        r"^\s*(?:ارسل|أرسل|ورني|وريني)\s+"
+        r"^\s*(?:ارسل|أرسل|ورني|وريني|عطني|اعطني|أعطني|هات|ابي|أبي|ابغى|أبغى)\s+"
         r"(?:لي\s+)?صورة\s+(.+?)\s*$",
         question,
         flags=re.IGNORECASE,
@@ -763,15 +763,105 @@ async def _fetch_page(url):
         return response.text[:5 * 1024 * 1024]
 
 
-async def _image_url_candidates_from_google(query: str):
-    page = await _fetch_page("https://www.google.com/search?" + urlencode({"tbm": "isch", "q": query}))
-    page = page.replace(r"\/", "/").replace(r"\u003d", "=").replace(r"\u0026", "&").replace(r"\u003c", "<").replace(r"\u003e", ">")
+def _is_anime_image_query(query: str) -> bool:
+    q = str(query or "").lower()
+    terms = (
+        "انمي", "أنمي", "anime", "مانجا", "مانغا", "manga",
+        "شخصية", "شخصيات", "character", "characters",
+        "مؤدي صوت", "ممثل صوت", "voice actor",
+    )
+    return any(term in q for term in terms)
+
+
+async def _jikan_image_candidates(query: str):
+    """Get image URLs from Jikan's free MyAnimeList API."""
     candidates = []
-    for match in re.finditer(r'"ou"\s*:\s*"(https?://[^"\\]+)', page):
-        url = match.group(1).replace(r"\u0026", "&")
-        if url.startswith(("https://", "http://")) and url not in candidates:
-            candidates.append(url)
-    return candidates[:20]
+    q = str(query or "").strip().lower()
+    endpoints = ["characters"]
+    if _is_anime_image_query(q) and not any(
+        term in q for term in ("شخصية", "شخصيات", "character", "characters")
+    ):
+        endpoints.append("anime")
+    if any(term in q for term in ("مؤدي صوت", "ممثل صوت", "voice actor")):
+        endpoints.append("people")
+
+    async with httpx.AsyncClient(
+        timeout=10,
+        follow_redirects=True,
+        headers={"User-Agent": "NyoufTelegramBot/1.0"},
+    ) as client:
+        for endpoint in endpoints:
+            try:
+                response = await client.get(
+                    f"https://api.jikan.moe/v4/{endpoint}",
+                    params={"q": query, "limit": 5, "sfw": "true"},
+                )
+                if response.status_code == 429:
+                    print("[AI Images] Jikan rate limit reached.")
+                    break
+                response.raise_for_status()
+                payload = response.json()
+                for item in payload.get("data", []):
+                    images = item.get("images") or {}
+                    webp = images.get("webp") or {}
+                    jpg = images.get("jpg") or {}
+                    image_url = (
+                        webp.get("large_image_url")
+                        or webp.get("image_url")
+                        or jpg.get("large_image_url")
+                        or jpg.get("image_url")
+                    )
+                    if image_url and image_url.startswith(("https://", "http://")):
+                        if image_url not in candidates:
+                            candidates.append(image_url)
+                if candidates:
+                    break
+            except Exception as exc:
+                print(f"[AI Images] Jikan {endpoint} error: {exc}")
+    return candidates[:10]
+
+
+async def _anilist_image_candidates(query: str):
+    """Fallback anime/character image lookup through AniList GraphQL."""
+    is_character = any(
+        term in str(query or "").lower()
+        for term in ("شخصية", "شخصيات", "character", "characters")
+    )
+    gql = (
+        "query ($search: String) { Character(search: $search) { image { large } } }"
+        if is_character or not _is_anime_image_query(query)
+        else "query ($search: String) { Media(search: $search, type: ANIME) { coverImage { extraLarge large } } }"
+    )
+    try:
+        async with httpx.AsyncClient(
+            timeout=10,
+            headers={"Content-Type": "application/json", "User-Agent": "NyoufTelegramBot/1.0"},
+        ) as client:
+            response = await client.post(
+                "https://graphql.anilist.co",
+                json={"query": gql, "variables": {"search": query}},
+            )
+            response.raise_for_status()
+            data = response.json().get("data") or {}
+        if "Character" in data:
+            image_url = ((data.get("Character") or {}).get("image") or {}).get("large")
+        else:
+            cover = (data.get("Media") or {}).get("coverImage") or {}
+            image_url = cover.get("extraLarge") or cover.get("large")
+        if image_url and image_url.startswith(("https://", "http://")):
+            return [image_url]
+    except Exception as exc:
+        print(f"[AI Images] AniList error: {exc}")
+    return []
+
+
+async def _anime_image_url_candidates(query: str):
+    candidates = await _jikan_image_candidates(query)
+    if candidates:
+        return candidates
+    if _is_anime_image_query(query):
+        return await _anilist_image_candidates(query)
+    return []
 
 
 async def _image_url_candidates_from_bing(query: str):
@@ -838,8 +928,32 @@ async def _image_url_candidates_from_duckduckgo(query: str):
 
 
 async def _search_and_download_image(query: str):
-    searchers = (_image_url_candidates_from_pinterest, _image_url_candidates_from_google, _image_url_candidates_from_bing, _image_url_candidates_from_duckduckgo)
     seen_urls = set()
+
+    # Anime characters and titles: try free structured APIs first.
+    try:
+        anime_urls = await _anime_image_url_candidates(query)
+    except Exception as exc:
+        print(f"[AI Images] Anime API lookup error: {exc}")
+        anime_urls = []
+
+    for image_url in anime_urls:
+        if image_url in seen_urls:
+            continue
+        seen_urls.add(image_url)
+        try:
+            result = await _download_image_url(image_url)
+            if result:
+                return result
+        except Exception as exc:
+            print(f"[AI Images] Anime image download failed: {exc}")
+
+    # General images: free sources only; no Google HTML scraping or paid API.
+    searchers = (
+        _image_url_candidates_from_duckduckgo,
+        _image_url_candidates_from_bing,
+        _image_url_candidates_from_pinterest,
+    )
     for search_query in (query, f"{query} image"):
         for searcher in searchers:
             try:
