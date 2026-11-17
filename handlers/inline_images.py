@@ -34,7 +34,7 @@ async def _source_candidates(query: str):
         searchers.insert(0, _anime_image_url_candidates(query))
 
     batches = await asyncio.gather(
-        *(asyncio.wait_for(task, timeout=7) for task in searchers),
+        *(asyncio.wait_for(task, timeout=2.5) for task in searchers),
         return_exceptions=True,
     )
     urls = []
@@ -57,7 +57,7 @@ async def _is_telegram_jpeg(client: httpx.AsyncClient, url: str) -> bool:
             "GET",
             url,
             headers={"Range": "bytes=0-15"},
-            timeout=4,
+            timeout=1.8,
         ) as response:
             if response.status_code >= 400:
                 return False
@@ -73,7 +73,7 @@ async def _is_telegram_jpeg(client: httpx.AsyncClient, url: str) -> bool:
 
 
 async def _validated_photo_urls(urls):
-    semaphore = asyncio.Semaphore(16)
+    semaphore = asyncio.Semaphore(12)
     async with httpx.AsyncClient(
         follow_redirects=True,
         headers=_IMAGE_HEADERS,
@@ -83,7 +83,7 @@ async def _validated_photo_urls(urls):
             async with semaphore:
                 return url if await _is_telegram_jpeg(client, url) else None
 
-        checked = await asyncio.gather(*(check(url) for url in urls[:40]))
+        checked = await asyncio.gather(*(check(url) for url in urls[:16]))
     return [url for url in checked if url][:_MAX_INLINE_PHOTOS]
 
 
@@ -101,8 +101,8 @@ async def inline_image_search(update: Update, context: ContextTypes.DEFAULT_TYPE
         return
 
     try:
-        candidates = await _source_candidates(query)
-        photo_urls = await _validated_photo_urls(candidates)
+        candidates = await asyncio.wait_for(_source_candidates(query), timeout=3.2)
+        photo_urls = await asyncio.wait_for(_validated_photo_urls(candidates), timeout=2.2)
         results = [
             InlineQueryResultPhoto(
                 id=hashlib.sha1(url.encode("utf-8")).hexdigest()[:32],
@@ -118,9 +118,12 @@ async def inline_image_search(update: Update, context: ContextTypes.DEFAULT_TYPE
             cache_time=0,
             is_personal=True,
         )
-    except Exception:
-        logger.exception("Inline image search failed for %r", query)
-        await inline.answer([], cache_time=0, is_personal=True)
+    except Exception as exc:
+        logger.warning("Inline image search failed for %r: %s", query, exc)
+        try:
+            await inline.answer([], cache_time=0, is_personal=True)
+        except Exception:
+            logger.debug("Could not send fallback inline answer for %r", query, exc_info=True)
 
     # Do not let the game inline handler answer the same query a second time.
     raise ApplicationHandlerStop()
