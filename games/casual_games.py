@@ -144,6 +144,7 @@ def _public(row, uid):
                        "scores": state.get("scores", []),
                        "target_score": int(state.get("target_score", 5)),
                        "round_winner_name": next((p.get("name") for p in players if int(p["id"]) == int(state.get("round_winner_id") or 0)), None),
+                        "reveal_target": state.get("target") if state.get("round_winner_id") is not None else None,
                        "difficulty": settings.get("difficulty", "متوسط"),
                        "wrong_by": state.get("wrong_by")})
     elif row["game_type"] == "match":
@@ -248,10 +249,10 @@ async def game_action(user_id, raw_id, action):
                 state["scores"][other_index] = int(state["scores"][other_index]) + 1
                 state["round_winner_id"] = other_id
                 state["wrong_by"] = None
-                state["round_next_at"] = time.time() + 2.7
+                state["round_next_at"] = time.time() + 2.0
                 if state["scores"][other_index] >= int(state.get("target_score", 5)):
                     state["winner_id"] = other_id
-                    state["final_due_at"] = time.time() + 2.7
+                    state["final_due_at"] = time.time() + 2.0
                 row = await c.fetchrow(
                     "UPDATE casual_game_rooms SET state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",
                     gid, json.dumps(state, ensure_ascii=False))
@@ -259,10 +260,10 @@ async def game_action(user_id, raw_id, action):
             state["scores"][player_index] = int(state["scores"][player_index]) + 1
             state["round_winner_id"] = uid
             state["wrong_by"] = None
-            state["round_next_at"] = time.time() + 2.7
+            state["round_next_at"] = time.time() + 2.0
             if state["scores"][player_index] >= int(state.get("target_score", 5)):
                 state["winner_id"] = uid
-                state["final_due_at"] = time.time() + 2.7
+                state["final_due_at"] = time.time() + 2.0
             row = await c.fetchrow(
                 "UPDATE casual_game_rooms SET state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",
                 gid, json.dumps(state, ensure_ascii=False))
@@ -354,10 +355,10 @@ async def bot_turn(user_id, raw_id):
                 if bot_index is not None:
                     state["scores"][bot_index] = int(state["scores"][bot_index]) + 1
                     state["round_winner_id"] = int(players[bot_index]["id"])
-                    state["round_next_at"] = now + 2.7
+                    state["round_next_at"] = now + 2.0
                     if state["scores"][bot_index] >= int(state.get("target_score", 5)):
                         state["winner_id"] = int(players[bot_index]["id"])
-                        state["final_due_at"] = now + 2.7
+                        state["final_due_at"] = now + 2.0
                     row = await c.fetchrow("UPDATE casual_game_rooms SET state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *", gid, json.dumps(state, ensure_ascii=False))
             return _public(row, uid)
         if row["game_type"]!="match" or not state.get("bot_pending"): return _public(row,uid)
