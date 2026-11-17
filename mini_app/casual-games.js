@@ -125,7 +125,7 @@ function addTurnControls(root,isPlayer,myTurn){
  timer.style.cssText="position:absolute;left:50%;transform:translateX(-50%);font-weight:800;color:#ffd6d6;font-size:14px;white-space:nowrap;text-align:center";
  const leave=document.createElement("button");
  leave.textContent="انسحاب";
- leave.style.cssText="margin-left:auto;background:#d92332;color:#fff;border:0;border-radius:10px;padding:8px 16px;font-weight:800";
+ leave.style.cssText="position:fixed;top:calc(env(safe-area-inset-top,0px) + 12px);right:14px;z-index:10020;background:#d92332;color:#fff;border:1px solid #ff8a91;border-radius:10px;padding:8px 16px;font-weight:900;box-shadow:0 4px 0 #650711";
  leave.onclick=async()=>{if(!confirm("هل أنت متأكد من الانسحاب؟ سيُعلن فوز اللاعب الآخر."))return;leave.disabled=true;try{current=await request("leave");finishGame();}catch(e){leave.disabled=false;err(e);}};
  if(myTurn){
   if(countdown)clearInterval(countdown);
