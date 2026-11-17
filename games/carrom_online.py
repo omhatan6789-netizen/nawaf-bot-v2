@@ -148,7 +148,7 @@ async def _forfeit_player(conn, row, players, state, uid, reset_timer=False):
     return await conn.fetchrow(
         """UPDATE carrom_online_games SET game_state=$2::jsonb,turn_index=$3,
            move_no=move_no+1,
-           turn_deadline=CASE WHEN $4 THEN NOW()+(($5)::text || ' seconds')::interval ELSE turn_deadline END,
+           turn_deadline=CASE WHEN $4 THEN NOW()+($5 * INTERVAL '1 second') ELSE turn_deadline END,
            updated_at=NOW() WHERE id=$1 RETURNING *""",
         row["id"], json.dumps(state), next_index, bool(was_current or reset_timer),
          int(_decode(row["settings"]).get("turn_seconds", 20)),
@@ -348,7 +348,7 @@ async def carrom_online_api(user_id: int, action: str, raw_game_id: str, payload
                 row = await conn.fetchrow(
                     """UPDATE carrom_online_games SET game_state=$2::jsonb,turn_index=$3,
                        move_no=move_no+1,status=$4,winner_id=$5,
-                       turn_deadline=CASE WHEN $4='playing' THEN NOW()+((($6)::text || ' seconds')::interval) ELSE NULL END,
+                       turn_deadline=CASE WHEN $4='playing' THEN NOW()+($6 * INTERVAL '1 second') ELSE NULL END,
                        updated_at=NOW() WHERE id=$1 RETURNING *""",
                     game_id, json.dumps(state), next_index, status, winner_id,
                     int(_decode(row["settings"]).get("turn_seconds", 20)),
