@@ -63,7 +63,7 @@ function applyOnlineState(result){
  (result.state.discs||[]).forEach((d,i)=>{const old=previousCoins[i];if(d.pocketed&&old&&!old.pocketed)queuePocketAnimation(old.position.x,old.position.y,old.gameColor,old.circleRadius||20);const coin=addCoin(Number(d.x),Number(d.y),d.color,d.type);if(d.pocketed){coin.pocketed=true;World.remove(world,coin);}});
  const sp=result.state.striker||baselinePosition(50);striker=Bodies.circle(Number(sp.x),Number(sp.y),30,{label:'striker',restitution:.82,friction:.035,frictionAir:.016,density:.002});striker.gameColor='#d8a64f';striker.isStriker=true;World.add(world,striker);updateStrikerPlacementState();
  queenPendingCover=!!result.state.queen_pending_cover;queenPocketed=false;strikerPocketed=false;queenCoverShot=false;turnPocketed=0;shotMoving=false;gameOver=result.status==='finished';
- if(previousMove!==undefined&&result.move_no!==previousMove){const messages={queen_pocketed:'دخلت الملكة الحمراء! لازم تدخل قرص ثاني في الضربة القادمة لتثبيتها',queen_covered:'تم تثبيت الملكة الحمراء بنجاح! +50 نقطة',queen_returned:'ما دخلت قرص لتثبيت الملكة؛ رجعت الملكة للنص',last_coin_returned:'رجعنا آخر قرص للنص؛ لازم تدخل الملكة الحمراء ثم تغطيها بقرص آخر',striker_foul:'دخل المضرب! تم خصم 5 نقاط',turn_timeout:'انتهى وقت اللاعب وتم استبعاده من المباراة',player_withdrew:'انسحب اللاعب من المباراة'};const event=result.state.last_event;if(messages[event])toast(messages[event]);}
+ if(previousMove!==undefined&&result.move_no!==previousMove){const messages={queen_pocketed:'دخلت الملكة الحمراء! لازم تدخل قرص ثاني في الضربة القادمة لتثبيتها',queen_covered:'تم تثبيت الملكة الحمراء بنجاح! +50 نقطة',queen_returned:'ما دخلت قرص لتثبيت الملكة؛ رجعت الملكة للنص',last_coin_returned:'لازم تجيب الملكة أول؛ رجعنا آخر قرص إلى وسط الملعب',queen_pocketed_last_coin_returned:'دخلت الملكة! رجع آخر قرص إلى الوسط؛ غطِّ الملكة بضربة بعدها',striker_foul:'دخل المضرب! تم خصم 5 نقاط',turn_timeout:'انتهى وقت اللاعب وتم استبعاده من المباراة',player_withdrew:'انسحب اللاعب من المباراة'};const event=result.state.last_event;if(messages[event])toast(messages[event]);}
  renderScores();draw();
  const hint=$('hint');
  if(gameOver){if(onlineMotionTimer){clearInterval(onlineMotionTimer);onlineMotionTimer=null;}const teamGame=players.length===4&&fourMode==='teams';const winnerPlayerIndex=players.findIndex(p=>p.id===result.winner_id);const teamIndex=teamGame&&winnerPlayerIndex>=0?winnerPlayerIndex%2:-1;const winner=teamGame?null:players.find(p=>p.id===result.winner_id);const isDraw=!result.winner_id;const winnerName=teamGame&&teamIndex>=0?('الفريق '+(teamIndex===0?'الأول':'الثاني')+' ('+players[teamIndex].name+' و '+players[teamIndex+2].name+')'):(winner?.name||'');const high=teamGame?(teamIndex===0?players[0].score+players[2].score:players[1].score+players[3].score):Math.max(...players.map(p=>p.score));showCarromEndOverlay(winnerName,isDraw,isDraw?'انتهت المباراة بالتعادل.':('الفائز: '+winnerName+' — '+high+' نقطة'));hint.textContent='انتهت المباراة';}
@@ -250,7 +250,36 @@ function enforceBoardBounds(){
 }
 function loop(t){if(!document.getElementById('game').classList.contains('show'))return;const dt=Math.min(33,t-(lastT||t));lastT=t;if(mode==='online'&&!onlineState?.your_turn&&remoteMotionActive){applyRemoteMotionFrame();}else{const step=(dt||16.67)/3;Engine.update(engine,step);Engine.update(engine,step);Engine.update(engine,step);detectPockets();enforceBoardBounds();}draw();if(!shotMoving&&striker&&striker.speed>.2)shotMoving=true;if(shotMoving&&allStopped()){shotMoving=false;finishTurn();}raf=requestAnimationFrame(loop);}
 function allStopped(){return [striker,...coins].filter(b=>b&&!b.pocketed).every(b=>Math.abs(b.velocity.x)<.13&&Math.abs(b.velocity.y)<.13&&Math.abs(b.angularVelocity)<.02);}
-function detectPockets(){const ps=[[77,77],[723,77],[77,723],[723,723]];[striker,...coins].filter(Boolean).forEach(b=>{if(b.pocketed)return;for(const [x,y] of ps){if(Math.hypot(b.position.x-x,b.position.y-y)<pocketR){queuePocketAnimation(b.position.x,b.position.y,b.gameColor,b.circleRadius||20,Math.hypot(b.velocity.x,b.velocity.y));b.pocketed=true;World.remove(world,b);playPocketSound();if(b===striker){strikerPocketed=true;setTimeout(()=>{placeStriker();draw();},180);}else if(b.gameType==='queen'){queenPocketed=true;toast('دخلت الملكة! لازم تدخل قرص أبيض أو أسود في الضربة القادمة');}else{turnPocketed++;const points=b.gameColor==='#080808'?5:10;if(mode!=='online'){players[turn].score+=points;collectedCoins[turn]=(collectedCoins[turn]||0)+1;}toast((points===5?'الأسود':'الأبيض')+' +'+points+' نقاط');}break;}}});}
+function detectPockets(){
+ const ps=[[77,77],[723,77],[77,723],[723,723]];
+ [striker,...coins].filter(Boolean).forEach(b=>{
+  if(b.pocketed)return;
+  for(const [x,y] of ps){
+   if(Math.hypot(b.position.x-x,b.position.y-y)<pocketR){
+    // The final black/white coin cannot be taken before the queen is pocketed.
+    // Online games enforce this authoritatively on the server.
+    if(mode!=='online'&&b!==striker&&b.gameType!=='queen'&&!queenPendingCover){
+     const otherRegular=coins.filter(c=>c!==b&&!c.pocketed&&c.gameType!=='queen').length;
+     const queenStillAvailable=queenPocketed||coins.some(c=>c.gameType==='queen'&&!c.pocketed);
+     if(otherRegular===0&&queenStillAvailable){
+      Body.setPosition(b,{x:cx,y:cy+55});
+      Body.setVelocity(b,{x:0,y:0});
+      Body.setAngularVelocity(b,0);
+      Sleeping.set(b,false);
+      toast('لازم تجيب الملكة أول');
+      break;
+     }
+    }
+    queuePocketAnimation(b.position.x,b.position.y,b.gameColor,b.circleRadius||20,Math.hypot(b.velocity.x,b.velocity.y));
+    b.pocketed=true;World.remove(world,b);playPocketSound();
+    if(b===striker){strikerPocketed=true;setTimeout(()=>{placeStriker();draw();},180);}
+    else if(b.gameType==='queen'){queenPocketed=true;toast('دخلت الملكة! لازم تدخل قرص أبيض أو أسود في الضربة القادمة');}
+    else{turnPocketed++;const points=b.gameColor==='#080808'?5:10;if(mode!=='online'){players[turn].score+=points;collectedCoins[turn]=(collectedCoins[turn]||0)+1;}toast((points===5?'الأسود':'الأبيض')+' +'+points+' نقاط');}
+    break;
+   }
+  }
+ });
+}
 function finishTurn(){if(mode==='online'){submitOnlineShot();return;}clearLocalTurnTimer();if(strikerPocketed){players[turn].score=Math.max(0,players[turn].score-5);toast('دخل المضرب! -5 نقاط');if((collectedCoins[turn]||0)>0){collectedCoins[turn]--;addCoin(400,455,'#080808');toast('رجع قرص أسود إلى وسط الملعب');}}if(queenCoverShot){if(turnPocketed>0){players[turn].score+=50;toast('تم تثبيت الملكة! +50 نقطة');queenPendingCover=false;}else{addCoin(cx,cy,'#ed172b','queen');queenPendingCover=false;toast('الملكة رجعت بالنص ماجبت شي بعدها');}queenCoverShot=false;}if(queenPocketed){queenPendingCover=true;queenPocketed=false;}renderScores();if(coins.every(c=>c.pocketed)&&!queenPendingCover){gameOver=true;const winner=players.reduce((a,b)=>a.score>=b.score?a:b);const tied=players.filter(p=>p.score===winner.score).length>1;$('hint').textContent=tied?'انتهت المباراة بالتعادل 🤝':'انتهت المباراة — الفائز: '+winner.name+' 🏆';showCarromEndOverlay(tied?'':winner.name,tied,tied?'تعادل اللاعبان في النقاط.':('🏆 الفائز: '+winner.name+' — '+winner.score+' نقطة'));return;}if((turnPocketed===0&&!queenPendingCover)||strikerPocketed)turn=(turn+1)%players.length;turnPocketed=0;strikerPocketed=false;placeStriker();renderScores();$('hint').textContent='دور '+players[turn].name+' — اسحب القرص للخلف ثم اتركه';startLocalTurnTimer();if(mode==='bot'&&turn===1&&!gameOver)setTimeout(botShot,1500);}
 let pocketAudio=null;function unlockPocketAudio(){try{const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;if(!pocketAudio)pocketAudio=new AC();if(pocketAudio.state==='suspended')pocketAudio.resume();}catch(_){}}function playPocketSound(){try{unlockPocketAudio();if(!pocketAudio)return;const t=pocketAudio.currentTime,master=pocketAudio.createGain();master.gain.setValueAtTime(.0001,t);master.gain.exponentialRampToValueAtTime(.42,t+.008);master.gain.exponentialRampToValueAtTime(.0001,t+.24);master.connect(pocketAudio.destination);const osc=pocketAudio.createOscillator(),g=pocketAudio.createGain();osc.type='triangle';osc.frequency.setValueAtTime(185,t);osc.frequency.exponentialRampToValueAtTime(72,t+.12);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.65,t+.006);g.gain.exponentialRampToValueAtTime(.0001,t+.16);osc.connect(g);g.connect(master);osc.start(t);osc.stop(t+.17);const n=Math.floor(pocketAudio.sampleRate*.055),buf=pocketAudio.createBuffer(1,n,pocketAudio.sampleRate),data=buf.getChannelData(0);for(let i=0;i<n;i++)data[i]=(Math.random()*2-1)*(1-i/n);const noise=pocketAudio.createBufferSource(),ng=pocketAudio.createGain();ng.gain.setValueAtTime(.0001,t);ng.gain.exponentialRampToValueAtTime(.18,t+.003);ng.gain.exponentialRampToValueAtTime(.0001,t+.055);noise.buffer=buf;noise.connect(ng);ng.connect(master);noise.start(t);noise.stop(t+.06);}catch(_){}}
 function pointerPos(e){const r=canvas.getBoundingClientRect(),sx=(e.clientX-r.left)*W/r.width-W/2,sy=(e.clientY-r.top)*H/r.height-H/2,a=-viewRotation,co=Math.cos(a),si=Math.sin(a);return{x:W/2+sx*co-sy*si,y:H/2+sx*si+sy*co};}
@@ -262,7 +291,11 @@ canvas.addEventListener('pointercancel',e=>{if(e.pointerId!==activePointerId)ret
 function botShot(){
  if(gameOver||turn!==1||mode!=='bot')return;
  const targets=coins.filter(c=>!c.pocketed&&c.gameType!=='queen');
- const pool=targets.length?targets:coins.filter(c=>!c.pocketed);
+ const queenTarget=coins.find(c=>!c.pocketed&&c.gameType==='queen');
+ // When only one regular coin remains, the bot must take the queen first.
+ const pool=queenTarget&&!queenPendingCover&&targets.length===1
+  ?[queenTarget]
+  :(targets.length?targets:(queenTarget?[queenTarget]:[]));
  if(!pool.length)return;
  let dx=0,dy=0,speed=8.5;
  if(botDifficulty==='easy'){
