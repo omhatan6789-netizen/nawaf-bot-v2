@@ -241,7 +241,17 @@ async def game_action(user_id, raw_id, action):
                 raise ValueError("تغيرت الجولة، ابحث عن الغرض الجديد")
             value = str(action.get("value", ""))
             if value != str(state.get("target", "")):
-                state["wrong_by"] = uid
+                # A wrong pick immediately awards the round to the other player.
+                other_index = (player_index + 1) % len(players)
+                other_player = players[other_index]
+                other_id = int(other_player["id"])
+                state["scores"][other_index] = int(state["scores"][other_index]) + 1
+                state["round_winner_id"] = other_id
+                state["wrong_by"] = None
+                state["round_next_at"] = time.time() + 2.7
+                if state["scores"][other_index] >= int(state.get("target_score", 5)):
+                    state["winner_id"] = other_id
+                    state["final_due_at"] = time.time() + 2.7
                 row = await c.fetchrow(
                     "UPDATE casual_game_rooms SET state=$2::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *",
                     gid, json.dumps(state, ensure_ascii=False))
