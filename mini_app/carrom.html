@@ -100,8 +100,8 @@ function ownOnlinePlayerId(){return Number(players[onlineState?.you_player_index
    onlineShotStartTimeout=setTimeout(()=>{if(!onlineShotPending||onlineShotMoveNo!==moveNo)return;onlineShotPending=false;onlineShotDeterministic=false;onlineShotOwnerId=ownOnlinePlayerId();Body.setVelocity(striker,{x:vx,y:vy});Sleeping.set(striker,false);shotMoving=true;$('hint').textContent='القرص يتحرك...';},1400);
   }else{onlineShotDeterministic=false;onlineShotOwnerId=ownOnlinePlayerId();Body.setVelocity(striker,{x:vx,y:vy});Sleeping.set(striker,false);shotMoving=true;sendOnlineMotion();}
  }
- function applyRemoteMotion(m)
- if(!m||Number(m.player_id)===Number(players[onlineState?.you_player_index||0]?.id))return;
+ function applyRemoteMotion(m){
+  if(!m||Number(m.player_id)===Number(players[onlineState?.you_player_index||0]?.id))return;
  const stamp=Number(m.sent_at||0);if(stamp&&stamp<=remoteMotionSeq)return;remoteMotionSeq=stamp||remoteMotionSeq+1;
  const snapshot={at:performance.now(),discs:(m.discs||[]).map(d=>({x:+d.x,y:+d.y,angle:+d.angle||0,vx:+d.vx||0,vy:+d.vy||0,av:+d.av||0,pocketed:!!d.pocketed})),striker:m.striker?{x:+m.striker.x,y:+m.striker.y,vx:+m.striker.vx||0,vy:+m.striker.vy||0}:null,aim:m.aim?{x:+m.aim.x,y:+m.aim.y}:null,moving:!!m.moving};
  remoteMotionBuffer.push(snapshot);if(remoteMotionBuffer.length>20)remoteMotionBuffer.shift();
