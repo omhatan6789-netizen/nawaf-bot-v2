@@ -24,14 +24,41 @@ _IMAGE_HEADERS = {
 }
 
 
+async def _translate_image_query(query: str) -> str:
+    # Translate Arabic searches to English so international image indexes
+    # can return relevant results; retain the original query as a fallback.
+    try:
+        async with httpx.AsyncClient(timeout=1.0, follow_redirects=True) as client:
+            response = await client.get(
+                "https://translate.googleapis.com/translate_a/single",
+                params={"client": "gtx", "sl": "auto", "tl": "en", "dt": "t", "q": query},
+            )
+            response.raise_for_status()
+            data = response.json()
+        translated = "".join(
+            str(part[0]) for part in (data[0] or [])
+            if isinstance(part, list) and part and part[0]
+        ).strip()
+        return translated if translated and translated.lower() != query.lower() else ""
+    except Exception as exc:
+        logger.debug("Inline image query translation failed: %s", exc)
+        return ""
+
+
 async def _source_candidates(query: str):
-    searchers = [
-        _wikipedia_image_candidates(query),
-        _image_url_candidates_from_duckduckgo(query),
-        _image_url_candidates_from_bing(query),
-    ]
-    if _is_anime_image_query(query):
-        searchers.insert(0, _anime_image_url_candidates(query))
+    translated = await _translate_image_query(query)
+    queries = list(dict.fromkeys([query, translated] if translated else [query]))
+    searchers = []
+    for search_query in queries:
+        searchers.extend([
+            _image_url_candidates_from_duckduckgo(search_query),
+            _image_url_candidates_from_bing(search_query),
+        ])
+        if search_query == query:
+            searchers.append(_wikipedia_image_candidates(search_query))
+    if _is_anime_image_query(query) or _is_anime_image_query(translated):
+        anime_query = translated if translated and _is_anime_image_query(translated) else query
+        searchers.insert(0, _anime_image_url_candidates(anime_query))
 
     batches = await asyncio.gather(
         *(asyncio.wait_for(task, timeout=2.5) for task in searchers),
@@ -48,6 +75,8 @@ async def _source_candidates(query: str):
             if url.startswith("https://") and url not in seen:
                 seen.add(url)
                 urls.append(url)
+    # Prefer links explicitly ending in JPEG; Telegram rejects WebP/PNG for photo results.
+    urls.sort(key=lambda url: 0 if url.split("?", 1)[0].lower().endswith((".jpg", ".jpeg")) else 1)
     return urls
 
 
