@@ -61,6 +61,7 @@ from handlers.moderation import (
 )
 from handlers.delete_messages import delete_messages
 from ai_assistant import ai_assistant_message
+from handlers.inline_images import inline_image_search
 from music_call import start_music_call, shutdown_music_call
 from memory_monitor import log_memory_checkpoint
 from account_clock import start_account_clock, shutdown_account_clock
@@ -435,6 +436,8 @@ def build_application(use_updater: bool = True) -> Application:
     # Instrument HTTPXRequest at class level; instance methods are read-only.
     instrument_telegram_requests()
     application.bot_data["settings"] = settings
+    # Image search runs before the game handler and only handles non-game queries.
+    application.add_handler(InlineQueryHandler(inline_image_search), group=-101)
     # Delete slash commands while allowing their normal handlers to execute in later groups.
     application.add_handler(InlineQueryHandler(online_games_inline_query), group=-100)
     application.add_handler(ChosenInlineResultHandler(online_game_chosen_inline_result), group=-100)
