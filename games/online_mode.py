@@ -131,7 +131,7 @@ def _select_games(query: str):
         return ["dots"]
     if any(word in value for word in ("ذاكرة", "ذاكرت", "memory")):
         return ["memory"]
-    if any(word in value for word in ("find", "find match", "ابحث عن المتشابه", "الغرض المشترك")):
+    if any(word in value for word in ("find", "find match", "المتشابه", "ابحث عن المتشابه", "الغرض المشترك")):
         return ["find"]
     if any(word in value for word in ("بطاقات", "تطابق", "match", "كروت")):
         return ["match"]
