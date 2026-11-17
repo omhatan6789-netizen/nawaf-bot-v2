@@ -252,7 +252,7 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
             [InlineKeyboardButton("فتح غرفة اللعبة", url=room_url)],
         ])
         list_photo_file_id = await pool.fetchval(
-            "SELECT photo_file_id FROM online_game_list_images WHERE game_type=$1",
+            "SELECT photo_file_id FROM online_game_images WHERE game_type=$1",
             game_type,
         )
         result_kwargs = {
