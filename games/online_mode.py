@@ -42,7 +42,6 @@ def _lobby_text(game_type: str, count: int, mode: str, joined_players=None) -> s
     mode_label = "فريقين (2 ضد 2)" if count == 4 and mode == "teams" else "كل لاعب لحاله"
     return (
         f"🎮 غرفة أونلاين — {GAME_INFO[game_type][0]}\n\n"
-        f"اللاعبون: {len(joined_players)}/{count}\n"
         + "\n".join(lines)
         + f"\n\nالطور: {mode_label}\n"
         + "اضغطوا «انضمام» حتى يكتمل عدد اللاعبين."
