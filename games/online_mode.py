@@ -363,7 +363,7 @@ async def online_show_game_image_callback(update: Update, context: ContextTypes.
         await query.edit_message_media(
             media=InputMediaPhoto(
                 media=photo_file_id,
-                caption=f"🎮 {title}\\n\\nافتحوا الغرفة من الزر بالأسفل للانضمام واللعب.",
+                caption=f"🎮 {title}\n\nافتحوا الغرفة من الزر بالأسفل للانضمام واللعب.",
             ),
             reply_markup=keyboard,
         )
