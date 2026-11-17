@@ -239,13 +239,12 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
                 "افتحوا الغرفة من الزر بالأسفل للانضمام. الحد الأقصى 5 لاعبين."
             )
             result_kwargs = {
-                "id": room_id,
+                "id": f"{game_type}:{room_id}",
                 "title": title,
                 "description": description,
                 "input_message_content": InputTextMessageContent(lobby_text),
                 "reply_markup": InlineKeyboardMarkup([
                     [InlineKeyboardButton("فتح غرفة اللعبة", url=room_url)],
-                    [InlineKeyboardButton("🖼 عرض صورة اللعبة", callback_data=f"online_show_image:{game_type}:{room_id}")],
                 ]),
             }
             list_photo_file_id = await pool.fetchval(
@@ -304,14 +303,13 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
             result_id = lobby_id.hex
         keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton("فتح غرفة اللعبة", url=room_url)],
-            [InlineKeyboardButton("🖼 عرض صورة اللعبة", callback_data=f"online_show_image:{game_type}:{result_id}")],
         ])
         list_photo_file_id = await pool.fetchval(
             "SELECT photo_file_id FROM online_game_list_images WHERE game_type=$1",
             game_type,
         )
         result_kwargs = {
-            "id": result_id,
+            "id": f"{game_type}:{result_id}",
             "title": title,
             "description": description,
             "input_message_content": InputTextMessageContent(lobby_text),
@@ -324,16 +322,15 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
     await inline.answer(results, cache_time=0, is_personal=True)
 
 
-async def online_show_game_image_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    if not query or not query.data:
+async def online_game_chosen_inline_result(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chosen = update.chosen_inline_result
+    if not chosen or not chosen.inline_message_id:
         return
     try:
-        _, game_type, room_id = query.data.split(":", 2)
+        game_type, room_id = chosen.result_id.split(":", 1)
         if game_type not in GAME_INFO:
-            raise ValueError("unknown game")
+            return
     except ValueError:
-        await query.answer("تعذر تحديد اللعبة.", show_alert=True)
         return
 
     pool = get_pool()
@@ -342,7 +339,6 @@ async def online_show_game_image_callback(update: Update, context: ContextTypes.
         game_type,
     )
     if not photo_file_id:
-        await query.answer("ما أضفت صورة لهذه اللعبة حتى الآن.", show_alert=True)
         return
 
     me = await context.bot.get_me()
@@ -355,21 +351,20 @@ async def online_show_game_image_callback(update: Update, context: ContextTypes.
     else:
         startapp = f"online_lobby_{room_id}"
     room_url = f"https://t.me/{me.username}?startapp={startapp}"
-    title = GAME_INFO[game_type][0]
     keyboard = InlineKeyboardMarkup([[
         InlineKeyboardButton("فتح غرفة اللعبة", url=room_url)
     ]])
     try:
-        await query.edit_message_media(
+        await context.bot.edit_message_media(
+            inline_message_id=chosen.inline_message_id,
             media=InputMediaPhoto(
                 media=photo_file_id,
-                caption=f"🎮 {title}\n\nافتحوا الغرفة من الزر بالأسفل للانضمام واللعب.",
+                caption=f"🎮 {GAME_INFO[game_type][0]}\n\nافتحوا الغرفة من الزر بالأسفل للانضمام واللعب.",
             ),
             reply_markup=keyboard,
         )
-        await query.answer("ظهرت صورة اللعبة ✅")
     except Exception:
-        await query.answer("تعذر عرض الصورة في هذه الرسالة. جرّب فتح اللعبة من الزر.", show_alert=True)
+        return
 
 
 async def _edit_lobby_message(query, context, text, keyboard):
