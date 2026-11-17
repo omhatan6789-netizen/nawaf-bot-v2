@@ -197,8 +197,7 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
                 game_type,
             )
             if photo_file_id:
-                base_url = os.environ.get("PUBLIC_BASE_URL", "https://nawaf-bot-frankfurt.onrender.com").rstrip("/")
-                photo_url = f"{base_url}/tg-file/{photo_file_id}"
+                base_url = os.environ.get("PUBLIC_BASE_URL", "https://nawaf-bot-frankfurt.onrender.com").rstrip("/")                photo_url = f"{base_url}/tg-file/{photo_file_id}"
                 results.append(InlineQueryResultPhoto(
                     id=room_id,
                     photo_url=photo_url,
@@ -397,8 +396,7 @@ async def online_lobby_callback(update: Update, context: ContextTypes.DEFAULT_TY
             if slot == 0:
                 await conn.execute(
                     "UPDATE online_game_lobbies SET creator_joined=TRUE,chat_id=COALESCE($2,chat_id),updated_at=NOW() WHERE id=$1",
-                    lobby_id, chat_id,
-                )
+                    lobby_id, chat_id,                )
             else:
                 id_col, name_col = f"player{slot+1}_id", f"player{slot+1}_name"
                 await conn.execute(
@@ -597,8 +595,7 @@ async def online_lobby_api(user_id: int, action: str, raw_lobby_id: str, setting
                 if user_id == int(lobby["creator_id"]):
                     await conn.execute("UPDATE online_game_lobbies SET status='cancelled',updated_at=NOW() WHERE id=$1", lobby_id)
                 else:
-                    for i in range(2, 5):
-                        if lobby[f"player{i}_id"] is not None and int(lobby[f"player{i}_id"]) == user_id:
+                    for i in range(2, 5):                        if lobby[f"player{i}_id"] is not None and int(lobby[f"player{i}_id"]) == user_id:
                             await conn.execute(
                                 f"UPDATE online_game_lobbies SET player{i}_id=NULL,player{i}_name=NULL,updated_at=NOW() WHERE id=$1",
                                 lobby_id,
@@ -672,7 +669,8 @@ async def online_lobby_api(user_id: int, action: str, raw_lobby_id: str, setting
                     lobby_id, game_id,
                 )
             elif action != "state":
-                raise ValueError("طلب غير معروف")            lobby = await conn.fetchrow("SELECT * FROM online_game_lobbies WHERE id=$1", lobby_id)
+                raise ValueError("طلب غير معروف")
+            lobby = await conn.fetchrow("SELECT * FROM online_game_lobbies WHERE id=$1", lobby_id)
     photo_file_id = await pool.fetchval(
         "SELECT photo_file_id FROM online_game_images WHERE game_type=$1",
         lobby["game_type"],
@@ -797,8 +795,7 @@ async def get_online_spectator_state(user_id: int, game_type: str, raw_game_id: 
         state.update({"spectator": True, "your_turn": False, "my_piece": 0})
         return {"game": state}
     if game_type in ("dots", "memory", "mini"):
-        from games.mini_games import get_mini_game_challenge_state
-        row = await pool.fetchrow(
+        from games.mini_games import get_mini_game_challenge_state        row = await pool.fetchrow(
             """SELECT player1_id,player2_id,player3_id,player4_id
                FROM mini_game_challenges WHERE id=$1 AND ($2='mini' OR game_type=$2)""",
             game_id, game_type
