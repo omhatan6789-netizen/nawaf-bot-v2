@@ -225,7 +225,8 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
                 f"أنشأ {inline.from_user.full_name or inline.from_user.first_name or 'لاعب'} غرفة جديدة.\n"
                 "افتحوا الغرفة من الزر بالأسفل للانضمام، ويمكن لصاحبها ضبط الإعدادات وبدء اللعب."
             )
-            result_id = game_id.hex        elif game_type == "word":
+            result_id = game_id.hex
+        elif game_type == "word":
             from games.extra_mini_games import word_create
             game = await word_create(
                 inline.from_user.id,
