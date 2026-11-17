@@ -110,6 +110,7 @@ function scheduleOnlinePoll(){if(onlinePollTimer)clearTimeout(onlinePollTimer);o
 async function submitOnlineShot(){
  if(onlineSubmitting||!onlineState)return;
  if(onlineMotionTimer){clearInterval(onlineMotionTimer);onlineMotionTimer=null;}if(onlineMotionInFlight)await new Promise(resolve=>{const w=()=>onlineMotionInFlight?setTimeout(w,25):resolve();w();});
+ if(carromSocket&&carromSocket.readyState===WebSocket.OPEN){try{carromSocket.send(JSON.stringify({type:'motion',motion:{discs:coins.map(b=>({x:b.position.x,y:b.position.y,angle:b.angle,vx:0,vy:0,av:0,color:b.gameColor,type:b.gameType,pocketed:!!b.pocketed})),striker:{x:striker?.position.x||400,y:striker?.position.y||620,vx:0,vy:0},aim:null,moving:false}}));}catch(_){}}
  onlineSubmitting=true;
  $('hint').textContent='جاري حفظ التسديدة...';
  try{
