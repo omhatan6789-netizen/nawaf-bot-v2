@@ -57,7 +57,7 @@ function showCarromEndOverlay(winnerName,isDraw,subtitle){
 }
 function applyOnlineState(result){
  const previousMove=onlineState?.move_no;
- onlineState=result;remoteMotionActive=false;remoteAim=null;remoteMotionSeq=0;remoteMotionTargets=null;remoteStrikerTarget=null;const previousCoins=coins.slice();count=result.players.length;fourMode=result.settings.team_mode||'individual';turn=result.turn_index;const seat=Math.max(0,Math.min(count-1,Number(result.you_player_index)||0));viewRotation=count===2?(seat===0?0:Math.PI):([-0,-Math.PI/2,Math.PI,Math.PI/2][seat]??0);
+ onlineState=result;remoteMotionActive=false;remoteAim=null;remoteMotionSeq=0;remoteMotionTargets=null;remoteStrikerTarget=null;remoteMotionNeedsSync=false;const previousCoins=coins.slice();count=result.players.length;fourMode=result.settings.team_mode||'individual';turn=result.turn_index;const seat=Math.max(0,Math.min(count-1,Number(result.you_player_index)||0));viewRotation=count===2?(seat===0?0:Math.PI):([-0,-Math.PI/2,Math.PI,Math.PI/2][seat]??0);
  players=result.players.map((p,i)=>({id:Number(p.id),name:p.name,color:i%2?'#eee4d0':'#242326',score:Number(result.scores?.[i]||0),forfeited:!!p.forfeited,team:fourMode==='teams'?i%2:undefined}));
  clearWorld();addWalls();
  (result.state.discs||[]).forEach((d,i)=>{const old=previousCoins[i];if(d.pocketed&&old&&!old.pocketed)queuePocketAnimation(old.position.x,old.position.y,old.gameColor,old.circleRadius||20);const coin=addCoin(Number(d.x),Number(d.y),d.color,d.type);if(d.pocketed){coin.pocketed=true;World.remove(world,coin);}});
@@ -94,7 +94,7 @@ function applyRemoteMotionFrame(){
   if(striker&&remoteStrikerTarget){Body.setPosition(striker,{x:remoteStrikerTarget.x,y:remoteStrikerTarget.y});Body.setVelocity(striker,{x:remoteStrikerTarget.vx,y:remoteStrikerTarget.vy});}
   remoteMotionNeedsSync=false;
  }
- if(remoteMotionActive&&remoteMotionTargets.some(d=>!d.pocketed&&(Math.abs(d.vx)+Math.abs(d.vy)>.02))){
+ if(remoteMotionActive&&(remoteMotionTargets.some(d=>!d.pocketed&&(Math.abs(d.vx)+Math.abs(d.vy)>.02))||(remoteStrikerTarget&&(Math.abs(remoteStrikerTarget.vx)+Math.abs(remoteStrikerTarget.vy)>.02)))){
   const step=1000/60/3;Engine.update(engine,step);Engine.update(engine,step);Engine.update(engine,step);detectPockets();enforceBoardBounds();
  }else if(!remoteMotionActive){
   remoteMotionTargets.forEach((d,i)=>{const b=coins[i];if(b&&!b.pocketed){Body.setPosition(b,{x:b.position.x+(d.x-b.position.x)*.45,y:b.position.y+(d.y-b.position.y)*.45});Body.setVelocity(b,{x:0,y:0});}});
