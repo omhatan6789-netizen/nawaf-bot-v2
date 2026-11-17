@@ -1139,17 +1139,3 @@ async def _send_internet_image(message, query: str, status_message=None) -> None
         await message.reply_text(
             "ما حصلت صورة مناسبة أقدر أرسلها حاليًا. جرّب اسمًا أو وصفًا مختلفًا."
         )
-
-
-async def _send_internet_image(message, query: str) -> None:
-    try:
-        image_bytes, extension = await _search_and_download_image(query)
-        photo = BytesIO(image_bytes)
-        photo.name = f"internet_image.{extension}"
-        # Send the actual image only: no source URL, website name, or caption.
-        await message.reply_photo(photo=photo)
-    except Exception as exc:
-        print(f"[AI Images] Image request failed for {query!r}: {exc}")
-        await message.reply_text(
-            "ما حصلت صورة مناسبة أقدر أرسلها حاليًا. جرّب اسمًا أو وصفًا مختلفًا."
-        )
