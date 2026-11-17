@@ -211,15 +211,17 @@ async def carrom_online_api(user_id: int, action: str, raw_game_id: str, payload
                         raise ValueError("تعريف قرص الحركة غير صالح")
                     angle = float(item.get("angle", 0))
                     vx, vy = float(item.get("vx", 0)), float(item.get("vy", 0))
-                    if not all(math.isfinite(v) for v in (angle, vx, vy)):
+                    av = float(item.get("av", 0))
+                    if not all(math.isfinite(v) for v in (angle, vx, vy, av)):
                         raise ValueError("سرعة أو زاوية قرص الحركة غير صالحة")
-                    clean_motion.append({"x": x, "y": y, "angle": angle, "vx": vx, "vy": vy,
+                    clean_motion.append({"x": x, "y": y, "angle": angle, "vx": vx, "vy": vy, "av": av,
                                          "color": color, "type": disc_type,
                                          "pocketed": bool(item.get("pocketed", False))})
                 striker_in = incoming.get("striker") or {}
                 sx, sy = float(striker_in.get("x", 400)), float(striker_in.get("y", 620))
-                if not math.isfinite(sx) or not math.isfinite(sy) or not (25 <= sx <= 775 and 25 <= sy <= 775):
-                    raise ValueError("موضع المضرب غير صالح")
+                svx, svy = float(striker_in.get("vx", 0)), float(striker_in.get("vy", 0))
+                if not all(math.isfinite(v) for v in (sx, sy, svx, svy)) or not (25 <= sx <= 775 and 25 <= sy <= 775):
+                    raise ValueError("موضع أو سرعة المضرب غير صالحة")
                 aim_in = incoming.get("aim")
                 clean_aim = None
                 if isinstance(aim_in, dict):
@@ -228,7 +230,7 @@ async def carrom_online_api(user_id: int, action: str, raw_game_id: str, payload
                         clean_aim = {"x": ax, "y": ay}
                 state["motion"] = {
                     "player_id": uid, "discs": clean_motion,
-                    "striker": {"x": sx, "y": sy}, "aim": clean_aim,
+                    "striker": {"x": sx, "y": sy, "vx": svx, "vy": svy}, "aim": clean_aim,
                     "moving": bool(incoming.get("moving")),
                     "sent_at": datetime.now(timezone.utc).timestamp(),
                 }
