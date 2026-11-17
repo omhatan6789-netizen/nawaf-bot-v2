@@ -153,25 +153,76 @@ def handle_carrom_websocket(handler):
                 packet = json.loads(raw.decode("utf-8"))
             except Exception:
                 continue
-            if not isinstance(packet, dict) or packet.get("type") != "motion":
+            if not isinstance(packet, dict):
                 continue
-            motion = packet.get("motion")
-            if not isinstance(motion, dict) or not isinstance(motion.get("discs"), list):
+            packet_type = packet.get("type")
+            if packet_type == "motion":
+                motion = packet.get("motion")
+                if not isinstance(motion, dict) or not isinstance(motion.get("discs"), list):
+                    continue
+                now = time.monotonic()
+                if now - last_motion_at < 0.010:
+                    continue
+                last_motion_at = now
+                motion["type"] = "motion"
+                motion["player_id"] = uid
+                motion["sent_at"] = time.time()
+                outgoing = json.dumps(motion, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+                with _carrom_ws_lock:
+                    peers = [
+                        item for item in _carrom_ws_clients.values()
+                        if item["game_id"] == game_id and item["uid"] != uid
+                    ]
+                for peer in peers:
+                    try:
+                        _ws_send(peer, outgoing)
+                    except Exception:
+                        pass
                 continue
-            now = time.monotonic()
-            if now - last_motion_at < 0.010:
+            if packet_type not in ("shot_start", "shot_complete"):
                 continue
-            last_motion_at = now
-            motion["type"] = "motion"
-            motion["player_id"] = uid
-            motion["sent_at"] = time.time()
-            outgoing = json.dumps(motion, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
-            with _carrom_ws_lock:
-                peers = [
+            state_future = asyncio.run_coroutine_threadsafe(
+                carrom_online_api(uid, "state", game_id, {}), application_loop
+            )
+            live_state = state_future.result(timeout=8)
+            if packet_type == "shot_start":
+                try:
+                    move_no = int(packet.get("move_no", -1))
+                    shot = packet.get("striker") or {}
+                    sx, sy = float(shot.get("x", 400)), float(shot.get("y", 620))
+                    svx, svy = float(shot.get("vx", 0)), float(shot.get("vy", 0))
+                except (TypeError, ValueError):
+                    continue
+                if (not live_state.get("your_turn") or move_no != int(live_state.get("move_no", -2))
+                        or not all(math.isfinite(v) for v in (sx, sy, svx, svy))
+                        or not (35 <= sx <= 765 and 35 <= sy <= 765)
+                        or abs(svx) > 40 or abs(svy) > 40):
+                    continue
+                outgoing_packet = {
+                    "type": "shot_start", "player_id": uid, "move_no": move_no,
+                    "striker": {"x": sx, "y": sy, "vx": svx, "vy": svy},
+                }
+                recipients = [
+                    item for item in _carrom_ws_clients.values()
+                    if item["game_id"] == game_id
+                ]
+            else:
+                try:
+                    completed_move = int(packet.get("move_no", -1))
+                except (TypeError, ValueError):
+                    continue
+                if int(live_state.get("move_no", -1)) <= completed_move:
+                    continue
+                outgoing_packet = {
+                    "type": "shot_complete", "player_id": uid,
+                    "move_no": int(live_state.get("move_no", -1)),
+                }
+                recipients = [
                     item for item in _carrom_ws_clients.values()
                     if item["game_id"] == game_id and item["uid"] != uid
                 ]
-            for peer in peers:
+            outgoing = json.dumps(outgoing_packet, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+            for peer in recipients:
                 try:
                     _ws_send(peer, outgoing)
                 except Exception:
