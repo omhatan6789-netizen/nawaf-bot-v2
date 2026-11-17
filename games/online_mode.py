@@ -197,8 +197,8 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
                 game_type,
             )
             if photo_file_id:
-                base_url = os.environ.get("PUBLIC_BASE_URL", "https://nawaf-bot-frankfurt.onrender.com").rstrip("/")                photo_url = f"{base_url}/tg-file/{photo_file_id}"
-                results.append(InlineQueryResultPhoto(
+                base_url = os.environ.get("PUBLIC_BASE_URL", "https://nawaf-bot-frankfurt.onrender.com").rstrip("/")
+                photo_url = f"{base_url}/tg-file/{photo_file_id}"                results.append(InlineQueryResultPhoto(
                     id=room_id,
                     photo_url=photo_url,
                     thumbnail_url=photo_url,
@@ -397,8 +397,7 @@ async def online_lobby_callback(update: Update, context: ContextTypes.DEFAULT_TY
                 await conn.execute(
                     "UPDATE online_game_lobbies SET creator_joined=TRUE,chat_id=COALESCE($2,chat_id),updated_at=NOW() WHERE id=$1",
                     lobby_id, chat_id,                )
-            else:
-                id_col, name_col = f"player{slot+1}_id", f"player{slot+1}_name"
+            else:                id_col, name_col = f"player{slot+1}_id", f"player{slot+1}_name"
                 await conn.execute(
                     f"UPDATE online_game_lobbies SET {id_col}=$2,{name_col}=$3,chat_id=COALESCE($4,chat_id),updated_at=NOW() WHERE id=$1",
                     lobby_id, user.id, user.full_name or user.username or "مستخدم", chat_id,
@@ -597,8 +596,7 @@ async def online_lobby_api(user_id: int, action: str, raw_lobby_id: str, setting
                 else:
                     for i in range(2, 5):                        if lobby[f"player{i}_id"] is not None and int(lobby[f"player{i}_id"]) == user_id:
                             await conn.execute(
-                                f"UPDATE online_game_lobbies SET player{i}_id=NULL,player{i}_name=NULL,updated_at=NOW() WHERE id=$1",
-                                lobby_id,
+                                f"UPDATE online_game_lobbies SET player{i}_id=NULL,player{i}_name=NULL,updated_at=NOW() WHERE id=$1",                                lobby_id,
                             )
                             break
             elif action == "start":
@@ -797,8 +795,7 @@ async def get_online_spectator_state(user_id: int, game_type: str, raw_game_id: 
     if game_type in ("dots", "memory", "mini"):
         from games.mini_games import get_mini_game_challenge_state        row = await pool.fetchrow(
             """SELECT player1_id,player2_id,player3_id,player4_id
-               FROM mini_game_challenges WHERE id=$1 AND ($2='mini' OR game_type=$2)""",
-            game_id, game_type
+               FROM mini_game_challenges WHERE id=$1 AND ($2='mini' OR game_type=$2)""",            game_id, game_type
         )
         if not row:
             raise ValueError("اللعبة غير موجودة")
