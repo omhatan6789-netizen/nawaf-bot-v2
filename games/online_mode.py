@@ -7,7 +7,7 @@ import uuid
 
 from telegram import (
     InlineKeyboardButton, InlineKeyboardMarkup, InlineQueryResultArticle,
-    InlineQueryResultPhoto, InputTextMessageContent, Update,
+    InputTextMessageContent, Update,
 )
 from telegram.ext import ContextTypes
 
@@ -247,24 +247,14 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
                     InlineKeyboardButton("فتح غرفة اللعبة", url=room_url)
                 ]]),
             }
-            photo_file_id = await pool.fetchval(
-                "SELECT photo_file_id FROM online_game_images WHERE game_type=$1",
+            list_photo_file_id = await pool.fetchval(
+                "SELECT photo_file_id FROM online_game_list_images WHERE game_type=$1",
                 game_type,
             )
-            if photo_file_id:
+            if list_photo_file_id:
                 base_url = os.environ.get("PUBLIC_BASE_URL", "https://nawaf-bot-frankfurt.onrender.com").rstrip("/")
-                photo_url = f"{base_url}/tg-file/{photo_file_id}"
-                results.append(InlineQueryResultPhoto(
-                    id=room_id,
-                    photo_url=photo_url,
-                    thumbnail_url=photo_url,
-                    title=title,
-                    description=description,
-                    caption=lobby_text,
-                    reply_markup=result_kwargs["reply_markup"],
-                ))
-            else:
-                results.append(InlineQueryResultArticle(**result_kwargs))
+                result_kwargs["thumbnail_url"] = f"{base_url}/tg-file/{list_photo_file_id}"
+            results.append(InlineQueryResultArticle(**result_kwargs))
             continue
         elif game_type in ("match", "number", "find"):
             from games.casual_games import create_game
@@ -314,12 +304,10 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
         keyboard = InlineKeyboardMarkup([[
             InlineKeyboardButton("فتح غرفة اللعبة", url=room_url)
         ]])
-        photo_file_id = await pool.fetchval(
-            "SELECT photo_file_id FROM online_game_images WHERE game_type=$1",
+        list_photo_file_id = await pool.fetchval(
+            "SELECT photo_file_id FROM online_game_list_images WHERE game_type=$1",
             game_type,
         )
-        # Article results are rendered as a vertical list: thumbnail on the side,
-        # with the game title and description visible beside it.
         result_kwargs = {
             "id": result_id,
             "title": title,
@@ -327,20 +315,10 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
             "input_message_content": InputTextMessageContent(lobby_text),
             "reply_markup": keyboard,
         }
-        if photo_file_id:
+        if list_photo_file_id:
             base_url = os.environ.get("PUBLIC_BASE_URL", "https://nawaf-bot-frankfurt.onrender.com").rstrip("/")
-            photo_url = f"{base_url}/tg-file/{photo_file_id}"
-            results.append(InlineQueryResultPhoto(
-                id=result_id,
-                photo_url=photo_url,
-                thumbnail_url=photo_url,
-                title=title,
-                description=description,
-                caption=lobby_text,
-                reply_markup=keyboard,
-            ))
-        else:
-            results.append(InlineQueryResultArticle(**result_kwargs))
+            result_kwargs["thumbnail_url"] = f"{base_url}/tg-file/{list_photo_file_id}"
+        results.append(InlineQueryResultArticle(**result_kwargs))
     await inline.answer(results, cache_time=0, is_personal=True)
 
 
