@@ -257,7 +257,7 @@ function enforceBoardBounds(){
   }
  }
 }
-function loop(t){if(!document.getElementById('game').classList.contains('show'))return;const dt=Math.min(33,t-(lastT||t));lastT=t;if(mode==='online'&&!onlineState?.your_turn){applyRemoteMotionFrame();}else{const step=(dt||16.67)/3;Engine.update(engine,step);Engine.update(engine,step);Engine.update(engine,step);detectPockets();enforceBoardBounds();}draw();if(!shotMoving&&striker&&striker.speed>.2)shotMoving=true;if(shotMoving&&allStopped()){shotMoving=false;if(mode==='online'&&!onlineState?.your_turn){remoteMotionActive=false;remoteAim=null;}else finishTurn();}raf=requestAnimationFrame(loop);}
+function loop(t){if(!document.getElementById('game').classList.contains('show'))return;const dt=Math.min(33,t-(lastT||t));lastT=t;if(mode==='online'&&!onlineState?.your_turn){applyRemoteMotionFrame();}else{const step=(dt||16.67)/3;Engine.update(engine,step);Engine.update(engine,step);Engine.update(engine,step);detectPockets();enforceBoardBounds();}draw();if(mode==='online'&&!onlineState?.your_turn){shotMoving=!!remoteMotionActive;}else{if(!shotMoving&&striker&&striker.speed>.2)shotMoving=true;if(shotMoving&&allStopped()){shotMoving=false;finishTurn();}}raf=requestAnimationFrame(loop);}
 function allStopped(){return [striker,...coins].filter(b=>b&&!b.pocketed).every(b=>Math.abs(b.velocity.x)<.13&&Math.abs(b.velocity.y)<.13&&Math.abs(b.angularVelocity)<.02);}
 function detectPockets(){
  const ps=[[77,77],[723,77],[77,723],[723,723]];
