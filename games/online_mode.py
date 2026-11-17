@@ -291,28 +291,28 @@ async def online_game_chosen_inline_result(update: Update, context: ContextTypes
     creator_name = creator.full_name or creator.first_name or "لاعب"
     if game_type == "sort":
         caption = (
-            "🔢 غرفة ترتيب الأرقام\\n\\n"
-            f"أنشأ {creator_name} غرفة جديدة.\\n"
+            "🔢 غرفة ترتيب الأرقام\n\n"
+            f"أنشأ {creator_name} غرفة جديدة.\n"
             "افتحوا الغرفة من الزر بالأسفل للانضمام. الحد الأقصى 5 لاعبين."
         )
         room_url = f"https://t.me/{(await context.bot.get_me()).username}?startapp=sort_{room_id}"
     elif game_type in ("match", "number", "find"):
         caption = (
-            f"🎮 غرفة أونلاين — {title}\\n\\n"
-            f"أنشأ {creator_name} غرفة جديدة.\\n"
+            f"🎮 غرفة أونلاين — {title}\n\n"
+            f"أنشأ {creator_name} غرفة جديدة.\n"
             "افتحوا الغرفة من الزر بالأسفل للانضمام، ويمكن لصاحبها ضبط الإعدادات وبدء اللعب."
         )
         room_url = f"https://t.me/{(await context.bot.get_me()).username}?startapp=casual_{game_type}_{room_id}"
     elif game_type == "word":
         caption = (
-            f"🔤 غرفة أونلاين — {title}\\n\\n"
-            f"أنشأ {creator_name} غرفة خمن الكلمة.\\n"
+            f"🔤 غرفة أونلاين — {title}\n\n"
+            f"أنشأ {creator_name} غرفة خمن الكلمة.\n"
             "انضموا من الزر بالأسفل، ويمكن لصاحب الغرفة بدء اللعبة بعد انضمام اللاعبين."
         )
         room_url = f"https://t.me/{(await context.bot.get_me()).username}?startapp=word_{room_id}"
     else:
         caption = (
-            f"🎮 غرفة أونلاين — {title}\\n\\n"
+            f"🎮 غرفة أونلاين — {title}\n\n"
             "افتحوا الغرفة من الزر بالأسفل للانضمام وضبط الإعدادات وبدء اللعبة داخل الميني آب."
         )
         room_url = f"https://t.me/{(await context.bot.get_me()).username}?startapp=online_lobby_{room_id}"
