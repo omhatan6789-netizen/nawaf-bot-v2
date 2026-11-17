@@ -158,6 +158,49 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
     )
     results = []
     me = await context.bot.get_me()
+
+    # Existing word-room invitation: let the user pick a Telegram chat,
+    # then send an inline result that opens this exact waiting room.
+    invite_parts = (inline.query or "").strip().split()
+    if len(invite_parts) == 3 and invite_parts[0] == "دعوة" and invite_parts[1] == "كلمة":
+        try:
+            invite_id = uuid.UUID(hex=invite_parts[2].replace("-", ""))
+        except ValueError:
+            invite_id = None
+        if invite_id:
+            invite_room = await pool.fetchrow(
+                "SELECT id,owner_id,status,players FROM word_games WHERE id=$1",
+                invite_id,
+            )
+            if invite_room and invite_room["status"] == "waiting":
+                players = invite_room["players"]
+                if isinstance(players, str):
+                    players = json.loads(players)
+                inviter_name = inline.from_user.full_name or inline.from_user.first_name or "لاعب"
+                invite_url = f"https://t.me/{me.username}?startapp=word_{invite_id.hex}"
+                invite_kwargs = {
+                    "id": f"wordinvite:{invite_id.hex}",
+                    "title": "دعوة لاعب — خمن الكلمة 🔤",
+                    "description": f"دعوة من {inviter_name} للانضمام إلى غرفة قائمة",
+                    "input_message_content": InputTextMessageContent(
+                        f"🔤 دعوة للانضمام إلى غرفة خمن الكلمة\\n\\n"
+                        f"دعاك {inviter_name} للانضمام إلى اللعبة."
+                    ),
+                    "reply_markup": InlineKeyboardMarkup([[
+                        InlineKeyboardButton("فتح غرفة اللعبة", url=invite_url)
+                    ]]),
+                }
+                invite_photo = await pool.fetchval(
+                    "SELECT photo_file_id FROM online_game_images WHERE game_type='word'"
+                )
+                if invite_photo:
+                    base_url = os.environ.get("PUBLIC_BASE_URL", "https://nawaf-bot-frankfurt.onrender.com").rstrip("/")
+                    invite_kwargs["thumbnail_url"] = f"{base_url}/tg-file/{invite_photo}"
+                await inline.answer([InlineQueryResultArticle(**invite_kwargs)], cache_time=0, is_personal=True)
+                return
+        await inline.answer([], cache_time=0, is_personal=True)
+        return
+
     for game_type in _select_games(inline.query):
         title, description = GAME_INFO[game_type]
         if game_type == "sort":
@@ -274,22 +317,32 @@ async def online_game_chosen_inline_result(update: Update, context: ContextTypes
         return
     try:
         game_type, room_id = chosen.result_id.split(":", 1)
-        if game_type not in GAME_INFO:
+        if game_type not in GAME_INFO and game_type != "wordinvite":
             return
     except ValueError:
         return
 
+    photo_game_type = "word" if game_type == "wordinvite" else game_type
     photo_file_id = await get_pool().fetchval(
         "SELECT photo_file_id FROM online_game_images WHERE game_type=$1",
-        game_type,
+        photo_game_type,
     )
     if not photo_file_id:
         return
 
-    title = GAME_INFO[game_type][0]
     creator = chosen.from_user
     creator_name = creator.full_name or creator.first_name or "لاعب"
-    if game_type == "sort":
+    if game_type == "wordinvite":
+        caption = (
+            "🔤 دعوة للانضمام إلى غرفة خمن الكلمة\\n\\n"
+            f"دعاك {creator_name} للانضمام إلى اللعبة."
+        )
+        room_url = f"https://t.me/{(await context.bot.get_me()).username}?startapp=word_{room_id}"
+    else:
+        title = GAME_INFO[game_type][0]
+    if game_type == "wordinvite":
+        pass
+    elif game_type == "sort":
         caption = (
             "🔢 غرفة ترتيب الأرقام\n\n"
             f"أنشأ {creator_name} غرفة جديدة.\n"
