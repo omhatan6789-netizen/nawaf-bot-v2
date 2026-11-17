@@ -2,7 +2,7 @@ import asyncio
 import logging
 
 from telegram import Update
-from telegram.ext import Application, ApplicationBuilder, CallbackQueryHandler, ChatMemberHandler, CommandHandler, ContextTypes, ConversationHandler, InlineQueryHandler, MessageHandler, filters
+from telegram.ext import Application, ApplicationBuilder, CallbackQueryHandler, ChatMemberHandler, CommandHandler, ContextTypes, ConversationHandler, InlineQueryHandler, ChosenInlineResultHandler, MessageHandler, filters
 
 from config import load_settings
 from handlers.mini_app import mini_app_message, register_mini_app_menu
@@ -94,7 +94,7 @@ from games.rock_paper_scissors import (
     start_rock_paper_scissors, rock_paper_scissors_callback,
 )
 from games.online_mode import (
-    online_games_inline_query, online_lobby_callback,
+    online_games_inline_query, online_lobby_callback, online_game_chosen_inline_result,
     online_image_add_start, online_image_select, online_image_receive,
 )
 from games.connect4_challenge import (
@@ -437,6 +437,7 @@ def build_application(use_updater: bool = True) -> Application:
     application.bot_data["settings"] = settings
     # Delete slash commands while allowing their normal handlers to execute in later groups.
     application.add_handler(InlineQueryHandler(online_games_inline_query), group=-100)
+    application.add_handler(ChosenInlineResultHandler(online_game_chosen_inline_result), group=-100)
     application.add_handler(CallbackQueryHandler(online_lobby_callback, pattern=r"^online_(join|settings|config):"))
     application.add_handler(CallbackQueryHandler(online_image_select, pattern=r"^online_image:"))
     application.add_handler(MessageHandler(
