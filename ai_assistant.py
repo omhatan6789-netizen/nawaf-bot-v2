@@ -763,6 +763,26 @@ async def _fetch_page(url):
         return response.text[:5 * 1024 * 1024]
 
 
+# Common Arabic/English names that identify anime characters without requiring
+# the user to add the word "anime". Unknown names still use general image search.
+_ANIME_IMAGE_ALIASES = {
+    "لوفي": "Luffy", "مونكي دي لوفي": "Monkey D. Luffy",
+    "زورو": "Roronoa Zoro", "رورونوا زورو": "Roronoa Zoro",
+    "سانجي": "Sanji", "نامي": "Nami", "اوسوب": "Usopp", "أوسوب": "Usopp",
+    "تشوبر": "Tony Tony Chopper", "روبين": "Nico Robin",
+    "فرانكي": "Franky", "بروك": "Brook", "جينبي": "Jinbe",
+    "غوجو": "Satoru Gojo", "غوجو ساتورو": "Satoru Gojo",
+    "ايتادوري": "Yuji Itadori", "إيتادوري": "Yuji Itadori",
+    "ميغومي": "Megumi Fushiguro", "ناروتو": "Naruto Uzumaki",
+    "ساسكي": "Sasuke Uchiha", "ساكورا": "Sakura Haruno",
+    "غوكو": "Son Goku", "فيجيتا": "Vegeta",
+    "ايرين": "Eren Yeager", "إيرين": "Eren Yeager",
+    "ليفاي": "Levi Ackerman", "ميكاسا": "Mikasa Ackerman",
+    "ايتاشي": "Itachi Uchiha", "إيتاشي": "Itachi Uchiha",
+    "كيلوا": "Killua Zoldyck", "غون": "Gon Freecss",
+    "ايس": "Portgas D. Ace", "إيس": "Portgas D. Ace",
+}
+
 def _is_anime_image_query(query: str) -> bool:
     q = str(query or "").lower()
     terms = (
@@ -770,7 +790,28 @@ def _is_anime_image_query(query: str) -> bool:
         "شخصية", "شخصيات", "character", "characters",
         "مؤدي صوت", "ممثل صوت", "voice actor",
     )
-    return any(term in q for term in terms)
+    return any(term in q for term in terms) or any(
+        name in q for name in _ANIME_IMAGE_ALIASES
+    )
+
+
+def _anime_image_query_variants(query: str):
+    raw = str(query or "").strip()
+    variants = [raw]
+    normalized = re.sub(r"\\s+", " ", raw).strip().lower()
+    for arabic, english in _ANIME_IMAGE_ALIASES.items():
+        if arabic in normalized:
+            variants.insert(0, english)
+            break
+    # Remove generic words while retaining the actual anime title/character.
+    cleaned = re.sub(
+        r"(?i)\\b(?:anime|manga|character|characters|image|photo)\\b|أنمي|انمي|مانجا|مانغا|شخصية|شخصيات",
+        " ", raw,
+    )
+    cleaned = re.sub(r"\\s+", " ", cleaned).strip()
+    if cleaned and cleaned not in variants:
+        variants.append(cleaned)
+    return list(dict.fromkeys(v for v in variants if v))
 
 
 async def _jikan_image_candidates(query: str):
@@ -856,12 +897,19 @@ async def _anilist_image_candidates(query: str):
 
 
 async def _anime_image_url_candidates(query: str):
-    candidates = await _jikan_image_candidates(query)
-    if candidates:
-        return candidates
-    if _is_anime_image_query(query):
-        return await _anilist_image_candidates(query)
-    return []
+    if not _is_anime_image_query(query):
+        return []
+    candidates = []
+    for variant in _anime_image_query_variants(query):
+        candidates.extend(await _jikan_image_candidates(variant))
+        if candidates:
+            break
+    if not candidates:
+        for variant in _anime_image_query_variants(query):
+            candidates.extend(await _anilist_image_candidates(variant))
+            if candidates:
+                break
+    return list(dict.fromkeys(candidates))
 
 
 async def _image_url_candidates_from_bing(query: str):
@@ -974,13 +1022,14 @@ async def _search_and_download_image(query: str):
     raise RuntimeError("ما حصلت صورة قابلة للإرسال من نتائج البحث.")
 
 async def _send_internet_image(message, query: str) -> None:
-    status_message = await message.reply_text("🔎 أدور لك على صورة حقيقية من الإنترنت...")
     try:
         image_bytes, extension = await _search_and_download_image(query)
         photo = BytesIO(image_bytes)
         photo.name = f"internet_image.{extension}"
-        await message.reply_photo(photo=photo, caption=f"📷 {query[:300]}"[:1000])
-        await status_message.delete()
+        # Send the actual image only: no source URL, website name, or caption.
+        await message.reply_photo(photo=photo)
     except Exception as exc:
-        print(f"[AI Images] Image request failed: {exc}")
-        await status_message.edit_text("ما حصلت صورة مناسبة أقدر أرسلها حاليًا. جرّب اسمًا أو وصفًا مختلفًا.")
+        print(f"[AI Images] Image request failed for {query!r}: {exc}")
+        await message.reply_text(
+            "ما حصلت صورة مناسبة أقدر أرسلها حاليًا. جرّب اسمًا أو وصفًا مختلفًا."
+        )
