@@ -7,7 +7,7 @@ import uuid
 
 from telegram import (
     InlineKeyboardButton, InlineKeyboardMarkup, InlineQueryResultArticle,
-    InputTextMessageContent, Update,
+    InputMediaPhoto, InputTextMessageContent, Update,
 )
 from telegram.ext import ContextTypes
 
@@ -243,9 +243,10 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
                 "title": title,
                 "description": description,
                 "input_message_content": InputTextMessageContent(lobby_text),
-                "reply_markup": InlineKeyboardMarkup([[
-                    InlineKeyboardButton("فتح غرفة اللعبة", url=room_url)
-                ]]),
+                "reply_markup": InlineKeyboardMarkup([
+                    [InlineKeyboardButton("فتح غرفة اللعبة", url=room_url)],
+                    [InlineKeyboardButton("🖼 عرض صورة اللعبة", callback_data=f"online_show_image:{game_type}:{room_id}")],
+                ]),
             }
             list_photo_file_id = await pool.fetchval(
                 "SELECT photo_file_id FROM online_game_list_images WHERE game_type=$1",
@@ -301,9 +302,10 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
                 "افتحوا الغرفة من الزر بالأسفل للانضمام وضبط الإعدادات وبدء اللعبة داخل الميني آب."
             )
             result_id = lobby_id.hex
-        keyboard = InlineKeyboardMarkup([[
-            InlineKeyboardButton("فتح غرفة اللعبة", url=room_url)
-        ]])
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("فتح غرفة اللعبة", url=room_url)],
+            [InlineKeyboardButton("🖼 عرض صورة اللعبة", callback_data=f"online_show_image:{game_type}:{result_id}")],
+        ])
         list_photo_file_id = await pool.fetchval(
             "SELECT photo_file_id FROM online_game_list_images WHERE game_type=$1",
             game_type,
@@ -320,6 +322,54 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
             result_kwargs["thumbnail_url"] = f"{base_url}/tg-file/{list_photo_file_id}"
         results.append(InlineQueryResultArticle(**result_kwargs))
     await inline.answer(results, cache_time=0, is_personal=True)
+
+
+async def online_show_game_image_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    if not query or not query.data:
+        return
+    try:
+        _, game_type, room_id = query.data.split(":", 2)
+        if game_type not in GAME_INFO:
+            raise ValueError("unknown game")
+    except ValueError:
+        await query.answer("تعذر تحديد اللعبة.", show_alert=True)
+        return
+
+    pool = get_pool()
+    photo_file_id = await pool.fetchval(
+        "SELECT photo_file_id FROM online_game_images WHERE game_type=$1",
+        game_type,
+    )
+    if not photo_file_id:
+        await query.answer("ما أضفت صورة لهذه اللعبة حتى الآن.", show_alert=True)
+        return
+
+    me = await context.bot.get_me()
+    if game_type == "sort":
+        startapp = f"sort_{room_id}"
+    elif game_type in ("match", "number", "find"):
+        startapp = f"casual_{game_type}_{room_id}"
+    elif game_type == "word":
+        startapp = f"word_{room_id}"
+    else:
+        startapp = f"online_lobby_{room_id}"
+    room_url = f"https://t.me/{me.username}?startapp={startapp}"
+    title = GAME_INFO[game_type][0]
+    keyboard = InlineKeyboardMarkup([[
+        InlineKeyboardButton("فتح غرفة اللعبة", url=room_url)
+    ]])
+    try:
+        await query.edit_message_media(
+            media=InputMediaPhoto(
+                media=photo_file_id,
+                caption=f"🎮 {title}\\n\\nافتحوا الغرفة من الزر بالأسفل للانضمام واللعب.",
+            ),
+            reply_markup=keyboard,
+        )
+        await query.answer("ظهرت صورة اللعبة ✅")
+    except Exception:
+        await query.answer("تعذر عرض الصورة في هذه الرسالة. جرّب فتح اللعبة من الزر.", show_alert=True)
 
 
 async def _edit_lobby_message(query, context, text, keyboard):
