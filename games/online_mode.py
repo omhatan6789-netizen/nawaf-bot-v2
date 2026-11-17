@@ -7,7 +7,7 @@ import uuid
 
 from telegram import (
     InlineKeyboardButton, InlineKeyboardMarkup, InlineQueryResultArticle,
-    InputTextMessageContent, Update,
+    InlineQueryResultPhoto, InputTextMessageContent, Update,
 )
 from telegram.ext import ContextTypes
 
@@ -198,10 +198,18 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
             )
             if photo_file_id:
                 base_url = os.environ.get("PUBLIC_BASE_URL", "https://nawaf-bot-frankfurt.onrender.com").rstrip("/")
-                result_kwargs["thumbnail_url"] = f"{base_url}/tg-file/{photo_file_id}"
-                result_kwargs["thumbnail_width"] = 80
-                result_kwargs["thumbnail_height"] = 80
-            results.append(InlineQueryResultArticle(**result_kwargs))
+                photo_url = f"{base_url}/tg-file/{photo_file_id}"
+                results.append(InlineQueryResultPhoto(
+                    id=room_id,
+                    photo_url=photo_url,
+                    thumbnail_url=photo_url,
+                    title=title,
+                    description=description,
+                    caption=lobby_text,
+                    reply_markup=result_kwargs["reply_markup"],
+                ))
+            else:
+                results.append(InlineQueryResultArticle(**result_kwargs))
             continue
         elif game_type in ("match", "number", "find"):
             from games.casual_games import create_game
@@ -217,8 +225,7 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
                 f"أنشأ {inline.from_user.full_name or inline.from_user.first_name or 'لاعب'} غرفة جديدة.\n"
                 "افتحوا الغرفة من الزر بالأسفل للانضمام، ويمكن لصاحبها ضبط الإعدادات وبدء اللعب."
             )
-            result_id = game_id.hex
-        elif game_type == "word":
+            result_id = game_id.hex        elif game_type == "word":
             from games.extra_mini_games import word_create
             game = await word_create(
                 inline.from_user.id,
@@ -267,10 +274,17 @@ async def online_games_inline_query(update: Update, context: ContextTypes.DEFAUL
         if photo_file_id:
             base_url = os.environ.get("PUBLIC_BASE_URL", "https://nawaf-bot-frankfurt.onrender.com").rstrip("/")
             photo_url = f"{base_url}/tg-file/{photo_file_id}"
-            result_kwargs["thumbnail_url"] = photo_url
-            result_kwargs["thumbnail_width"] = 80
-            result_kwargs["thumbnail_height"] = 80
-        results.append(InlineQueryResultArticle(**result_kwargs))
+            results.append(InlineQueryResultPhoto(
+                id=result_id,
+                photo_url=photo_url,
+                thumbnail_url=photo_url,
+                title=title,
+                description=description,
+                caption=lobby_text,
+                reply_markup=keyboard,
+            ))
+        else:
+            results.append(InlineQueryResultArticle(**result_kwargs))
     await inline.answer(results, cache_time=0, is_personal=True)
 
 
@@ -437,8 +451,7 @@ async def online_lobby_callback(update: Update, context: ContextTypes.DEFAULT_TY
                            VALUES($1,$2,$3,'متوسط',$4::jsonb,'human',$5,$6,$7,$2,0,TRUE)""",
                         game_id, int(lobby["creator_id"]), int(lobby["player2_id"]),
                         json.dumps(board), chat_id, player1_name, player2_name,
-                    )
-                else:
+                    )                else:
                     if game_type == "dots":
                         count = int(lobby["player_count"])
                         size = 4 if count == 2 else 6
@@ -657,8 +670,7 @@ async def online_lobby_api(user_id: int, action: str, raw_lobby_id: str, setting
                     lobby_id, game_id,
                 )
             elif action != "state":
-                raise ValueError("طلب غير معروف")
-            lobby = await conn.fetchrow("SELECT * FROM online_game_lobbies WHERE id=$1", lobby_id)
+                raise ValueError("طلب غير معروف")            lobby = await conn.fetchrow("SELECT * FROM online_game_lobbies WHERE id=$1", lobby_id)
     photo_file_id = await pool.fetchval(
         "SELECT photo_file_id FROM online_game_images WHERE game_type=$1",
         lobby["game_type"],
