@@ -268,9 +268,9 @@ class BoundedThreadingHTTPServer(ThreadingHTTPServer):
         if not self._worker_slots.acquire(blocking=False):
             try:
                 request.sendall(
-                    b"HTTP/1.1 503 Service Unavailable\\r\\n"
-                    b"Connection: close\\r\\n"
-                    b"Content-Length: 0\\r\\n\\r\\n"
+                    b"HTTP/1.1 503 Service Unavailable\r\n"
+                    b"Connection: close\r\n"
+                    b"Content-Length: 0\r\n\r\n"
                 )
             except OSError:
                 pass
