@@ -147,7 +147,7 @@
       for(const h of hazards) {
         const sy=runnerY-(h.y-p.y);
         if(Math.abs(sy-runnerY)<(h.width/2+11)) {
-          const overlaps = h.safe<0 ? p.x < b.right-h.depth : p.x > b.left+h.depth;
+          const overlaps = h.safe<0 ? p.x > b.right-h.depth : p.x < b.left+h.depth;
           if(overlaps) {p.alive=false;emit(p.x,runnerY,p.color==='blue'?'#54ddff':'#ff7177',20);playTone(125,.25);if(pi===0){canvas.parentElement.classList.add('shake');setTimeout(()=>canvas.parentElement.classList.remove('shake'),300);showResult(false,'اصطدمت بعقبة! المس الشاشة أبكر لتنتقل إلى الجهة الآمنة.');}else {showResult(true,'البوت اصطدم بعقبة، وأنت فزت!');}break;}
         }
       }
