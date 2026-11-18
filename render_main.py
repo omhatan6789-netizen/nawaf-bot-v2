@@ -4,6 +4,7 @@ The same HTTP server serves the Mini App, game POST routes, health checks,
 and Telegram webhook updates.
 """
 import asyncio
+import concurrent.futures
 import hmac
 import json
 import logging
@@ -36,9 +37,9 @@ class BoundedThreadingHTTPServer(ThreadingHTTPServer):
         if not self._worker_slots.acquire(blocking=False):
             try:
                 request.sendall(
-                    b"HTTP/1.1 503 Service Unavailable\\r\\n"
-                    b"Connection: close\\r\\n"
-                    b"Content-Length: 0\\r\\n\\r\\n"
+                    b"HTTP/1.1 503 Service Unavailable\r\n"
+                    b"Connection: close\r\n"
+                    b"Content-Length: 0\r\n\r\n"
                 )
             except OSError:
                 pass
@@ -105,10 +106,23 @@ class HealthHandler(BaseHTTPRequestHandler):
             if update is None or application_loop is None:
                 self._respond(400, b"Invalid update")
                 return
-            future = asyncio.run_coroutine_threadsafe(
-                application.update_queue.put(update), application_loop
-            )
-            future.result(timeout=10)
+            queued = concurrent.futures.Future()
+
+            def enqueue_update():
+                try:
+                    application.update_queue.put_nowait(update)
+                    queued.set_result(True)
+                except asyncio.QueueFull:
+                    queued.set_exception(asyncio.QueueFull())
+
+            application_loop.call_soon_threadsafe(enqueue_update)
+            queued.result(timeout=3)
+        except concurrent.futures.TimeoutError:
+            self._respond(503, b"Webhook queue is busy")
+            return
+        except asyncio.QueueFull:
+            self._respond(503, b"Webhook queue is full")
+            return
         except Exception:
             logger.exception("Failed to enqueue Telegram webhook update")
             self._respond(500, b"Webhook processing failed")
