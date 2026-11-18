@@ -186,7 +186,6 @@ function openGameInTelegram(type){
  else{const note=document.createElement('div');note.className='c4-hint';note.textContent='هذه الميزة تحتاج إصدارًا أحدث من تيليجرام.';document.getElementById('c4-shell')?.appendChild(note);}
 }
 function launchGameAgainstBot(type){
- if(type==='gravity'){location.href='/gravity-run';return;}
  if(type==='carrom'){clearCarromReturnDismissal();location.href='/carrom';return;}
  if(type==='timer'){startQuickGameSetup(type);return;}
  if(type==='sort'){startNumberSortSetup();return;}
@@ -196,7 +195,7 @@ function launchGameAgainstBot(type){
  showMiniGameInstructions(type);
 }
 function showGameModeChooser(type){
- const names={gravity:'Gravity Run 🏃',connect:'كونكت 4 🔴',dots:'المربعات 🟦',memory:'اختبر ذاكرتك 🧠',word:'خمن الكلمة 🔤',match:'تطابق البطاقات 🃏',find:'المتشابه 🔎',number:'خمن الرقم 🔢',sort:'ترتيب الأرقام 🔢',carrom:'الكيرم 🎯'};
+ const names={connect:'كونكت 4 🔴',dots:'المربعات 🟦',memory:'اختبر ذاكرتك 🧠',word:'خمن الكلمة 🔤',match:'تطابق البطاقات 🃏',find:'المتشابه 🔎',number:'خمن الرقم 🔢',sort:'ترتيب الأرقام 🔢',carrom:'الكيرم 🎯'};
  const shell=c4Shell();
  shell.innerHTML='<div class="c4-heading"><h2>'+names[type]+'</h2><p>اختر طريقة اللعب</p></div><div class="c4-panel"><button class="c4-start" id="game-vs-bot" style="display:block;width:100%;min-height:58px;margin:0 0 12px;font-size:18px">🤖 لعب ضد البوت</button><button class="c4-secondary" id="game-vs-telegram" style="display:block;width:100%;min-height:54px;margin:0 0 10px">👥 ضد شخص بالتيليجرام</button><button class="c4-secondary" id="game-mode-back" style="display:block;width:100%;min-height:48px">رجوع للألعاب</button></div>';
  shell.querySelector('#game-vs-bot').onclick=()=>launchGameAgainstBot(type);
@@ -235,7 +234,6 @@ function showGames(){
   ['🎯','خمن الرقم','اكتشف الرقم مع تلميحات أعلى أو أقل','number'],
   ['⏱️','المؤقت','أوقف الوقت عند الهدف دون رؤية العداد','timer'],
   ['🎯','الكيرم','صوّب واضرب الأقراص نحو الجيوب','carrom'],
-  ['🏃','Gravity Run','بدّل الجاذبية وتفادَ الحواجز في سباق ضد البوت','gravity'],
  ];
  games.forEach(([emoji,name,hint,type])=>{
   const card=document.createElement('button');card.className='custom-card game-card';card.type='button';card.style.width='100%';card.style.cursor='pointer';
@@ -248,7 +246,7 @@ function showGames(){
    const placeholder=document.createElement('div');placeholder.className='game-cover-placeholder';placeholder.textContent=emoji;card.appendChild(placeholder);
   }
   const label=document.createElement('span');label.className='label';label.textContent=name;card.appendChild(label);
-  card.onclick=()=>{if(type==='timer'||type==='gravity'){launchGameAgainstBot(type);return;}showGameModeChooser(type);};
+  card.onclick=()=>{if(type==='timer'){launchGameAgainstBot(type);return;}showGameModeChooser(type);};
   pageContent.appendChild(card);
  });
 }
