@@ -4,6 +4,9 @@ import asyncio
 import json
 import logging
 import re
+import threading
+import time
+from contextlib import contextmanager
 from pathlib import Path
 from urllib.parse import unquote, parse_qs, urlparse
 
@@ -15,6 +18,56 @@ from database.pool import get_pool
 WEB_ROOT = Path(__file__).resolve().parent / "mini_app"
 _loop = None
 _bot = None
+
+_YOUTUBE_LIMITS = {}
+_YOUTUBE_LIMIT_LOCK = threading.Lock()
+_YOUTUBE_SLOTS = threading.BoundedSemaphore(4)
+
+
+class AuthenticationError(Exception):
+    pass
+
+
+class RateLimitError(Exception):
+    pass
+
+
+def _authorize_youtube(handler, action):
+    init_data = handler.headers.get("X-Telegram-Init-Data", "")
+    if not init_data or _bot is None:
+        raise AuthenticationError("افتح الميني آب من داخل تيليجرام أولاً")
+    from games.connect4 import verify_init_data
+    try:
+        user = verify_init_data(init_data, _bot.token)
+    except (TypeError, ValueError, json.JSONDecodeError):
+        raise AuthenticationError("بيانات تيليجرام غير صالحة أو انتهت صلاحيتها")
+    user_id = int(user["id"])
+    now = time.monotonic()
+    limit = 12 if action == "search" else 4
+    with _YOUTUBE_LIMIT_LOCK:
+        bucket = _YOUTUBE_LIMITS.get((user_id, action))
+        if bucket is None or now - bucket[0] >= 60:
+            _YOUTUBE_LIMITS[(user_id, action)] = [now, 1]
+        else:
+            if bucket[1] >= limit:
+                raise RateLimitError("طلبات كثيرة، انتظر دقيقة ثم حاول مجددًا")
+            bucket[1] += 1
+        if len(_YOUTUBE_LIMITS) > 10000:
+            cutoff = now - 120
+            for key, value in list(_YOUTUBE_LIMITS.items()):
+                if value[0] < cutoff:
+                    _YOUTUBE_LIMITS.pop(key, None)
+    return user
+
+
+@contextmanager
+def _youtube_slot():
+    if not _YOUTUBE_SLOTS.acquire(blocking=False):
+        raise RateLimitError("الخدمة مشغولة حاليًا، حاول بعد قليل")
+    try:
+        yield
+    finally:
+        _YOUTUBE_SLOTS.release()
 
 
 def configure_mini_app(loop, bot):
@@ -146,13 +199,21 @@ def handle_mini_app_request(handler):
         return True
     if path == "/api/youtube/search":
         try:
+            _authorize_youtube(handler, "search")
             query = parse_qs(urlparse(handler.path).query).get("q", [""])[0].strip()
             if not query or len(query) > 100:
                 raise ValueError("اكتب اسم المقطع للبحث")
             from handlers.youtube_audio import _search_youtube
-            results = _run(_search_youtube(query), timeout=30)
+            with _youtube_slot():
+                results = _run(_search_youtube(query), timeout=25)
             body = json.dumps({"ok": True, "results": results}, ensure_ascii=False).encode()
             handler.send_response(200)
+        except AuthenticationError as exc:
+            body = json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False).encode()
+            handler.send_response(401)
+        except RateLimitError as exc:
+            body = json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False).encode()
+            handler.send_response(429)
         except ValueError as exc:
             body = json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False).encode()
             handler.send_response(400)
@@ -168,23 +229,35 @@ def handle_mini_app_request(handler):
         return True
     if path == "/api/youtube/resolve":
         try:
+            _authorize_youtube(handler, "resolve")
             video_id = parse_qs(urlparse(handler.path).query).get("id", [""])[0].strip()
             if not re.fullmatch(r"[A-Za-z0-9_-]{11}", video_id):
                 raise ValueError("معرّف المقطع غير صالح")
             video_url = f"https://www.youtube.com/watch?v={video_id}"
-            with httpx.Client(timeout=httpx.Timeout(120.0, connect=20.0), follow_redirects=True) as client:
-                response = client.post(
-                    "https://api.samplecut.app/v1/downloads",
-                    json={"url": video_url, "format": "mp3", "response": "url"},
-                    headers={"X-Client-Name": "NawafMiniApp", "Accept": "application/json"},
-                )
-                response.raise_for_status()
-                data = response.json()
+            with _youtube_slot():
+                with httpx.Client(
+                    timeout=httpx.Timeout(30.0, connect=5.0, read=25.0, write=10.0, pool=5.0),
+                    follow_redirects=False,
+                ) as client:
+                    response = client.post(
+                        "https://api.samplecut.app/v1/downloads",
+                        json={"url": video_url, "format": "mp3", "response": "url"},
+                        headers={"X-Client-Name": "NawafMiniApp", "Accept": "application/json"},
+                    )
+                    response.raise_for_status()
+                    data = response.json()
             audio_url = data.get("download_url") or data.get("downloadUrl")
-            if not audio_url or not audio_url.startswith("https://"):
-                raise RuntimeError("لم يتم الحصول على رابط الصوت")
+            parsed_audio_url = urlparse(audio_url or "")
+            if parsed_audio_url.scheme != "https" or not parsed_audio_url.hostname:
+                raise RuntimeError("لم يتم الحصول على رابط صوت آمن")
             body = json.dumps({"ok": True, "url": audio_url}, ensure_ascii=False).encode()
             handler.send_response(200)
+        except AuthenticationError as exc:
+            body = json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False).encode()
+            handler.send_response(401)
+        except RateLimitError as exc:
+            body = json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False).encode()
+            handler.send_response(429)
         except ValueError as exc:
             body = json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False).encode()
             handler.send_response(400)
@@ -292,8 +365,25 @@ def handle_connect4_post(handler):
     ):
         return False
     try:
-        length = min(int(handler.headers.get("Content-Length", "0")), 16384)
-        payload = json.loads(handler.rfile.read(length) or b"{}")
+        raw_length = handler.headers.get("Content-Length")
+        if raw_length is None or not raw_length.isdigit():
+            handler.send_error(411, "Content-Length required")
+            return True
+        length = int(raw_length)
+        if length <= 0 or length > 16384:
+            handler.send_error(413, "Invalid payload size")
+            return True
+        content_type = handler.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
+        if content_type != "application/json":
+            handler.send_error(415, "Content-Type must be application/json")
+            return True
+        raw_body = handler.rfile.read(length)
+        if len(raw_body) != length:
+            handler.send_error(400, "Incomplete request body")
+            return True
+        payload = json.loads(raw_body)
+        if not isinstance(payload, dict):
+            raise ValueError("صيغة الطلب غير صحيحة")
         from games.connect4 import (
             verify_init_data, create_game, play_move,
             play_bot_move, get_game_state,
