@@ -235,6 +235,7 @@ function showGames(){
   ['🎯','خمن الرقم','اكتشف الرقم مع تلميحات أعلى أو أقل','number'],
   ['⏱️','المؤقت','أوقف الوقت عند الهدف دون رؤية العداد','timer'],
   ['🎯','الكيرم','صوّب واضرب الأقراص نحو الجيوب','carrom'],
+  ['🏃','Gravity Run','بدّل الجاذبية وتفادَ الحواجز في سباق ضد البوت','gravity'],
  ];
  games.forEach(([emoji,name,hint,type])=>{
   const card=document.createElement('button');card.className='custom-card game-card';card.type='button';card.style.width='100%';card.style.cursor='pointer';
@@ -247,7 +248,7 @@ function showGames(){
    const placeholder=document.createElement('div');placeholder.className='game-cover-placeholder';placeholder.textContent=emoji;card.appendChild(placeholder);
   }
   const label=document.createElement('span');label.className='label';label.textContent=name;card.appendChild(label);
-  card.onclick=()=>{if(type==='timer'){launchGameAgainstBot(type);return;}showGameModeChooser(type);};
+  card.onclick=()=>{if(type==='timer'||type==='gravity'){launchGameAgainstBot(type);return;}showGameModeChooser(type);};
   pageContent.appendChild(card);
  });
 }
