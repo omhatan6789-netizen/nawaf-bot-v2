@@ -4,6 +4,7 @@ The same HTTP server serves the Mini App, game POST routes, health checks,
 and Telegram webhook updates.
 """
 import asyncio
+import concurrent.futures
 import base64
 import hashlib
 import hmac
@@ -11,6 +12,7 @@ import json
 import logging
 import math
 import os
+import re
 import signal
 import socket
 import struct
@@ -18,7 +20,7 @@ import threading
 import time
 from urllib.parse import parse_qs, urlparse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from threading import Thread
+from threading import BoundedSemaphore, Thread
 
 from telegram import Update
 
@@ -254,6 +256,39 @@ application_loop = None
 webhook_secret = None
 
 
+class BoundedThreadingHTTPServer(ThreadingHTTPServer):
+    daemon_threads = True
+    request_queue_size = 64
+
+    def __init__(self, server_address, handler_class, max_workers=32):
+        self._worker_slots = BoundedSemaphore(max_workers)
+        super().__init__(server_address, handler_class)
+
+    def process_request(self, request, client_address):
+        if not self._worker_slots.acquire(blocking=False):
+            try:
+                request.sendall(
+                    b"HTTP/1.1 503 Service Unavailable\\r\\n"
+                    b"Connection: close\\r\\n"
+                    b"Content-Length: 0\\r\\n\\r\\n"
+                )
+            except OSError:
+                pass
+            self.shutdown_request(request)
+            return
+        try:
+            super().process_request(request, client_address)
+        except Exception:
+            self._worker_slots.release()
+            raise
+
+    def process_request_thread(self, request, client_address):
+        try:
+            super().process_request_thread(request, client_address)
+        finally:
+            self._worker_slots.release()
+
+
 class HealthHandler(BaseHTTPRequestHandler):
     def _respond(self, status=200, body=b"OK", content_type="text/plain; charset=utf-8"):
         self.send_response(status)
@@ -268,6 +303,10 @@ class HealthHandler(BaseHTTPRequestHandler):
             self._respond(404, b"")
             return
         self._respond(200, b"OK" if include_body else b"")
+
+    def setup(self):
+        super().setup()
+        self.connection.settimeout(15)
 
     def do_GET(self):
         if handle_carrom_websocket(self):
@@ -300,10 +339,23 @@ class HealthHandler(BaseHTTPRequestHandler):
             if update is None or application_loop is None:
                 self._respond(400, b"Invalid update")
                 return
-            future = asyncio.run_coroutine_threadsafe(
-                application.update_queue.put(update), application_loop
-            )
-            future.result(timeout=10)
+            queued = concurrent.futures.Future()
+
+            def enqueue_update():
+                try:
+                    application.update_queue.put_nowait(update)
+                    queued.set_result(True)
+                except asyncio.QueueFull:
+                    queued.set_exception(asyncio.QueueFull())
+
+            application_loop.call_soon_threadsafe(enqueue_update)
+            queued.result(timeout=3)
+        except concurrent.futures.TimeoutError:
+            self._respond(503, b"Webhook queue is busy")
+            return
+        except asyncio.QueueFull:
+            self._respond(503, b"Webhook queue is full")
+            return
         except Exception:
             logger.exception("Failed to enqueue Telegram webhook update")
             self._respond(500, b"Webhook processing failed")
@@ -319,7 +371,7 @@ class HealthHandler(BaseHTTPRequestHandler):
 
 def start_http_server():
     port = int(os.environ.get("PORT", "10000"))
-    server = ThreadingHTTPServer(("0.0.0.0", port), HealthHandler)
+    server = BoundedThreadingHTTPServer(("0.0.0.0", port), HealthHandler, max_workers=32)
     Thread(target=server.serve_forever, name="render-http-server", daemon=True).start()
     return server
 
@@ -328,8 +380,8 @@ async def run_webhook_bot():
     global application, application_loop, webhook_secret
     __import__("config").load_settings()
     webhook_secret = os.environ.get("TELEGRAM_WEBHOOK_SECRET", "")
-    if not webhook_secret:
-        raise RuntimeError("TELEGRAM_WEBHOOK_SECRET is required for webhook mode")
+    if not re.fullmatch(r"[A-Za-z0-9_-]{1,256}", webhook_secret):
+        raise RuntimeError("TELEGRAM_WEBHOOK_SECRET must be 1-256 characters using A-Z, a-z, 0-9, _ or -")
 
     application_loop = asyncio.get_running_loop()
     application = build_application(use_updater=False)
@@ -339,7 +391,13 @@ async def run_webhook_bot():
         if application.post_init:
             await application.post_init(application)
 
-        base_url = os.environ.get("PUBLIC_BASE_URL", "https://nawaf-bot-v2.onrender.com").rstrip("/")
+        base_url = (
+            os.environ.get("RENDER_EXTERNAL_URL")
+            or os.environ.get("PUBLIC_BASE_URL")
+            or "https://nawaf-bot-frankfurt.onrender.com"
+        ).rstrip("/")
+        if not base_url.startswith("https://"):
+            raise RuntimeError("RENDER_EXTERNAL_URL or PUBLIC_BASE_URL must use HTTPS")
         webhook_url = f"{base_url}/telegram-webhook"
         await application.bot.set_webhook(
             url=webhook_url,
