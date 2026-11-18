@@ -9,6 +9,7 @@ import hmac
 import json
 import logging
 import os
+import re
 import signal
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import BoundedSemaphore, Thread
@@ -147,8 +148,8 @@ async def run_webhook_bot():
     global application, application_loop, webhook_secret
     settings = __import__("config").load_settings()
     webhook_secret = os.environ.get("TELEGRAM_WEBHOOK_SECRET", "")
-    if not webhook_secret:
-        raise RuntimeError("TELEGRAM_WEBHOOK_SECRET is required for webhook mode")
+    if not re.fullmatch(r"[A-Za-z0-9_-]{1,256}", webhook_secret):
+        raise RuntimeError("TELEGRAM_WEBHOOK_SECRET must be 1-256 characters using A-Z, a-z, 0-9, _ or -")
 
     application_loop = asyncio.get_running_loop()
     application = build_application(use_updater=False)
