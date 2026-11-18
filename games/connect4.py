@@ -28,8 +28,12 @@ def verify_init_data(init_data: str, bot_token: str) -> dict:
     calculated = hmac.new(secret, check_string.encode(), hashlib.sha256).hexdigest()
     if not hmac.compare_digest(calculated, received_hash):
         raise ValueError("بيانات تيليجرام غير صالحة")
-    auth_date = int(pairs.get("auth_date", "0") or 0)
-    if not auth_date or time.time() - auth_date > 86400:
+    try:
+        auth_date = int(pairs.get("auth_date", "0") or 0)
+    except (TypeError, ValueError):
+        raise ValueError("بيانات جلسة تيليجرام غير صالحة")
+    now = time.time()
+    if not auth_date or auth_date > now + 30 or now - auth_date > 3600:
         raise ValueError("انتهت صلاحية الجلسة، أغلق اللعبة وافتحها مجددًا")
     user = json.loads(pairs.get("user", "{}"))
     if not user.get("id"):
