@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#101a34">
+  <meta name="description" content="Gravity Run — سباق جاذبية عمودي ضد البوت، بثلاث مراحل. لعبة ويب مناسبة لـ Telegram Mini Apps.">
+  <title>Gravity Run — سباق الجاذبية</title>
+  <style>
+
+:root{color-scheme:dark;--ink:#f7f8ff;--muted:#a9b5d1;--panel:#111a33;--blue:#16b9f4;--red:#ff656e;--gold:#ffca53}*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0b1227;color:var(--ink);font-family:'Changa','Rubik',sans-serif;touch-action:none}body{display:grid;place-items:center;background:radial-gradient(ellipse at 50% 35%,#1d2b50 0,#0b1227 66%)}button{font:inherit}.app-shell{width:min(100vw,520px);height:100dvh;max-height:940px;display:flex;flex-direction:column;padding:env(safe-area-inset-top) 15px env(safe-area-inset-bottom);position:relative}.topbar{height:68px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 6px;direction:ltr}.brand{display:flex;align-items:center;gap:8px;color:#f8fbff;text-decoration:none;font:800 13px/1 'Rubik',sans-serif;letter-spacing:1px}.brand b{color:#5bd1ff;letter-spacing:2px}.brand-mark{display:grid;place-items:center;width:34px;height:34px;border-radius:12px;background:linear-gradient(145deg,#35cbff,#178af4);font-size:23px;font-weight:800;color:#08204a;box-shadow:0 5px 16px #138df755}.stage-pill{direction:rtl;border:1px solid #ffffff20;background:#ffffff0b;border-radius:99px;padding:7px 13px;color:#cbd5ed;font-size:13px}.stage-pill b{color:#ffca53;margin:0 3px}.icon-button{width:37px;height:37px;border:1px solid #ffffff20;border-radius:12px;background:#ffffff0b;color:#dce7ff;font-size:20px;cursor:pointer}.game-wrap{position:relative;flex:1;min-height:0;border:1px solid #ffffff20;border-radius:24px;overflow:hidden;background:#79bdf8;box-shadow:0 22px 65px #0005,inset 0 0 0 4px #ffffff08}canvas{display:block;width:100%;height:100%;touch-action:none}.hud{position:absolute;z-index:2;top:14px;left:13px;right:13px;display:flex;align-items:flex-start;justify-content:space-between;pointer-events:none}.race-status{display:flex;align-items:center;gap:8px;padding:7px 11px;border:1px solid #ffffff48;border-radius:99px;background:#10203c9c;backdrop-filter:blur(8px);font-size:12px;color:#f6f7ff}.live-dot{height:7px;width:7px;border-radius:50%;background:#ffcf56;box-shadow:0 0 10px #ffcf56}.runner-labels{display:flex;gap:6px;direction:rtl}.runner-tag{display:flex;align-items:center;gap:5px;padding:6px 9px;border-radius:99px;background:#0c183da8;border:1px solid #ffffff30;font-size:11px;color:white}.runner-tag i{display:block;width:7px;height:7px;border-radius:50%;background:var(--blue)}.red-tag i{background:var(--red)}.tap-hint{pointer-events:none;position:absolute;z-index:2;bottom:15px;left:50%;transform:translateX(-50%);white-space:nowrap;display:flex;align-items:center;gap:7px;padding:8px 13px;border:1px solid #fff6;border-radius:99px;color:#fff;background:#13203b9c;backdrop-filter:blur(8px);font-size:12px;transition:opacity .25s}.tap-icon{font-size:15px}.tap-hint.hidden{opacity:0}.overlay{position:absolute;z-index:3;inset:0;display:grid;place-items:center;padding:20px;background:#09112772;backdrop-filter:blur(5px);transition:opacity .3s,visibility .3s}.overlay.hidden{opacity:0;visibility:hidden;pointer-events:none}.card{width:min(100%,350px);padding:29px 25px 22px;text-align:center;border-radius:26px;border:1px solid #ffffff30;background:linear-gradient(145deg,#172748f5,#101931f5);box-shadow:0 24px 70px #0006;animation:card-in .35s ease-out}@keyframes card-in{from{transform:translateY(12px) scale(.97);opacity:0}to{transform:none;opacity:1}}.card-emblem{display:grid;place-items:center;margin:0 auto 13px;width:57px;height:57px;border-radius:19px;color:#0b2650;background:linear-gradient(145deg,#59ddff,#28a9ff);font:800 40px/1 'Rubik',sans-serif;box-shadow:0 8px 25px #20bafa44}.eyebrow{margin:0 0 4px;color:#67d6ff;font-size:13px;font-weight:600}.card h1{margin:0 0 9px;font-size:25px;line-height:1.35}.card-copy{margin:0 auto 20px;max-width:275px;color:#b9c5df;font-size:14px;line-height:1.8}.primary-button{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;min-height:51px;border:0;border-radius:15px;background:linear-gradient(100deg,#43d5ff,#388cff);color:#071936;font-size:16px;font-weight:800;box-shadow:0 8px 22px #258eff40;cursor:pointer;transition:transform .15s,filter .15s}.primary-button:active{transform:scale(.97);filter:brightness(.92)}.primary-button span{font-size:21px}.small-note{margin:13px 0 0;color:#8493b3;font-size:11px}.bottom-bar{height:45px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 8px;color:#91a0bf;font-size:11px}.control-tip{display:flex;align-items:center;gap:7px}kbd{padding:2px 6px;border:1px solid #ffffff30;border-radius:5px;color:#ced8ec;font:10px 'Rubik',sans-serif}.shake{animation:shake .28s}@keyframes shake{20%{transform:translateX(-5px)}45%{transform:translateX(5px)}70%{transform:translateX(-3px}}@media(min-width:600px){.app-shell{padding-top:12px;padding-bottom:12px}.topbar{height:76px}.bottom-bar{height:48px}}@media(max-height:620px){.topbar{height:53px}.bottom-bar{height:35px}.card{padding:19px}.card-emblem{width:46px;height:46px;font-size:32px;margin-bottom:8px}.card h1{font-size:21px}.card-copy{font-size:12px;margin-bottom:12px}}
+
+  </style>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="Gravity Run"><span class="brand-mark">↕</span><span>GRAVITY<br><b>RUN</b></span></a>
+      <div class="stage-pill" id="stagePill">المرحلة <b id="stageNumber">1</b> من 3</div>
+      <button class="icon-button" id="soundButton" aria-label="تشغيل أو إيقاف الصوت" title="الصوت">♪</button>
+    </header>
+
+    <section class="game-wrap" aria-label="ساحة اللعبة">
+      <canvas id="gameCanvas" aria-label="لعبة Gravity Run. المس الشاشة لتبديل الجاذبية."></canvas>
+      <div class="hud">
+        <div class="race-status"><span class="live-dot"></span><span id="statusText">استعد للسباق!</span></div>
+        <div class="runner-labels"><span class="runner-tag blue-tag"><i></i> أنت</span><span class="runner-tag red-tag"><i></i> البوت</span></div>
+      </div>
+      <div class="tap-hint" id="tapHint"><span class="tap-icon">👆</span><span>المس الشاشة لتبديل الجاذبية</span></div>
+      <div class="overlay" id="overlay">
+        <div class="card" id="overlayCard">
+          <div class="card-emblem" id="cardEmblem">↕</div>
+          <p class="eyebrow" id="eyebrow">تحدي الجاذبية</p>
+          <h1 id="overlayTitle">جاهز للانطلاق؟</h1>
+          <p class="card-copy" id="overlayCopy">تسابق ضد البوت عبر ثلاث مراحل عمودية. بدّل الجاذبية لتتفادى الحواجز وتجنّب السقوط!</p>
+          <button class="primary-button" id="startButton">ابدأ السباق <span>←</span></button>
+          <p class="small-note" id="smallNote">المس الشاشة أو اضغط Space لتبديل الجاذبية</p>
+        </div>
+      </div>
+    </section>
+    <footer class="bottom-bar"><span>ثلاث مراحل · سباق ضد البوت</span><span class="control-tip">المس للتبديل <kbd>SPACE</kbd></span></footer>
+  </main>
+  <script>
+(() => {
+  'use strict';
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  const overlay = document.getElementById('overlay');
+  const startButton = document.getElementById('startButton');
+  const statusText = document.getElementById('statusText');
+  const stageNumber = document.getElementById('stageNumber');
+  const stagePill = document.getElementById('stagePill');
+  const tapHint = document.getElementById('tapHint');
+  const soundButton = document.getElementById('soundButton');
+  const ui = { title: document.getElementById('overlayTitle'), copy: document.getElementById('overlayCopy'), eyebrow: document.getElementById('eyebrow'), emblem: document.getElementById('cardEmblem'), note: document.getElementById('smallNote') };
+  const tg = window.Telegram?.WebApp;
+  if (tg) { tg.ready(); tg.expand(); tg.disableVerticalSwipes?.(); }
+
+  const stages = [
+    { name: 'المجرّة الزرقاء', sky: ['#78c4ff','#48a9f7'], wall: '#526288', trim: '#9888cb', trim2: '#514d80', accent: '#c4eaff', seed: 17 },
+    { name: 'غابة النعناع', sky: ['#d7f0a3','#a9dc82'], wall: '#81523d', trim: '#47ba68', trim2: '#287f59', accent: '#f5ffd6', seed: 41 },
+    { name: 'صحراء الشمس', sky: ['#ffed91','#ffd35d'], wall: '#a65a3e', trim: '#ffac28', trim2: '#b46532', accent: '#fffbd0', seed: 73 }
+  ];
+  const stageLength = 1850;
+  let W = 0, H = 0, dpr = 1, mode = 'ready', stageIndex = 0, elapsed = 0, lastTime = 0, time = 0, soundOn = false, audioCtx = null;
+  let players = [], hazards = [], particles = [], stars = [], cameraY = 0, countdown = 0;
+  const rand = (seed) => { let x = Math.sin(seed * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+  function resize() {
+    const r = canvas.getBoundingClientRect(); dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = r.width; H = r.height; canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    if (!players.length) resetPlayers();
+  }
+  function bounds() { const wall = Math.max(34, W * .105); return { left: wall + 8, right: W - wall - 8, wall }; }
+  function resetPlayers() {
+    const b = bounds(); const center = (b.left + b.right) / 2;
+    players = [makePlayer('blue', center - Math.min(20, W*.06), -1), makePlayer('red', center + Math.min(20, W*.06), 1)];
+  }
+  function makePlayer(color, x, side) { return { color, x, side, y: 0, alive: true, trail: [], anim: Math.random()*10, targetSide: side, wobble: 0 }; }
+  function makeHazards(si) {
+    const b = bounds(), width = b.right - b.left, list = [];
+    // Safe-side openings alternate to make gravity switching essential.
+    for (let i = 0; i < 7; i++) {
+      const safe = (i + si) % 2 === 0 ? 1 : -1;
+      const gap = Math.min(width * .43, 150);
+      const depth = width - gap;
+      list.push({ y: 200 + i * 225, safe, depth, width: Math.min(width*.085, 29), type: i % 3 === 1 ? 'crate' : 'ledge', seed: si*100+i });
+    }
+    // A broad central splitter adds a narrow but readable passage on later stages.
+    if (si > 0) for (let i = 0; i < 3; i++) list.push({ y: 320 + i*510, safe: i%2 ? -1 : 1, depth: width*.52, width: Math.min(width*.06,21), type:'pillar', seed:si*300+i });
+    return list.sort((a,b)=>a.y-b.y);
+  }
+  function begin() {
+    stageIndex = 0; elapsed = 0; time = 0; mode = 'countdown'; countdown = 2.2;
+    resetPlayers(); hazards = makeHazards(0); particles = []; cameraY = 0;
+    overlay.classList.add('hidden'); tapHint.classList.remove('hidden'); stagePill.classList.remove('hidden');
+    statusText.textContent = 'استعد...'; stageNumber.textContent = '1';
+    playTone(440,.08); requestAnimationFrame(loop);
+  }
+  function showResult(win, text) {
+    if (mode === 'ended') return;
+    mode = 'ended'; overlay.classList.remove('hidden'); tapHint.classList.add('hidden');
+    ui.eyebrow.textContent = win ? 'فوز مستحق!' : 'انتهى السباق';
+    ui.title.textContent = win ? 'أكملت المراحل الثلاث!' : 'البوت سبقك!';
+    ui.copy.textContent = win ? 'يا سلام! تفاديت الحواجز وأنهيت كل المراحل قبل البوت.' : (text || 'سقطت في حفرة أو اصطدمت بعقبة. جرّب مرة ثانية وبدّل الجاذبية في الوقت المناسب.');
+    ui.emblem.textContent = win ? '★' : '↻'; ui.emblem.style.background = win ? 'linear-gradient(145deg,#ffe887,#ffad37)' : '';
+    ui.emblem.style.color = win ? '#593510' : ''; ui.eyebrow.style.color = win ? '#ffd465' : '';
+    ui.note.textContent = 'ما فيه نقاط — الفوز بإنهاء المراحل أو خسارة البوت'; startButton.innerHTML = 'العب مرة ثانية <span>↻</span>';
+    playTone(win ? 780 : 180, .2);
+  }
+  function nextStage() {
+    if (stageIndex >= 2) { showResult(true); return; }
+    stageIndex++; elapsed = 0; hazards = makeHazards(stageIndex);
+    players.forEach(p => { p.y = 0; p.alive = true; p.side = p.color === 'blue' ? -1 : 1; p.targetSide = p.side; p.x = p.side < 0 ? bounds().left + 22 : bounds().right - 22; p.trail = []; });
+    particles = []; stageNumber.textContent = String(stageIndex+1); statusText.textContent = stages[stageIndex].name;
+    countdown = 1.15; mode = 'countdown'; playTone(580,.12);
+  }
+  function flip(p) { if (!p?.alive || mode !== 'playing') return; p.side *= -1; p.targetSide = p.side; p.wobble = .22; emit(p.x,p.y+H*.69,p.color==='blue'?'#65eaff':'#ffb0ac',7); playTone(p.color==='blue'?620:360,.055); }
+  function controls(e) {
+    if (e) { e.preventDefault(); }
+    if (mode === 'ready' || mode === 'ended') { begin(); return; }
+    if (mode === 'playing') flip(players[0]);
+  }
+  function createStars() { stars=[]; for (let i=0;i<35;i++) stars.push({x:rand(i+8),y:rand(i+99),r:1+rand(i+7)*3,a:.13+rand(i+3)*.2}); }
+  function emit(x,y,color,n=4) { for(let i=0;i<n;i++) particles.push({x,y,vx:(Math.random()-.5)*95,vy:(Math.random()-.6)*90,life:.45+Math.random()*.35,max:.8,color,r:2+Math.random()*3}); }
+  function update(dt) {
+    time += dt;
+    if (mode === 'countdown') { countdown -= dt; if (countdown <= 0) {mode='playing';statusText.textContent=stages[stageIndex].name+' — انطلق!';playTone(700,.13);} }
+    if (mode !== 'playing') { updateParticles(dt); return; }
+    elapsed += dt;
+    const b=bounds(), width=b.right-b.left, runnerY=H*.70, playerSpeed=205, botSpeed=211;
+    for (let pi=0;pi<players.length;pi++) {
+      const p=players[pi]; if(!p.alive) continue;
+      const speed=pi===0?playerSpeed:botSpeed; p.y += speed*dt; p.anim += dt*9; p.wobble=Math.max(0,p.wobble-dt);
+      const target = p.side < 0 ? b.left+19 : b.right-19;
+      // Bot reads the next opening and switches before reaching each barrier.
+      if (pi===1) {
+        const next=hazards.find(h=>h.y>p.y+95);
+        if(next && next.y-p.y < 190 && p.side !== next.safe) {p.side=next.safe;p.targetSide=next.safe;}
+        if(next && p.y>stageLength-280) {p.side = (b.right-p.x < p.x-b.left)?-1:1;}
+      }
+      const dx=target-p.x; p.x += clamp(dx,-(pi===0?240:290)*dt,(pi===0?240:290)*dt);
+      p.trail.push({x:p.x,y:runnerY,life:.32}); if(p.trail.length>8)p.trail.shift();
+      for(const h of hazards) {
+        const sy=runnerY-(h.y-p.y);
+        if(Math.abs(sy-runnerY)<(h.width/2+11)) {
+          const overlaps = h.safe<0 ? p.x < b.right-h.depth : p.x > b.left+h.depth;
+          if(overlaps) {p.alive=false;emit(p.x,runnerY,p.color==='blue'?'#54ddff':'#ff7177',20);playTone(125,.25);if(pi===0){canvas.parentElement.classList.add('shake');setTimeout(()=>canvas.parentElement.classList.remove('shake'),300);showResult(false,'اصطدمت بعقبة! المس الشاشة أبكر لتنتقل إلى الجهة الآمنة.');}else {showResult(true,'البوت اصطدم بعقبة، وأنت فزت!');}break;}
+        }
+      }
+      if(p.alive && p.y>=stageLength) {p.y=stageLength; if(pi===0){ if(players[1].y<stageLength){showResult(true);return;} } else if(players[0].y<stageLength){showResult(false,'البوت أنهى المراحل قبلك. حاول تبديل الجاذبية في توقيت أفضل.');return;} }
+    }
+    if(players[0].y>=stageLength && players[1].y>=stageLength) nextStage();
+    cameraY=players[0].y; updateParticles(dt);
+  }
+  function updateParticles(dt) { particles=particles.filter(p=>p.life>0); for(const p of particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.life-=dt;p.vy+=35*dt;} }
+  function roundedRect(x,y,w,h,r,fill,stroke,lw=1){ctx.beginPath();ctx.roundRect(x,y,w,h,r);if(fill){ctx.fillStyle=fill;ctx.fill()}if(stroke){ctx.lineWidth=lw;ctx.strokeStyle=stroke;ctx.stroke()}}
+  function drawBackground(s) {
+    const g=ctx.createLinearGradient(0,0,W,H);g.addColorStop(0,s.sky[0]);g.addColorStop(1,s.sky[1]);ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+    ctx.save();ctx.globalAlpha=.18;
+    if(stageIndex===0){for(let i=0;i<stars.length;i++){let x=stars[i].x*W,y=((stars[i].y*H+time*11)%H);ctx.fillStyle='#fff';ctx.globalAlpha=stars[i].a;ctx.beginPath();ctx.arc(x,y,stars[i].r,0,Math.PI*2);ctx.fill();}ctx.globalAlpha=.12;ctx.strokeStyle='#fff';ctx.lineWidth=1;for(let i=0;i<5;i++){ctx.beginPath();ctx.arc(W*.5,H*.48,45+i*27+Math.sin(time+i)*4,0,Math.PI*2);ctx.stroke();}}
+    else if(stageIndex===1){for(let i=0;i<8;i++){const x=((i*79+20)%W),y=((i*137+time*12)%H);ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(x,y,20,7,0,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(x+14,y-7,10,0,Math.PI*2);ctx.fill();}}
+    else {for(let i=0;i<6;i++){ctx.fillStyle=i%2?'#fff5b4':'#eaa63f';ctx.beginPath();ctx.moveTo(i*W/4-60,H*.2+(i%3)*85);ctx.lineTo(i*W/4+30,H*.2+(i%3)*85-45);ctx.lineTo(i*W/4+140,H*.2+(i%3)*85);ctx.fill();}}
+    ctx.restore();
+  }
+  function drawWalls(s) {
+    const b=bounds();
+    // Dark rim and repeating scallops create a lively, layered side-wall treatment.
+    ctx.fillStyle=s.wall;ctx.fillRect(0,0,b.wall,H);ctx.fillRect(W-b.wall,0,b.wall,H);
+    const step=18,offset=(time*35)%step;
+    for(let side=0;side<2;side++){
+      const x=side===0?b.wall-2:W-b.wall+2;
+      for(let y=-step+offset;y<H+step;y+=step){ctx.fillStyle=s.trim2;ctx.beginPath();ctx.arc(x,y,11,side===0?-.5*Math.PI:.5*Math.PI,side===0?.5*Math.PI:1.5*Math.PI);ctx.fill();ctx.fillStyle=s.trim;ctx.beginPath();ctx.arc(x+(side===0?4:-4),y,8,side===0?-.5*Math.PI:.5*Math.PI,side===0?.5*Math.PI:1.5*Math.PI);ctx.fill();}
+    }
+    ctx.fillStyle='#17213a';ctx.fillRect(b.left-3,0,3,H);ctx.fillRect(b.right,0,3,H);
+  }
+  function drawHazards(s) {
+    const b=bounds(), runnerY=H*.70;
+    for(const h of hazards){const sy=runnerY-(h.y-cameraY);if(sy < -90 || sy>H+90)continue;
+      const depth=h.depth, blockW=h.width;
+      const x=h.safe<0?b.right-depth:b.left;
+      const grad=ctx.createLinearGradient(x,sy-blockW/2,x+depth,sy+blockW/2);grad.addColorStop(0,'#2c2744');grad.addColorStop(.12,s.wall);grad.addColorStop(1,s.wall);
+      ctx.fillStyle=grad;ctx.fillRect(x,sy-blockW/2,depth,blockW);
+      ctx.strokeStyle='#211b2e';ctx.lineWidth=4;ctx.strokeRect(x,sy-blockW/2,depth,blockW);
+      ctx.fillStyle=s.trim;ctx.fillRect(h.safe<0?x: x+depth-blockW,sy-blockW/2,blockW,blockW);
+      if(h.type==='crate'){
+        const cx=h.safe<0?x+depth-10:x+10;ctx.fillStyle='#a95345';ctx.strokeStyle='#452e39';ctx.lineWidth=3;ctx.fillRect(cx-13,sy-13,26,26);ctx.strokeRect(cx-13,sy-13,26,26);ctx.beginPath();ctx.moveTo(cx-10,sy-10);ctx.lineTo(cx+10,sy+10);ctx.moveTo(cx+10,sy-10);ctx.lineTo(cx-10,sy+10);ctx.stroke();
+      }
+    }
+  }
+  function drawRunner(p, y) {
+    const s=p.color==='blue'?'#11bdf1':'#ff5e69', dark=p.color==='blue'?'#063f68':'#672b39';
+    for(let i=0;i<p.trail.length;i++){const t=p.trail[i];ctx.globalAlpha=(i/p.trail.length)*.18;ctx.fillStyle=s;ctx.beginPath();ctx.ellipse(t.x,y+(p.trail.length-i)*2,9,13,0,0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;
+    ctx.save();ctx.translate(p.x,y);ctx.rotate(p.side<0?0:Math.PI);ctx.rotate(Math.sin(p.anim)*.045+p.wobble*1.3);
+    // Original, vector-drawn mascot: visor, compact suit, boots and bright gravity-side accents.
+    ctx.fillStyle=dark;ctx.beginPath();ctx.ellipse(0,1,13,17,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#f7fbff';ctx.beginPath();ctx.ellipse(0,-2,9.5,12,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#26344f';ctx.beginPath();ctx.ellipse(2,-4,4,5,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(3,-5,1.3,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=s;roundedRect(-11,-1,22,6,3,s);ctx.fillStyle='#ffd451';ctx.beginPath();ctx.moveTo(-8,10);ctx.lineTo(-18,8);ctx.lineTo(-12,15);ctx.closePath();ctx.fill();
+    ctx.strokeStyle='#17243a';ctx.lineWidth=2.2;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(-5,12);ctx.lineTo(-9,17+Math.sin(p.anim)*2);ctx.moveTo(5,12);ctx.lineTo(9,17-Math.sin(p.anim)*2);ctx.stroke();
+    ctx.restore();
+  }
+  function render() {
+    const s=stages[stageIndex]||stages[0];drawBackground(s);drawWalls(s);drawHazards(s);
+    const runnerY=H*.70;
+    // Finish gate and subtle progress cue.
+    const remain=stageLength-cameraY;
+    if(remain<330){const fy=runnerY-remain;ctx.strokeStyle='#fff';ctx.lineWidth=5;ctx.setLineDash([8,6]);ctx.beginPath();ctx.moveTo(bounds().left,fy);ctx.lineTo(bounds().right,fy);ctx.stroke();ctx.setLineDash([]);}
+    players.forEach(p=>{if(p.alive)drawRunner(p,runnerY);});
+    for(const p of particles){ctx.globalAlpha=clamp(p.life/p.max,0,1);ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;
+    if(mode==='countdown'){const n=Math.max(1,Math.ceil(countdown));ctx.fillStyle='#12203b9c';ctx.beginPath();ctx.arc(W/2,H*.43,39,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font='800 44px Rubik, sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(n),W/2,H*.43);}
+  }
+  function loop(now) { if(mode==='ended'||mode==='ready')return; const dt=Math.min(.04,(now-lastTime)/1000||0);lastTime=now;update(dt);render();if(mode!=='ended')requestAnimationFrame(loop); }
+  function playTone(freq,duration) { if(!soundOn)return;try{audioCtx ||= new (window.AudioContext||window.webkitAudioContext)();const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='sine';o.frequency.value=freq;g.gain.setValueAtTime(.055,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+duration);o.connect(g);g.connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+duration);}catch(_){} }
+
+  canvas.addEventListener('pointerdown', e=>{if(mode==='ready'||mode==='ended')return;controls(e);});
+  startButton.addEventListener('click',e=>{e.stopPropagation();begin();});
+  overlay.addEventListener('click',e=>{if(e.target===overlay&&mode==='ended')begin();});
+  document.addEventListener('keydown',e=>{if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();if(mode==='ready'||mode==='ended')begin();else flip(players[0]);}});
+  soundButton.addEventListener('click',()=>{soundOn=!soundOn;soundButton.textContent=soundOn?'♫':'♪';soundButton.style.color=soundOn?'#62d7ff':'';if(soundOn)playTone(520,.08);});
+  window.addEventListener('resize',resize);window.addEventListener('orientationchange',()=>setTimeout(resize,150));
+  createStars();resize();resetPlayers();render();
+})();
+
+  </script>
+</body>
+</html>
