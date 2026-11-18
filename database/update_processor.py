@@ -31,7 +31,8 @@ class ChatSerialUpdateProcessor(BaseUpdateProcessor):
         chat = getattr(update, "effective_chat", None)
         if chat is not None:
             key = ("chat", chat.id)
-            label = "chat"
+            chat_type = getattr(chat, "type", None)
+            label = "private" if chat_type == "private" else "group"
         else:
             user = getattr(update, "effective_user", None)
             if user is not None:
