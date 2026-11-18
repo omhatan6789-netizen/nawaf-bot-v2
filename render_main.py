@@ -10,7 +10,7 @@ import logging
 import os
 import signal
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from threading import Thread
+from threading import BoundedSemaphore, Thread
 
 from telegram import Update
 
@@ -22,6 +22,39 @@ logger = logging.getLogger("nawaf-webhook")
 application = None
 application_loop = None
 webhook_secret = None
+
+
+class BoundedThreadingHTTPServer(ThreadingHTTPServer):
+    daemon_threads = True
+    request_queue_size = 64
+
+    def __init__(self, server_address, handler_class, max_workers=32):
+        self._worker_slots = BoundedSemaphore(max_workers)
+        super().__init__(server_address, handler_class)
+
+    def process_request(self, request, client_address):
+        if not self._worker_slots.acquire(blocking=False):
+            try:
+                request.sendall(
+                    b"HTTP/1.1 503 Service Unavailable\\r\\n"
+                    b"Connection: close\\r\\n"
+                    b"Content-Length: 0\\r\\n\\r\\n"
+                )
+            except OSError:
+                pass
+            self.shutdown_request(request)
+            return
+        try:
+            super().process_request(request, client_address)
+        except Exception:
+            self._worker_slots.release()
+            raise
+
+    def process_request_thread(self, request, client_address):
+        try:
+            super().process_request_thread(request, client_address)
+        finally:
+            self._worker_slots.release()
 
 
 class HealthHandler(BaseHTTPRequestHandler):
@@ -38,6 +71,10 @@ class HealthHandler(BaseHTTPRequestHandler):
             self._respond(404, b"")
             return
         self._respond(200, b"OK" if include_body else b"")
+
+    def setup(self):
+        super().setup()
+        self.connection.settimeout(15)
 
     def do_GET(self):
         if handle_mini_app_request(self):
@@ -87,7 +124,7 @@ class HealthHandler(BaseHTTPRequestHandler):
 
 def start_http_server():
     port = int(os.environ.get("PORT", "10000"))
-    server = ThreadingHTTPServer(("0.0.0.0", port), HealthHandler)
+    server = BoundedThreadingHTTPServer(("0.0.0.0", port), HealthHandler, max_workers=32)
     Thread(target=server.serve_forever, name="render-http-server", daemon=True).start()
     return server
 
@@ -107,7 +144,10 @@ async def run_webhook_bot():
         if application.post_init:
             await application.post_init(application)
 
-        webhook_url = "https://nawaf-bot-v2.onrender.com/telegram-webhook"
+        external_url = os.environ.get("RENDER_EXTERNAL_URL", "https://nawaf-bot-v2.onrender.com").rstrip("/")
+        if not external_url.startswith("https://"):
+            raise RuntimeError("RENDER_EXTERNAL_URL must use HTTPS")
+        webhook_url = external_url + "/telegram-webhook"
         await application.bot.set_webhook(
             url=webhook_url,
             secret_token=webhook_secret,
