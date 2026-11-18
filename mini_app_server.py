@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import json
 import logging
 import re
@@ -169,7 +170,12 @@ async def _payload(top=None):
 def _run(coro, timeout=20):
     if _loop is None:
         raise RuntimeError("Mini App backend is not ready")
-    return asyncio.run_coroutine_threadsafe(coro, _loop).result(timeout=timeout)
+    future = asyncio.run_coroutine_threadsafe(coro, _loop)
+    try:
+        return future.result(timeout=timeout)
+    except concurrent.futures.TimeoutError:
+        future.cancel()
+        raise
 
 
 def handle_mini_app_request(handler):
