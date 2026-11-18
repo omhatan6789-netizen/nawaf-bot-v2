@@ -183,6 +183,20 @@ def _run(coro, timeout=20):
 
 def handle_mini_app_request(handler):
     path = handler.path.split("?", 1)[0]
+    if path == "/gravity-run":
+        file_path = WEB_ROOT / "gravity-run.html"
+        try:
+            body = file_path.read_bytes()
+        except OSError:
+            handler.send_error(404, "Gravity Run not found")
+            return True
+        handler.send_response(200)
+        handler.send_header("Content-Type", "text/html; charset=utf-8")
+        handler.send_header("Cache-Control", "no-store")
+        handler.send_header("Content-Length", str(len(body)))
+        handler.end_headers()
+        handler.wfile.write(body)
+        return True
     if path in ("/", "/mini-app", "/mini-app/", "/carrom"):
         file_path = WEB_ROOT / ("carrom.html" if path == "/carrom" else "index.html")
         body = file_path.read_bytes()
