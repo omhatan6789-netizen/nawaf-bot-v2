@@ -414,6 +414,8 @@ def build_application(use_updater: bool = True) -> Application:
         builder = builder.updater(None)
     application = (
         builder
+        # Bound queued updates so overload applies backpressure instead of growing memory.
+        .update_queue(asyncio.Queue(maxsize=256))
         # Keep Telegram's long-poll request alive longer than its 10s server wait.
         .get_updates_read_timeout(15)
         # Give regular Bot API calls room to complete during brief network jitter.
