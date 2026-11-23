@@ -142,7 +142,7 @@ async def load_settings():
         replies_enabled = bool(raw.get("replies_enabled", DEFAULT_ENABLED))
         muted_users = raw.get("muted", {})
         restricted_users = raw.get("restricted", {})
-    scheduled_messages = raw.get("scheduled_messages", [])
+        scheduled_messages = raw.get("scheduled_messages", [])
 
     if not isinstance(scheduled_messages, list):
         scheduled_messages = []
@@ -489,7 +489,7 @@ async def _reply_control_handler(client, message):
         lines = text.splitlines()
         if len(lines) < 2:
             await message.reply_text(
-                "اكتب الرسالة في السطر الأول والوقت في السطر الثاني، مثل:\\nاضف رسالة - هاي نيوف\\n5:00 PM"
+                "اكتب الرسالة في السطر الأول والوقت في السطر الثاني، مثل:\nاضف رسالة - هاي نيوف\n5:00 PM"
             )
             return
 
@@ -497,7 +497,7 @@ async def _reply_control_handler(client, message):
         message_text = first_line[len("اضف رسالة -"):].strip()
         time_text = lines[-1].strip().upper()
         if len(lines) > 2:
-            message_text = "\\n".join([message_text, *[line.rstrip() for line in lines[1:-1]]]).strip()
+            message_text = "\n".join([message_text, *[line.rstrip() for line in lines[1:-1]]]).strip()
 
         try:
             scheduled_time = datetime.strptime(time_text, "%I:%M %p")
