@@ -3,6 +3,7 @@ import re
 import json
 import time
 import asyncio
+import uuid
 from pathlib import Path
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -76,6 +77,7 @@ _control_handler = None
 _private_handler = None
 
 _daily_task = None
+_scheduled_messages_task = None
 _daily_chat_id = None
 
 # آخر وقت أرسلنا فيه تنبيه التقييد
@@ -88,14 +90,16 @@ restrict_notice_times = {}
 replies_enabled = DEFAULT_ENABLED
 muted_users = {}
 restricted_users = {}
+scheduled_messages = []
 
 async def load_settings():
-    global replies_enabled, muted_users, restricted_users
+    global replies_enabled, muted_users, restricted_users, scheduled_messages
 
     default = {
         "replies_enabled": DEFAULT_ENABLED,
         "muted": {},
-        "restricted": {}
+        "restricted": {},
+        "scheduled_messages": []
     }
 
     pool = get_pool()
@@ -138,6 +142,10 @@ async def load_settings():
         replies_enabled = bool(raw.get("replies_enabled", DEFAULT_ENABLED))
         muted_users = raw.get("muted", {})
         restricted_users = raw.get("restricted", {})
+    scheduled_messages = raw.get("scheduled_messages", [])
+
+    if not isinstance(scheduled_messages, list):
+        scheduled_messages = []
 
     if not isinstance(muted_users, dict):
         muted_users = {}
@@ -150,7 +158,8 @@ async def save_settings():
     data = {
         "replies_enabled": replies_enabled,
         "muted": muted_users,
-        "restricted": restricted_users
+        "restricted": restricted_users,
+        "scheduled_messages": scheduled_messages
     }
 
     try:
@@ -469,6 +478,62 @@ async def _reply_control_handler(client, message):
     ).strip()
 
     if not text:
+        return
+
+    # --------------------------
+    # إضافة رسالة يومية مجدولة
+    # الصيغة: اضف رسالة - نص الرسالة ثم الوقت في السطر التالي
+    # --------------------------
+
+    if text.startswith("اضف رسالة -"):
+        lines = text.splitlines()
+        if len(lines) < 2:
+            await message.reply_text(
+                "اكتب الرسالة في السطر الأول والوقت في السطر الثاني، مثل:\\nاضف رسالة - هاي نيوف\\n5:00 PM"
+            )
+            return
+
+        first_line = lines[0].strip()
+        message_text = first_line[len("اضف رسالة -"):].strip()
+        time_text = lines[-1].strip().upper()
+        if len(lines) > 2:
+            message_text = "\\n".join([message_text, *[line.rstrip() for line in lines[1:-1]]]).strip()
+
+        try:
+            scheduled_time = datetime.strptime(time_text, "%I:%M %p")
+        except ValueError:
+            await message.reply_text("الوقت غير صحيح. اكتبه مثل 5:00 PM أو 7:00 AM.")
+            return
+
+        if not message_text:
+            await message.reply_text("اكتب نص الرسالة بعد (اضف رسالة -).")
+            return
+
+        scheduled_messages.append({
+            "id": uuid.uuid4().hex,
+            "chat_id": int(message.chat.id),
+            "text": message_text,
+            "hour": scheduled_time.hour,
+            "minute": scheduled_time.minute,
+            "last_sent_date": None,
+        })
+        await save_settings()
+
+        try:
+            await client.send_reaction(
+                chat_id=message.chat.id,
+                message_id=message.id,
+                emoji="👍"
+            )
+        except FloodWait as exc:
+            print(f"[SCHEDULED MESSAGE] Reaction FloodWait: {exc.value}s")
+        except Exception as exc:
+            print(f"[SCHEDULED MESSAGE] Reaction error: {exc}")
+
+        print(
+            f"[SCHEDULED MESSAGE] Added for {scheduled_time.strftime('%I:%M %p')} "
+            f"in chat {message.chat.id}"
+        )
         return
 
     # --------------------------
@@ -955,6 +1020,54 @@ async def daily_message_loop():
             await asyncio.sleep(60)
 
 # ==========================================
+# الرسائل اليومية المخصصة
+# ==========================================
+
+async def scheduled_messages_loop():
+    print("[SCHEDULED MESSAGE] Scheduler started.")
+
+    while True:
+        try:
+            now = datetime.now(DAILY_TIMEZONE)
+            today = now.date().isoformat()
+            current_minutes = now.hour * 60 + now.minute
+
+            for item in list(scheduled_messages):
+                if item.get("last_sent_date") == today:
+                    continue
+
+                try:
+                    target_minutes = int(item.get("hour", 0)) * 60 + int(item.get("minute", 0))
+                    if current_minutes < target_minutes:
+                        continue
+
+                    await _client.send_message(
+                        chat_id=int(item["chat_id"]),
+                        text=str(item["text"]),
+                    )
+                    item["last_sent_date"] = today
+                    await save_settings()
+                    print(
+                        f"[SCHEDULED MESSAGE] Sent {item.get('id')} "
+                        f"at {now.strftime('%I:%M %p')}"
+                    )
+
+                except FloodWait as exc:
+                    print(f"[SCHEDULED MESSAGE] FloodWait: {exc.value}s")
+                    await asyncio.sleep(exc.value + 1)
+                except Exception as exc:
+                    print(f"[SCHEDULED MESSAGE] Send error: {exc}")
+
+            await asyncio.sleep(15)
+
+        except asyncio.CancelledError:
+            print("[SCHEDULED MESSAGE] Scheduler stopped.")
+            raise
+        except Exception as exc:
+            print(f"[SCHEDULED MESSAGE] Scheduler error: {exc}")
+            await asyncio.sleep(15)
+
+# ==========================================
 # التشغيل
 # ==========================================
 
@@ -965,6 +1078,7 @@ async def start_name_reaction():
     global _control_handler
     global _private_handler
     global _daily_task
+    global _scheduled_messages_task
     global _daily_chat_id
 
     if _handler is not None:
@@ -1050,6 +1164,14 @@ async def start_name_reaction():
         daily_message_loop()
     )
 
+    _scheduled_messages_task = asyncio.create_task(
+        scheduled_messages_loop()
+    )
+
+    print(
+        f"[SCHEDULED MESSAGE] Loaded {len(scheduled_messages)} scheduled messages."
+    )
+
     print(
         "[DAILY MESSAGE] Daily scheduler enabled."
     )
@@ -1065,7 +1187,17 @@ async def shutdown_name_reaction():
     global _control_handler
     global _private_handler
     global _daily_task
+    global _scheduled_messages_task
     global _daily_chat_id
+
+    # إيقاف مهمة الرسائل اليومية المخصصة
+    if _scheduled_messages_task is not None:
+        _scheduled_messages_task.cancel()
+        try:
+            await _scheduled_messages_task
+        except asyncio.CancelledError:
+            pass
+        _scheduled_messages_task = None
 
     # إيقاف مهمة الإرسال اليومي
 
